@@ -1113,14 +1113,17 @@ body.header-hidden .ge-floating-controls {
   margin-bottom: 1rem;
 }
 
-.feature-icon-box.blue { background-color: #3b82f6; }
-.feature-icon-box.pink { background-color: #ec4899; }
-.feature-icon-box.orange { background-color: #f97316; }
-.feature-icon-box.gold { background-color: #eab308; }
-.feature-icon-box.gray { background-color: #64748b; }
-.feature-icon-box.cyan { background-color: #06b6d4; }
-
-.feature-icon-box { color: white; }
+/* Soft tinted icon boxes — same calm pattern as the stat cards (pale
+   background + saturated icon) instead of loud solid colour blocks. */
+.feature-icon-box.blue { background-color: #eff6ff; color: #3b82f6; }
+.feature-icon-box.green { background-color: #ecfdf5; color: #10b981; }
+.feature-icon-box.teal { background-color: #f0fdfa; color: #14b8a6; }
+.feature-icon-box.cyan { background-color: #ecfeff; color: #06b6d4; }
+.feature-icon-box.orange { background-color: #fff7ed; color: #f97316; }
+.feature-icon-box.gold { background-color: #fefce8; color: #eab308; }
+.feature-icon-box.pink { background-color: #fdf2f8; color: #ec4899; }
+.feature-icon-box.purple { background-color: #f5f3ff; color: #8b5cf6; }
+.feature-icon-box.gray { background-color: #f1f5f9; color: #64748b; }
 
 .feature-title {
   font-size: 1.15rem;
