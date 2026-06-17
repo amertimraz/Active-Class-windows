@@ -7,6 +7,10 @@ const XLSX = require('xlsx');
 const crypto = require('crypto');
 const log = require('./server/logger').create('main');
 
+// Single source of truth for the renderer Content-Security-Policy (was
+// duplicated across every BrowserWindow). Update here only.
+const CSP_VALUE = `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' http://localhost:* https://cdnjs.cloudflare.com; media-src 'self' data: blob:;`;
+
 // Uniform in-place shuffle (Fisher–Yates). Replaces the biased
 // `arr.sort(() => Math.random() - 0.5)` idiom, which does not produce a
 // uniform permutation — it matters for fair question selection/ordering.
@@ -47,7 +51,7 @@ function createWindow() {
       responseHeaders: {
         ...details.responseHeaders,
         "Content-Security-Policy": [
-          "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' http://localhost:* https://cdnjs.cloudflare.com; media-src 'self' data: blob:;"
+          CSP_VALUE
         ]
       }
     });
@@ -122,7 +126,7 @@ function createNumbersWindow() {
       responseHeaders: {
         ...details.responseHeaders,
         "Content-Security-Policy": [
-          "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' http://localhost:* https://cdnjs.cloudflare.com; media-src 'self' data: blob:;"
+          CSP_VALUE
         ]
       }
     });
@@ -163,7 +167,7 @@ function createWheelWindow() {
       responseHeaders: {
         ...details.responseHeaders,
         "Content-Security-Policy": [
-          "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' http://localhost:* https://cdnjs.cloudflare.com; media-src 'self' data: blob:;"
+          CSP_VALUE
         ]
       }
     });
@@ -231,7 +235,7 @@ app.whenReady().then(async () => {
         });
         win.webContents.session.webRequest.onHeadersReceived((details, callback) => {
           callback({ responseHeaders: { ...details.responseHeaders, 'Content-Security-Policy': [
-            "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' http://localhost:* https://cdnjs.cloudflare.com; media-src 'self' data: blob:;"
+            CSP_VALUE
           ]}});
         });
         win.loadURL('http://localhost:5000/pages/names.html');
@@ -253,7 +257,7 @@ app.whenReady().then(async () => {
         });
         win.webContents.session.webRequest.onHeadersReceived((details, callback) => {
           callback({ responseHeaders: { ...details.responseHeaders, 'Content-Security-Policy': [
-            "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' http://localhost:* https://cdnjs.cloudflare.com; media-src 'self' data: blob:;"
+            CSP_VALUE
           ]}});
         });
         win.loadURL('http://localhost:5000/pages/timer-standalone.html');

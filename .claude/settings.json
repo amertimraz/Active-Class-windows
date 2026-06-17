@@ -59,7 +59,9 @@
       "Bash(npm test *)",
       "Bash(rm -f .git/index)",
       "Bash(git reset *)",
-      "Bash(node --check main.js)"
+      "Bash(node --check main.js)",
+      "Bash(git rm *)",
+      "Bash(rm -f \"tests/__pw_verify.cjs\" \"tests/__pw_debug.cjs\" \"getComputedStyle\\(el\\).visibility\")"
     ]
   }
 }
