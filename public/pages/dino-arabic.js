@@ -1,3 +1,5 @@
+/* uniform Fisher-Yates shuffle (replaces biased Array.sort random comparator) */
+function __acShuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
 (function() {
   const startBtn = document.getElementById('start-btn');
   const startScreen = document.getElementById('start-screen');
@@ -234,7 +236,7 @@
       } else {
         topicQueues[topicToUse] = [...data.data];
       }
-      topicQueues[topicToUse].sort(() => Math.random() - 0.5);
+      __acShuffle(topicQueues[topicToUse]);
     }
 
     const currentItem = topicQueues[topicToUse].pop();
@@ -276,7 +278,7 @@
     document.getElementById(`question-${team}`).textContent = question;
     const container = document.getElementById(`answers-${team}`);
     container.innerHTML = '';
-    options.sort(() => Math.random() - 0.5);
+    __acShuffle(options);
 
     options.forEach(opt => {
       const btn = document.createElement('button');

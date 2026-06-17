@@ -7,6 +7,17 @@ const XLSX = require('xlsx');
 const crypto = require('crypto');
 const log = require('./server/logger').create('main');
 
+// Uniform in-place shuffle (Fisher–Yates). Replaces the biased
+// `arr.sort(() => Math.random() - 0.5)` idiom, which does not produce a
+// uniform permutation — it matters for fair question selection/ordering.
+function shuffleInPlace(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
 let mainWindow;
 let numbersWindow;
 let wheelWindow;
@@ -849,9 +860,9 @@ app.whenReady().then(async () => {
       const distribution = settings.difficultyDistribution || { easy: 5, medium: 5, hard: 5 };
       const selectedQuestions = [];
 
-      const easyQuestions = questions.filter(q => q.difficulty === 'easy').sort(() => Math.random() - 0.5);
-      const mediumQuestions = questions.filter(q => q.difficulty === 'medium').sort(() => Math.random() - 0.5);
-      const hardQuestions = questions.filter(q => q.difficulty === 'hard').sort(() => Math.random() - 0.5);
+      const easyQuestions = shuffleInPlace(questions.filter(q => q.difficulty === 'easy'));
+      const mediumQuestions = shuffleInPlace(questions.filter(q => q.difficulty === 'medium'));
+      const hardQuestions = shuffleInPlace(questions.filter(q => q.difficulty === 'hard'));
 
       selectedQuestions.push(...easyQuestions.slice(0, Math.min(distribution.easy, easyQuestions.length)));
       selectedQuestions.push(...mediumQuestions.slice(0, Math.min(distribution.medium, mediumQuestions.length)));
@@ -871,7 +882,7 @@ app.whenReady().then(async () => {
       selectedQuestions.splice(15);
 
       if (settings.ordering === 'random') {
-        selectedQuestions.sort(() => Math.random() - 0.5);
+        shuffleInPlace(selectedQuestions);
       }
 
       const session = {

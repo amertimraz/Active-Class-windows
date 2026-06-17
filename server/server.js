@@ -5,7 +5,7 @@ const fsSync = require('fs');
 const multer = require('multer');
 const crypto = require('crypto');
 const os = require('os');
-const { db, dbData, saveDB, openDB, closeDB } = require('./sqlite');
+const { db, openDB, closeDB } = require('./sqlite');
 const { generateQuizFromPDF } = require('./ai-service');
 const log = require('./logger').create('server');
 
@@ -594,17 +594,6 @@ function ensureDataFiles() {
 }
 ensureDataFiles();
 
-function listLocalIPs() {
-  const nets = os.networkInterfaces();
-  const ips = [];
-  for (const name of Object.keys(nets)) {
-    for (const net of nets[name] || []) {
-      if (net.family === 'IPv4' && !net.internal) ips.push(net.address);
-    }
-  }
-  return ips;
-}
-
 async function readJSONFile(filepath, fallback) {
   try {
     const data = await fs.readFile(filepath, 'utf8');
@@ -614,10 +603,8 @@ async function readJSONFile(filepath, fallback) {
   }
 }
 
-// GET /api/local-ip → ["192.168.1.10", ...]
-app.get('/api/local-ip', (_req, res) => {
-  res.json({ ips: listLocalIPs(), port: PORT });
-});
+// GET /api/local-ip is defined once below (see "LAN IP discovery") using
+// getLocalIPv4s(); the earlier duplicate route + listLocalIPs() were removed.
 
 // [Consolidated] GET /api/quizzes/:id is defined later in the file with short link support
 
@@ -1215,31 +1202,50 @@ app.get('/quiz', (_req, res) => {
   res.sendFile(path.join(publicDir, 'pages', 'quiz-view.html'));
 });
 
-// Game Engine Results
+// Game Engine Results — persisted in SQLite (previously written to an in-memory
+// object with a no-op saveDB(), so every result was lost on restart).
 app.post('/api/game-results', (req, res) => {
   try {
     const session = req.body;
     if (!session || typeof session !== 'object') {
       return res.status(400).json({ message: 'Invalid session data' });
     }
-    if (!Array.isArray(dbData.game_results)) dbData.game_results = [];
+    const id = session.id || crypto.randomUUID();
     session._savedAt = new Date().toISOString();
-    dbData.game_results.push(session);
-    if (dbData.game_results.length > 500) dbData.game_results.splice(0, dbData.game_results.length - 500);
-    saveDB();
-    res.status(201).json({ ok: true, id: session.id });
+    db.prepare(
+      'INSERT OR REPLACE INTO game_results (id, game_id, session_json, created_at) VALUES (?, ?, ?, ?)'
+    ).run(id, session.gameId || null, JSON.stringify(session), session._savedAt);
+
+    // Keep only the most recent 500 rows.
+    db.prepare(
+      `DELETE FROM game_results WHERE id NOT IN (
+         SELECT id FROM game_results ORDER BY created_at DESC LIMIT 500
+       )`
+    ).run();
+
+    res.status(201).json({ ok: true, id });
   } catch (e) {
+    log.error('Error saving game result:', e);
     res.status(500).json({ message: e.message });
   }
 });
 
 app.get('/api/game-results', authenticateTeacher, (req, res) => {
   try {
-    const results = Array.isArray(dbData.game_results) ? dbData.game_results : [];
     const { gameId, limit = 100 } = req.query;
-    const filtered = gameId ? results.filter(r => r.gameId === gameId) : results;
-    res.json(filtered.slice(-Number(limit)).reverse());
+    const lim = Math.min(Math.max(Number(limit) || 100, 1), 500);
+    const rows = gameId
+      ? db
+          .prepare(
+            'SELECT session_json FROM game_results WHERE game_id = ? ORDER BY created_at DESC LIMIT ?'
+          )
+          .all(gameId, lim)
+      : db
+          .prepare('SELECT session_json FROM game_results ORDER BY created_at DESC LIMIT ?')
+          .all(lim);
+    res.json(rows.map((r) => parseJSONSafe(r.session_json, {})));
   } catch (e) {
+    log.error('Error reading game results:', e);
     res.status(500).json({ message: e.message });
   }
 });

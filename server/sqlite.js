@@ -110,6 +110,13 @@ db.exec(`
     content_json TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
+
+  CREATE TABLE IF NOT EXISTS game_results (
+    id TEXT PRIMARY KEY,
+    game_id TEXT,
+    session_json TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
 `);
 
 // --- One-time Migration from JSON ---

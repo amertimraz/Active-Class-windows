@@ -42,3 +42,12 @@ test('reconnect() returns a usable connection', () => {
   const one = sqlite.db.prepare('SELECT 1 AS x').get().x;
   assert.strictEqual(one, 1);
 });
+
+test('game_results table exists and round-trips a row (persistence fix)', () => {
+  sqlite.db
+    .prepare('INSERT INTO game_results (id, game_id, session_json) VALUES (?, ?, ?)')
+    .run('g-test', 'duck', JSON.stringify({ id: 'g-test', score: 7 }));
+  const row = sqlite.db.prepare('SELECT session_json FROM game_results WHERE id = ?').get('g-test');
+  assert.ok(row, 'row should persist');
+  assert.strictEqual(JSON.parse(row.session_json).score, 7);
+});

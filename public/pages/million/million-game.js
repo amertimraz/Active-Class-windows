@@ -1,3 +1,5 @@
+/* uniform Fisher-Yates shuffle (replaces biased Array.sort random comparator) */
+function __acShuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
 const MONEY_VALUES = [
   100, 200, 300, 500, 1000, 2000, 4000, 8000, 16000, 32000, 64000, 125000, 250000, 500000, 1000000
 ];
@@ -345,7 +347,7 @@ function useFiftyFifty() {
   const correctIndex = question.correct;
   const wrongAnswers = [0, 1, 2, 3].filter(i => i !== correctIndex);
   
-  const toDisable = wrongAnswers.sort(() => Math.random() - 0.5).slice(0, 2);
+  const toDisable = __acShuffle(wrongAnswers).slice(0, 2);
   toDisable.forEach(index => {
     disabledAnswers.add(index);
     const btn = document.querySelector(`.answer-btn[data-index="${index}"]`);

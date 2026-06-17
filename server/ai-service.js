@@ -35,7 +35,7 @@ async function generateQuizFromPDF(pdfPath, apiKey) {
     
     النص التعليمي:
     """
-    ${text.substring(0, 15000)} // Limit text length to avoid token limits, though 1.5-flash can handle more
+    ${text.substring(0, 15000)}
     """
     
     يجب أن يكون المخرج عبارة عن كائن JSON صالح (بدون أي نصوص إضافية أو علامات Markdown) يحتوي على مصفوفة باسم "slides".

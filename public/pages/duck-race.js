@@ -1,3 +1,5 @@
+/* uniform Fisher-Yates shuffle (replaces biased Array.sort random comparator) */
+function __acShuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
 (function(){
 const COLORS = ['#1d4ed8', '#be123c', '#16a34a', '#f59e0b', '#7c3aed', '#0ea5e9'];
 
@@ -275,7 +277,7 @@ function createPlayers(settings) {
   const names = settings?.players || [];
   const count = Math.min(Math.max(names.length || 2, 2), 6);
   
-  const spriteIndices = [0, 1, 2, 3, 4].sort(() => Math.random() - 0.5);
+  const spriteIndices = __acShuffle([0, 1, 2, 3, 4]);
   
   state.players = Array.from({ length: count }, (_, index) => {
     const name = names[index]?.trim() || `لاعب ${index + 1}`;
@@ -335,7 +337,7 @@ function buildQuestion(level, operations, mode, topic) {
       } else {
         state.topicQueues[topicToUse] = [...data.data];
       }
-      state.topicQueues[topicToUse].sort(() => Math.random() - 0.5);
+      state.__acShuffle(topicQueues[topicToUse]);
     }
 
     const currentItem = state.topicQueues[topicToUse].pop();
@@ -362,7 +364,7 @@ function buildQuestion(level, operations, mode, topic) {
         if (!choices.includes(w)) choices.push(w);
       }
     }
-    choices.sort(() => Math.random() - 0.5);
+    __acShuffle(choices);
     return { text: qText, answer: correctAnswer, choices: choices };
   }
 }
