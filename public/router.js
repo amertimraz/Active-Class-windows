@@ -242,38 +242,28 @@
     app.innerHTML = `
       <section class="home-section">
         <div class="home-container">
-          <!-- Quick Actions Section -->
-          <div class="quick-actions-section">
-            <h2 class="section-title">إجراءات سريعة</h2>
-            <div class="quick-actions-grid">
-              <a href="#/groups" class="qa-btn btn-blue">
-                <span class="qa-icon">⊕</span> إضافة مجموعة
-              </a>
-              <a href="#/games" class="qa-btn btn-green">
-                <span class="qa-icon">▶</span> ابدأ لعبة
-              </a>
-              <a href="#/quizzes" class="qa-btn btn-orange">
-                <span class="qa-icon">📝</span> إنشاء اختبار
-              </a>
-            </div>
+          <!-- Welcome -->
+          <div class="home-welcome">
+            <h1 class="home-title">مرحبًا بك في Active Class 👋</h1>
+            <p class="home-subtitle">اختر ما تريد البدء به من البطاقات بالأسفل.</p>
           </div>
 
           <!-- Summary Stats Section -->
           <div class="summary-stats-grid">
-            ${summaryCard('إجمالي الألعاب التعليمية', '11', '🎮', 'blue')}
-            ${summaryCard('إجمالي الاختبارات', '1', '📋', 'green')}
-            ${summaryCard('إجمالي المجموعات', '2', '👥', 'orange')}
-            ${summaryCard('إجمالي الطلاب', '11', '🎓', 'teal')}
+            ${summaryCard('إجمالي الألعاب التعليمية', '0', '🎮', 'blue')}
+            ${summaryCard('إجمالي الاختبارات', '0', '📋', 'green')}
+            ${summaryCard('إجمالي المجموعات', '0', '👥', 'orange')}
+            ${summaryCard('إجمالي الطلاب', '0', '🎓', 'teal')}
           </div>
 
-          <!-- Features Grid -->
+          <!-- Features Grid (single source of navigation actions) -->
           <div class="features-grid">
-            ${featureCard('#/ai-generator', '✨', 'الذكاء الاصطناعي', 'تحويل الـ PDF لدروس تفاعلية ممتعة (Storyline).', 'توليد بالذكاء الاصطناعي', 'purple')}
-            ${featureCard('#/groups', '👥', 'إدارة المجموعات', 'إنشاء وإدارة مجموعات الطلاب.', 'الذهاب للمجموعات', 'blue')}
-            ${featureCard('#/games', '🎮', 'إنشاء ألعاب تعليمية', 'بناء ألعاب تعليمية تفاعلية.', 'بدء اللعبة', 'pink')}
+            ${featureCard('#/quizzes', '📝', 'الاختبارات', 'إنشاء وإدارة الاختبارات والتقييمات.', 'إنشاء اختبار', 'orange')}
+            ${featureCard('#/groups', '👥', 'المجموعات والطلاب', 'إنشاء وإدارة مجموعات الطلاب.', 'الذهاب للمجموعات', 'blue')}
+            ${featureCard('#/games', '🎮', 'الألعاب التعليمية', 'بناء ألعاب تعليمية تفاعلية وممتعة.', 'بدء اللعبة', 'pink')}
             ${featureCard('#/content', '📚', 'المحتوى التعليمي', 'إدارة وعرض المحاضرات والمحتوى الدراسي.', 'تصفح المحتوى', 'teal')}
-            ${featureCard('#/quizzes', '📝', 'توليد الاختبارات', 'إنشاء وإدارة الاختبارات والتقييمات.', 'إنشاء اختبار', 'orange')}
-            ${featureCard('#/competitions', '📈', 'تتبع تقدم الطلاب', 'مراقبة أداء الطلاب وتقاريرهم.', 'عرض التقارير', 'gold')}
+            ${featureCard('#/ai-generator', '✨', 'الذكاء الاصطناعي', 'تحويل الـ PDF لدروس تفاعلية ممتعة.', 'توليد بالذكاء الاصطناعي', 'purple')}
+            ${featureCard('#/competitions', '📈', 'تتبع التقدم', 'مراقبة أداء الطلاب وتقاريرهم.', 'عرض التقارير', 'gold')}
           </div>
         </div>
       </section>
@@ -283,46 +273,6 @@
     try { I18n.apply(app); } catch {}
 
     loadHomeStats();
-  }
-
-  function summaryCard(label, initialValue, icon, colorClass) {
-    const idMap = {
-      'إجمالي الألعاب التعليمية': 'homeStatsGames',
-      'إجمالي الاختبارات': 'homeStatsQuizzes',
-      'إجمالي المجموعات': 'homeStatsGroups',
-      'إجمالي الطلاب': 'homeStatsStudents'
-    };
-    const id = idMap[label] || '';
-    return `
-      <div class="summary-card">
-        <div class="summary-content">
-          <span class="summary-label">${label}</span>
-          <span class="summary-value" id="${id}">${initialValue}</span>
-        </div>
-        <div class="summary-icon-box ${colorClass}">
-          <span class="summary-icon">${icon}</span>
-        </div>
-      </div>
-    `;
-  }
-
-  function featureCard(href, icon, title, desc, btnText, colorClass) {
-    return `
-      <div class="feature-card">
-        <div class="feature-header">
-          <div class="feature-icon-box ${colorClass}">
-            <span class="feature-icon">${icon}</span>
-          </div>
-          <h3 class="feature-title">${title}</h3>
-          <p class="feature-desc">${desc}</p>
-        </div>
-        <a href="${href}" class="feature-btn">${btnText}</a>
-      </div>
-    `;
-  }
-
-  function subPageLink(href, icon, title, desc, btnText, colorClass) {
-     return featureCard(href, icon, title, desc, btnText, colorClass);
   }
 
   function summaryCard(label, initialValue, icon, colorClass) {

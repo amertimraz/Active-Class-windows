@@ -546,6 +546,26 @@ body {
   border: 2px solid var(--border);
 }
 
+/* Header utility icon buttons (settings gear, etc.) */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  font-size: 1.2rem;
+  text-decoration: none;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  background: var(--card-hover);
+  transition: all 0.2s;
+}
+.icon-btn:hover {
+  color: var(--primary);
+  border-color: var(--border-light);
+}
+
 .logout-btn {
   background: none;
   border: none;
@@ -934,6 +954,22 @@ body.header-hidden .ge-floating-controls {
 .home-container {
   max-width: 1200px;
   margin: 0 auto;
+}
+
+/* Welcome header */
+.home-welcome {
+  margin-bottom: 1.5rem;
+}
+.home-title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0 0 0.25rem;
+}
+.home-subtitle {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  margin: 0;
 }
 
 .section-title {

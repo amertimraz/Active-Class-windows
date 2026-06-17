@@ -79,7 +79,8 @@
       "Bash(SHOT_DIR=\"/tmp/uishots\" node tests/__ui_shots.cjs)",
       "Read(//c/Users/ADAM-LAP/AppData/Local/Temp/uishots/**)",
       "Read(//f/tmp/uishots/**)",
-      "Read(//c/tmp/**)"
+      "Read(//c/tmp/**)",
+      "Bash(node --check public/router.js)"
     ]
   }
 }
