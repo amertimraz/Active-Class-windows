@@ -40,7 +40,7 @@ function createWindow() {
       allowRunningInsecureContent: false,
       experimentalFeatures: false,
       webSecurity: true,
-      sandbox: false,
+      sandbox: true,
       preload: path.join(__dirname, 'preload.js')
     }
   });
@@ -115,7 +115,7 @@ function createNumbersWindow() {
       allowRunningInsecureContent: false,
       experimentalFeatures: false,
       webSecurity: true,
-      sandbox: false,
+      sandbox: true,
       preload: path.join(__dirname, 'preload.js')
     }
   });
@@ -156,7 +156,7 @@ function createWheelWindow() {
       allowRunningInsecureContent: false,
       experimentalFeatures: false,
       webSecurity: true,
-      sandbox: false,
+      sandbox: true,
       preload: path.join(__dirname, 'preload.js')
     }
   });

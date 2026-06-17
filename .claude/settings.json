@@ -61,7 +61,17 @@
       "Bash(git reset *)",
       "Bash(node --check main.js)",
       "Bash(git rm *)",
-      "Bash(rm -f \"tests/__pw_verify.cjs\" \"tests/__pw_debug.cjs\" \"getComputedStyle\\(el\\).visibility\")"
+      "Bash(rm -f \"tests/__pw_verify.cjs\" \"tests/__pw_debug.cjs\" \"getComputedStyle\\(el\\).visibility\")",
+      "Bash(sed -i 's/sandbox: false/sandbox: true/g' main.js)",
+      "Bash(node --check server/ai-service.js)",
+      "Bash(npm view *)",
+      "PowerShell(Get-Process electron -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; Start-Sleep 2; $c = \\(Get-Process electron,node -ErrorAction SilentlyContinue | Measure-Object\\).Count; \"electron/node procs remaining: $c\")",
+      "Bash(grep -qiE \"added|changed|removed|up to date|error|npm error\" \"C:\\\\Users\\\\ADAM-LAP\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\f--Amer-ActiveClass-app-clean-classroom-manager\\\\543a3404-d351-40a9-9198-8e2c262e191c\\\\tasks\\\\bbb2ma0k2.output\")",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/electron/package.json'\\).version\\)\")",
+      "Bash(tee /tmp/app39.log)",
+      "Bash(powershell -NoProfile -Command \"\\(Get-Process electron -ErrorAction SilentlyContinue | Measure-Object\\).Count\")",
+      "Bash(curl -s -D - -o /dev/null http://localhost:5000/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} \\(expect 401\\)\\\\n\" http://localhost:5000/api/quizzes)"
     ]
   }
 }

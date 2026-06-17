@@ -25,8 +25,14 @@ async function generateQuizFromPDF(pdfPath, apiKey) {
     }
 
     // 2. Initialize Gemini API
+    // Model is overridable via GEMINI_MODEL; default to a current flash model
+    // (gemini-1.5-flash is being retired). responseMimeType makes the model
+    // emit raw JSON, so we no longer depend on stripping ``` fences.
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' }); // Fast and capable model
+    const model = genAI.getGenerativeModel({
+        model: process.env.GEMINI_MODEL || 'gemini-2.0-flash',
+        generationConfig: { responseMimeType: 'application/json' },
+    });
 
     // 3. Define the Prompt
     const prompt = `
