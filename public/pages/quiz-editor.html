@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <title data-i18n="quizzes.editor.page_title">محرر الأسئلة</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/pages/quizzes.css" />
+  <link rel="stylesheet" href="/pages/quiz-editor.css" />
+<script nonce="ac">
+  (function(){
+    try{
+      var theme = localStorage.getItem('cm_theme');
+      if(!theme){
+        fetch('/api/settings')
+          .then(function(r){ return r.ok ? r.json() : {}; })
+          .then(function(s){
+            var t = (s && s.theme) ? s.theme : 'light';
+            document.documentElement.setAttribute('data-theme', t);
+          })
+          .catch(function(){
+            document.documentElement.setAttribute('data-theme','light');
+          });
+      } else {
+        document.documentElement.setAttribute('data-theme', theme);
+      }
+      window.addEventListener('storage', function(e){
+        if(e.key === 'cm_theme' && e.newValue){
+          document.documentElement.setAttribute('data-theme', e.newValue);
+        }
+      });
+    }catch(_){ }
+  })();
+</script>
+</head>
+<body>
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay" style="display:none;">
+    <div class="loading-spinner">
+      <div class="spinner"></div>
+      <p data-i18n="quizzes.editor.saving">جاري الحفظ...</p>
+    </div>
+  </div>
+
+  <main class="editor-container">
+    <!-- Header -->
+    <header class="editor-header">
+      <div class="header-content">
+        <div class="title-section">
+          <h1 class="main-title"><span class="emoji">✏️</span> <span data-i18n="quizzes.editor.page_title">محرر الأسئلة</span></h1>
+          <div class="quiz-info">
+            <span id="quizName" class="quiz-name" data-i18n="quizzes.editor.loading_quiz">جاري التحميل...</span>
+          </div>
+        </div>
+        <div class="header-controls">
+          <button class="btn btn-secondary" id="goToQuizzes" data-i18n-title="quizzes.editor.back_quizzes" title="العودة للاختبارات">
+            <span class="btn-icon">🏠</span>
+            <span data-i18n="quizzes.editor.back_quizzes">العودة للاختبارات</span>
+          </button>
+          <button id="saveQuiz" class="btn btn-primary" data-i18n-title="common.save" title="حفظ">
+            <span class="btn-icon">💾</span>
+            <span data-i18n="common.save">حفظ</span>
+          </button>
+          <button id="previewQuiz" class="btn btn-secondary" data-i18n-title="quizzes.editor.preview" title="معاينة">
+            <span class="btn-icon">👁️</span>
+            <span data-i18n="quizzes.editor.preview">معاينة</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Toolbar -->
+    <section class="toolbar-section">
+      <div class="toolbar-card">
+        <div class="toolbar-left">
+          <div class="search-section">
+            <input type="text" id="searchInput" class="search-input" data-i18n-placeholder="quizzes.editor.search_placeholder" placeholder="🔍 ابحث في الأسئلة...">
+            <button id="clearSearch" class="btn btn-secondary" data-i18n="quizzes.editor.clear_search">مسح</button>
+          </div>
+          
+          <div class="filter-section">
+            <select id="typeFilter" class="form-select">
+              <option value="" data-i18n="quizzes.editor.types.all">جميع الأنواع</option>
+              <option value="mcq" data-i18n="quizzes.editor.types.mcq">اختيار متعدد</option>
+              <option value="tf" data-i18n="quizzes.editor.types.tf">صح/خطأ</option>
+              <option value="match" data-i18n="quizzes.editor.types.match">مطابقة</option>
+              <option value="fill" data-i18n="quizzes.editor.types.fill">ملء الفراغات</option>
+            </select>
+            
+            <select id="difficultyFilter" class="form-select">
+              <option value="" data-i18n="quizzes.editor.difficulty.all">جميع المستويات</option>
+              <option value="easy" data-i18n="quizzes.editor.difficulty.easy">سهل</option>
+              <option value="medium" data-i18n="quizzes.editor.difficulty.medium">متوسط</option>
+              <option value="hard" data-i18n="quizzes.editor.difficulty.hard">صعب</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="toolbar-right">
+          <div class="stats-section">
+            <span class="stat-item">
+              <span class="stat-label" data-i18n="quizzes.editor.stats.questions">الأسئلة:</span>
+              <span id="questionsCount" class="stat-value">0</span>
+            </span>
+            <span class="stat-item">
+              <span class="stat-label" data-i18n="quizzes.editor.stats.points">النقاط:</span>
+              <span id="totalPoints" class="stat-value">0</span>
+            </span>
+          </div>
+          
+          <button id="addQuestion" class="btn btn-primary" data-i18n-title="quizzes.editor.add_question" title="سؤال جديد">
+            <span class="btn-icon">➕</span>
+            <span data-i18n="quizzes.editor.add_question">سؤال جديد</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Questions List -->
+    <section class="questions-section">
+      <div class="section-card">
+        <div class="section-header">
+          <h2 class="section-title">
+            <span class="section-icon">❓</span>
+            <span data-i18n="quizzes.editor.list_title">قائمة الأسئلة</span>
+          </h2>
+          <div class="view-controls">
+            <button id="expandAll" class="btn btn-secondary" data-i18n="quizzes.editor.expand_all">توسيع الكل</button>
+            <button id="collapseAll" class="btn btn-secondary" data-i18n="quizzes.editor.collapse_all">طي الكل</button>
+          </div>
+        </div>
+        <div class="section-content">
+          <div id="questionsList" class="questions-list">
+            <!-- سيتم ملؤها بواسطة JavaScript -->
+          </div>
+
+          <!-- Grouped by Type Sections -->
+          <div id="groupedByType" class="grouped-by-type" style="margin-top: 1.5rem;"></div>
+          
+          <!-- Empty State -->
+          <div id="emptyState" class="empty-state">
+            <div class="empty-icon">❓</div>
+            <h3 data-i18n="quizzes.editor.empty.title">لا توجد أسئلة بعد</h3>
+            <p data-i18n="quizzes.editor.empty.desc">ابدأ بإضافة أول سؤال لاختبارك</p>
+            <button class="btn btn-primary" id="emptyAddQuestion" data-i18n-title="quizzes.editor.empty.add" title="إضافة سؤال">
+              <span class="btn-icon">➕</span>
+              <span data-i18n="quizzes.editor.empty.add">إضافة سؤال</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Question Modal -->
+  <div id="questionModal" class="modal-overlay" style="display:none;">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h3 class="modal-title" id="questionModalTitle" data-i18n="quizzes.editor.modal.add_title">إضافة سؤال جديد</h3>
+        <button class="modal-close" id="questionModalClose">✖</button>
+      </div>
+      <div class="modal-body">
+        <form id="questionForm" class="question-form-grid">
+          <!-- Type + Text + Image side-by-side -->
+          <div class="form-row row-full type-text-row">
+            <div class="form-group type-col">
+              <div class="type-settings-box">
+                <div class="form-group">
+                  <label class="form-label" data-i18n="quizzes.editor.modal.type_label">نوع السؤال</label>
+                  <select id="questionType" class="form-select" required>
+                    <option value="" data-i18n="quizzes.editor.modal.type_placeholder">اختر نوع السؤال</option>
+                    <option value="mcq" data-i18n="quizzes.editor.types.mcq">اختيار متعدد</option>
+                    <option value="tf" data-i18n="quizzes.editor.types.tf">صح/خطأ</option>
+                    <option value="match" data-i18n="quizzes.editor.types.match">مطابقة</option>
+                    <option value="fill" data-i18n="quizzes.editor.types.fill">ملء الفراغات</option>
+                  </select>
+                </div>
+                <div class="row-inline">
+                  <div class="form-group">
+                    <label class="form-label">مستوى الصعوبة</label>
+                    <select id="questionDifficulty" class="form-select">
+                      <option value="easy">سهل</option>
+                      <option value="medium" selected>متوسط</option>
+                      <option value="hard">صعب</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">النقاط</label>
+                    <input type="number" id="questionPoints" class="form-input" min="1" max="100" value="1">
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="text-image-box">
+              <div class="form-group text-col">
+                <label class="form-label">نص السؤال</label>
+                <textarea id="questionText" class="form-textarea" rows="3" required placeholder="اكتب السؤال هنا..."></textarea>
+              </div>
+              <div class="form-group image-col">
+                <label class="form-label">صورة السؤال (اختياري)</label>
+                <input type="file" id="questionImage" class="form-input" accept="image/*">
+                <div id="imagePreview" class="image-preview" style="display:none;">
+                  <img id="previewImg" src="" alt="معاينة الصورة">
+                  <button type="button" id="removeImage" class="btn btn-danger btn-small">حذف الصورة</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+
+
+          <!-- Options boxed -->
+          <div class="form-row row-full">
+            <div class="options-box">
+              <div id="optionsContainer" class="options-container">
+                <!-- سيتم ملؤها حسب نوع السؤال -->
+              </div>
+            </div>
+          </div>
+
+
+
+
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button id="saveQuestion" class="btn btn-primary">حفظ السؤال</button>
+        <button id="cancelQuestion" class="btn btn-secondary">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div id="deleteQuestionModal" class="modal-overlay" style="display:none;">
+    <div class="modal modal-small">
+      <div class="modal-header">
+        <h3 class="modal-title">تأكيد الحذف</h3>
+        <button class="modal-close" id="deleteQuestionModalClose">✖</button>
+      </div>
+      <div class="modal-body">
+        <p>هل أنت متأكد من حذف هذا السؤال؟</p>
+        <p class="warning-text">⚠️ هذا الإجراء لا يمكن التراجع عنه</p>
+      </div>
+      <div class="modal-footer">
+        <button id="confirmDeleteQuestion" class="btn btn-danger">حذف</button>
+        <button id="cancelDeleteQuestion" class="btn btn-secondary">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quiz Settings Modal -->
+  <div id="settingsModal" class="modal-overlay" style="display:none;">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h3 class="modal-title">إعدادات الاختبار</h3>
+        <button class="modal-close" id="settingsModalClose">✖</button>
+      </div>
+      <div class="modal-body">
+        <form id="settingsForm">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">اسم الاختبار</label>
+              <input type="text" id="settingsQuizName" class="form-input" required>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">وصف الاختبار</label>
+            <textarea id="settingsQuizDescription" class="form-textarea" rows="3"></textarea>
+          </div>
+
+          <div class="settings-section">
+            <h4>إعدادات العرض</h4>
+            <div class="checkbox-group">
+              <label class="checkbox-option">
+                <input type="checkbox" id="showResults">
+                <span>إظهار النتائج للطلاب</span>
+              </label>
+              <label class="checkbox-option">
+                <input type="checkbox" id="randomizeQuestions">
+                <span>ترتيب الأسئلة عشوائياً</span>
+              </label>
+              <label class="checkbox-option">
+                <input type="checkbox" id="randomizeOptions">
+                <span>ترتيب الخيارات عشوائياً</span>
+              </label>
+              <label class="checkbox-option">
+                <input type="checkbox" id="allowReview">
+                <span>السماح بمراجعة الإجابات</span>
+              </label>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button id="saveSettings" class="btn btn-primary">حفظ الإعدادات</button>
+        <button id="cancelSettings" class="btn btn-secondary">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Preview/Export Modal -->
+  <div id="previewModal" class="modal-overlay" style="display:none;">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h3 class="modal-title">معاينة الاختبار وتصدير</h3>
+        <button class="modal-close" id="previewModalClose">✖</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row" style="gap: 0.75rem; align-items:center;">
+          <button id="interactivePreview" class="btn btn-secondary">
+            <span class="btn-icon">👁️</span>
+            معاينة العرض
+          </button>
+          <button id="exportPdf" class="btn btn-primary">
+            <span class="btn-icon">📄</span>
+            تصدير الأسئلة PDF
+          </button>
+        </div>
+        <div id="previewPane" class="preview-pane" style="margin-top:1rem; max-height:60vh; overflow:auto; border:1px solid var(--border-color); border-radius: var(--radius-lg); padding:1rem; background:#fff;"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/pages/quiz-editor.js"></script>
+</body>
+</html>

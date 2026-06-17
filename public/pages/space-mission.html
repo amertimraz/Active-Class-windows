@@ -1,0 +1,81 @@
+<div class="sub-page-container">
+  <div class="page-top-bar">
+    <a class="page-back-btn" href="#/games">
+      <span class="icon">🎮</span>
+      <span>العودة للألعاب</span>
+    </a>
+  </div>
+
+  <main class="container">
+    <div id="game-ui" class="game-overlay">
+      <!-- Start Screen -->
+      <div id="start-screen" class="ui-screen active">
+        <div class="nebula-card">
+          <div class="game-logo">🚀</div>
+          <h1>مهمة الفضاء</h1>
+          <p>أجب على الأسئلة لتعزيز طاقة مركبتك واستكشاف المجرة</p>
+          
+          <div class="quiz-selector-area">
+            <label for="quizSelect">اختر موضوع المهمة:</label>
+            <select id="quizSelect" class="space-select">
+              <option value="">-- تحميل الاختبارات... --</option>
+            </select>
+          </div>
+
+          <div class="game-actions">
+            <button id="start-btn" class="space-btn primary" disabled>انطلاق المهمة 🚀</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quiz Overlay (Shown during game) -->
+      <div id="quiz-overlay" class="ui-screen">
+        <div class="question-container">
+          <div class="question-header">
+            <span class="q-count">السؤال <span id="current-q">1</span></span>
+            <div class="energy-bar"><div id="energy-fill"></div></div>
+          </div>
+          <h2 id="question-text">تحميل السؤال...</h2>
+          <div id="options-grid" class="options-grid"></div>
+        </div>
+      </div>
+
+      <!-- Result Screen -->
+      <div id="result-screen" class="ui-screen">
+        <div class="nebula-card">
+          <div id="result-icon">🌌</div>
+          <h2 id="result-title">انتهت المهمة</h2>
+          <div class="score-display">
+            <div class="score-item">
+              <span>النقاط</span>
+              <strong id="final-score">0</strong>
+            </div>
+            <div class="score-item">
+              <span>الدقة</span>
+              <strong id="final-accuracy">0%</strong>
+            </div>
+          </div>
+          <div class="game-actions">
+            <button id="restart-btn" class="space-btn">مهمة جديدة 🔄</button>
+            <a href="#/games" class="space-btn secondary">قائمة الألعاب</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live HUD -->
+      <div id="game-hud" class="game-hud">
+        <div class="hud-item">
+          <span class="hud-label">النقاط</span>
+          <span id="live-score" class="hud-value">0</span>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">المسافة</span>
+          <span id="live-dist" class="hud-value">0m</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phaser Canvas Container -->
+    <div id="phaser-game"></div>
+  </main>
+</div>

@@ -1,0 +1,51 @@
+<link rel="stylesheet" href="/pages/ai-generator.css">
+<div class="ai-generator-wrapper" style="direction: rtl;">
+    <!-- Header -->
+    <div class="ai-header">
+        <div>
+            <h1 class="ai-title">
+                مولد الدروس التفاعلية بالذكاء الاصطناعي
+            </h1>
+            <p class="ai-subtitle">قم برفع ملف PDF (شرح الدرس) وسيقوم الذكاء الاصطناعي بتحويله لتجربة تفاعلية ممتعة.</p>
+        </div>
+        <div class="ai-header-icon">
+            <i class="fas fa-magic"></i>
+        </div>
+    </div>
+
+    <div class="ai-grid">
+        <!-- Upload Section -->
+        <div class="ai-card">
+            <h2 class="ai-card-title"><i class="fas fa-file-pdf" style="margin-left: 0.5rem; color: #ef4444;"></i> رفع ملف PDF</h2>
+            
+            <div id="ai-dropzone" class="ai-dropzone">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <p class="ai-dropzone-title">اسحب وأفلت ملف الـ PDF هنا</p>
+                <p class="ai-dropzone-subtitle">أو اضغط لاختيار ملف</p>
+                <input type="file" id="ai-file-input" accept="application/pdf" style="display: none;">
+            </div>
+
+            <!-- Loading State (Hidden by default) -->
+            <div id="ai-loading" class="ai-loading-state">
+                <div class="ai-spinner"></div>
+                <p class="ai-loading-text">جاري المعالجة بواسطة الذكاء الاصطناعي...</p>
+                <p class="ai-loading-subtext">قد يستغرق هذا بضع ثوانٍ بناءً على حجم الملف</p>
+            </div>
+        </div>
+
+        <!-- Generated Lessons List -->
+        <div class="ai-card">
+            <h2 class="ai-card-title"><i class="fas fa-list" style="margin-left: 0.5rem; color: #6366f1;"></i> الدروس التفاعلية السابقة</h2>
+            
+            <div id="ai-lessons-list" class="ai-lessons-list">
+                <!-- Lessons will be injected here -->
+                <div class="ai-empty-state">
+                    <i class="fas fa-inbox"></i>
+                    <p>لا توجد دروس مولدة حتى الآن.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/pages/ai-generator.js"></script>
+</div>

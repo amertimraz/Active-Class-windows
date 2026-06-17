@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>نتائج الاختبارات - إدارة الفصول الدراسية</title>
+  <link rel="stylesheet" href="../css/common.css">
+  <link rel="stylesheet" href="quiz-results.css">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+<script nonce="ac">
+  (function(){
+    try{
+      var theme = localStorage.getItem('cm_theme');
+      if(!theme){
+        fetch('/api/settings')
+          .then(function(r){ return r.ok ? r.json() : {}; })
+          .then(function(s){
+            var t = (s && s.theme) ? s.theme : 'light';
+            document.documentElement.setAttribute('data-theme', t);
+          })
+          .catch(function(){
+            document.documentElement.setAttribute('data-theme','light');
+          });
+      } else {
+        document.documentElement.setAttribute('data-theme', theme);
+      }
+      window.addEventListener('storage', function(e){
+        if(e.key === 'cm_theme' && e.newValue){
+          document.documentElement.setAttribute('data-theme', e.newValue);
+        }
+      });
+    }catch(_){ }
+  })();
+</script>
+</head>
+<body>
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">جاري التحميل...</div>
+  </div>
+
+  <!-- Header -->
+  <header class="page-header">
+    <div class="header-content">
+      <div class="header-info">
+        <h1 id="quizTitle" class="page-title">نتائج الاختبار</h1>
+        <div class="breadcrumb">
+          <a href="/pages/quizzes.html">الاختبارات</a>
+          <span>›</span>
+          <span>النتائج</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="exportResults" class="btn btn-secondary">
+          📊 تصدير النتائج
+        </button>
+        <button id="printResults" class="btn btn-secondary">
+          🖨️ طباعة
+        </button>
+        <button id="backToQuizzes" class="btn btn-primary">
+          ← العودة للاختبارات
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Statistics Cards -->
+  <section class="stats-section">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">👥</div>
+        <div class="stat-content">
+          <div class="stat-number" id="totalSubmissions">0</div>
+          <div class="stat-label">إجمالي المشاركات</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📈</div>
+        <div class="stat-content">
+          <div class="stat-number" id="averageScore">0%</div>
+          <div class="stat-label">متوسط الدرجات</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🏆</div>
+        <div class="stat-content">
+          <div class="stat-number" id="highestScore">0%</div>
+          <div class="stat-label">أعلى درجة</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📉</div>
+        <div class="stat-content">
+          <div class="stat-number" id="lowestScore">0%</div>
+          <div class="stat-label">أقل درجة</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Filters and Search -->
+  <section class="filters-section">
+    <div class="filters-container">
+      <div class="search-group">
+        <input type="text" id="searchInput" placeholder="البحث في النتائج..." class="search-input">
+        <button id="clearSearch" class="search-clear">✕</button>
+      </div>
+      <div class="filter-group">
+        <select id="scoreFilter" class="filter-select">
+          <option value="">جميع الدرجات</option>
+          <option value="excellent">ممتاز (90-100%)</option>
+          <option value="very-good">جيد جداً (80-89%)</option>
+          <option value="good">جيد (70-79%)</option>
+          <option value="acceptable">مقبول (60-69%)</option>
+          <option value="weak">ضعيف (أقل من 60%)</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <select id="sortBy" class="filter-select">
+          <option value="score">ترتيب حسب الدرجة</option>
+          <option value="name">ترتيب حسب الاسم</option>
+          <option value="time">ترتيب حسب الوقت</option>
+          <option value="duration">ترتيب حسب المدة</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <select id="sortOrder" class="filter-select">
+          <option value="desc">تنازلي</option>
+          <option value="asc">تصاعدي</option>
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <!-- Results Table -->
+  <section class="results-section">
+    <div class="results-container">
+      <div class="results-header">
+        <h2>تفاصيل النتائج</h2>
+        <div class="results-count">
+          <span id="resultsCount">0</span> نتيجة
+        </div>
+      </div>
+      
+      <div class="table-container">
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th>الطالب</th>
+              <th>الدرجة</th>
+              <th>النسبة المئوية</th>
+              <th>الإجابات الصحيحة</th>
+              <th>الوقت المستغرق</th>
+              <th>تاريخ التسليم</th>
+              <th>الإجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="resultsTableBody">
+            <!-- Results will be rendered here -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Empty State -->
+      <div id="emptyState" class="empty-state" style="display: none;">
+        <div class="empty-icon">📊</div>
+        <h3>لا توجد نتائج</h3>
+        <p>لم يتم العثور على نتائج لهذا الاختبار بعد.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Question Analysis -->
+  <section class="analysis-section">
+    <div class="analysis-container">
+      <div class="analysis-header">
+        <h2>تحليل الأسئلة</h2>
+        <button id="toggleAnalysis" class="btn btn-outline">
+          <span id="toggleAnalysisText">إظهار التحليل</span>
+        </button>
+      </div>
+      
+      <div id="questionAnalysis" class="question-analysis" style="display: none;">
+        <!-- Question analysis will be rendered here -->
+      </div>
+    </div>
+  </section>
+
+  <!-- Student Detail Modal -->
+  <div id="studentModal" class="modal">
+    <div class="modal-content large">
+      <div class="modal-header">
+        <h2 id="studentModalTitle">تفاصيل إجابات الطالب</h2>
+        <button id="studentModalClose" class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="student-summary">
+          <div class="summary-card">
+            <div class="summary-score">
+              <div class="score-circle">
+                <span id="studentScore">0%</span>
+              </div>
+              <div class="score-details">
+                <div class="score-points">
+                  <span id="studentPoints">0</span> من <span id="studentTotalPoints">0</span> نقطة
+                </div>
+                <div class="score-grade" id="studentGrade">-</div>
+              </div>
+            </div>
+            <div class="summary-stats">
+              <div class="stat-item">
+                <span class="stat-label">الإجابات الصحيحة</span>
+                <span class="stat-value" id="studentCorrect">0</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">الإجابات الخاطئة</span>
+                <span class="stat-value" id="studentIncorrect">0</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">الأسئلة المتجاهلة</span>
+                <span class="stat-value" id="studentSkipped">0</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">الوقت المستغرق</span>
+                <span class="stat-value" id="studentDuration">0 دقيقة</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div id="studentAnswers" class="student-answers">
+          <!-- Student answers will be rendered here -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="printStudentResult" class="btn btn-secondary">طباعة النتيجة</button>
+        <button id="closeStudentModal" class="btn btn-primary">إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="quiz-results.js"></script>
+</body>
+</html>

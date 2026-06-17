@@ -1,0 +1,501 @@
+/* Accessibility & Responsive Design Enhancements */
+
+/* Focus Visible Styles for Better Keyboard Navigation */
+:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: var(--radius);
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Skip to Main Content Link */
+.skip-to-main {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: var(--primary);
+  color: white;
+  padding: 8px;
+  border-radius: var(--radius);
+  z-index: 1000;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.skip-to-main:focus {
+  top: 0;
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: more) {
+  :root {
+    --text: #000000;
+    --text-muted: #333333;
+    --border: #000000;
+    --primary: #0000ff;
+  }
+  
+  [data-theme="dark"] {
+    --text: #ffffff;
+    --text-muted: #e0e0e0;
+    --border: #ffffff;
+    --primary: #ffff00;
+  }
+}
+
+/* Dark mode is handled via [data-theme="dark"] in styles.css for better control */
+
+/* Enhanced Mobile Responsiveness */
+@media (max-width: 1400px) {
+  .container {
+    max-width: 100%;
+  }
+  
+  .grid {
+    grid-template-columns: repeat(4, minmax(200px, 1fr));
+  }
+}
+
+@media (max-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(180px, 1fr));
+  }
+  
+  .btn {
+    padding: 10px 20px;
+    font-size: 14px;
+  }
+  
+  .card {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .container {
+    margin: 24px auto;
+    padding: 0 16px;
+  }
+  
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .tools-grid {
+    max-width: 100%;
+  }
+  
+  .tools-grid .card {
+    width: 100%;
+    height: auto;
+    aspect-ratio: auto;
+  }
+  
+  .brand {
+    padding: 12px 16px;
+    gap: 8px;
+  }
+  
+  .brand h1 {
+    font-size: 18px;
+  }
+  
+  .brand-logo-small {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .quick-tools {
+    gap: 6px;
+  }
+  
+  .quick-tools .qt-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+  }
+  
+  .section-title {
+    font-size: 20px;
+    margin: 24px 0 12px;
+  }
+  
+  .panel {
+    padding: 20px;
+  }
+  
+  .btn {
+    width: 100%;
+  }
+  
+  .modal {
+    width: 95%;
+    max-height: 95vh;
+  }
+  
+  .notification {
+    width: calc(100% - 40px);
+    left: 20px;
+    right: 20px;
+    bottom: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    margin: 16px auto;
+    padding: 0 12px;
+  }
+  
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .tools-grid {
+    gap: 12px;
+  }
+  
+  .brand {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 12px;
+  }
+  
+  .brand-left {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .brand h1 {
+    font-size: 16px;
+  }
+  
+  .quick-tools {
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  
+  .quick-tools .qt-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+  
+  .section-title {
+    font-size: 18px;
+  }
+  
+  .card {
+    padding: 16px;
+    gap: 12px;
+  }
+  
+  .card .icon {
+    width: 80px;
+    height: 80px;
+    font-size: 40px;
+  }
+  
+  .card .title {
+    font-size: 16px;
+  }
+  
+  .panel {
+    padding: 16px;
+  }
+  
+  .btn {
+    padding: 12px 16px;
+    font-size: 14px;
+    width: 100%;
+  }
+  
+  .tab-btn {
+    padding: 12px 16px;
+    font-size: 13px;
+  }
+  
+  .modal {
+    width: 98%;
+  }
+  
+  .actions {
+    flex-direction: column;
+  }
+  
+  .actions .btn {
+    width: 100%;
+  }
+  
+  .notification {
+    font-size: 14px;
+    padding: 14px 16px;
+  }
+}
+
+/* Tablet Optimization */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .tools-grid {
+    max-width: calc((200px + 14px) * 2);
+  }
+  
+  .tools-grid .card {
+    width: 200px;
+    height: 200px;
+  }
+}
+
+/* Large Screen Optimization */
+@media (min-width: 1920px) {
+  .container {
+    max-width: 1400px;
+    margin: 40px auto;
+  }
+  
+  .grid {
+    grid-template-columns: repeat(6, minmax(240px, 1fr));
+  }
+  
+  .tools-grid {
+    max-width: calc((260px + 18px) * 3);
+  }
+  
+  .tools-grid .card {
+    width: 260px;
+    height: 260px;
+    padding: 28px;
+  }
+  
+  .card .icon {
+    width: 140px;
+    height: 140px;
+    font-size: 64px;
+  }
+}
+
+/* Touch-friendly Buttons */
+@media (hover: none) and (pointer: coarse) {
+  .btn,
+  .card,
+  .icon-btn,
+  .tab-btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .btn,
+  .card {
+    padding: 16px;
+  }
+  
+  button {
+    min-height: 44px;
+  }
+  
+  input,
+  select,
+  textarea {
+    padding: 14px 16px;
+    font-size: 16px;
+  }
+}
+
+/* Landscape Orientation */
+@media (orientation: landscape) and (max-height: 600px) {
+  .app-header {
+    position: relative;
+  }
+  
+  .brand {
+    padding: 8px 12px;
+  }
+  
+  .container {
+    margin: 16px auto;
+  }
+  
+  .section-title {
+    margin: 12px 0 8px;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .app-header,
+  .footer,
+  .quick-tools,
+  .btn,
+  .notification,
+  [hidden] {
+    display: none !important;
+  }
+  
+  body {
+    background: white;
+    color: black;
+  }
+  
+  .card {
+    page-break-inside: avoid;
+    box-shadow: none;
+    border: 1px solid #ccc;
+  }
+  
+  a {
+    text-decoration: underline;
+  }
+}
+
+/* Text Selection */
+::selection {
+  background: var(--primary);
+  color: white;
+}
+
+::-moz-selection {
+  background: var(--primary);
+  color: white;
+}
+
+/* Link Underline Animation */
+a {
+  position: relative;
+  text-decoration: none;
+  color: var(--primary);
+  transition: color 0.3s ease;
+}
+
+a::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: var(--primary);
+  transition: width 0.3s ease;
+}
+
+a:hover::after {
+  width: 100%;
+}
+
+/* Reduced Motion Support for Critical Elements */
+@media (prefers-reduced-motion: reduce) {
+  .card:hover {
+    animation: none;
+  }
+  
+  .card .icon {
+    animation: none;
+  }
+  
+  .btn::before {
+    animation: none;
+  }
+  
+  .tab-btn.active::after {
+    animation: none;
+  }
+  
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Enhanced Focus States */
+.btn:focus-visible {
+  box-shadow: 0 0 0 4px var(--primary-bg);
+}
+
+.card:focus-visible {
+  box-shadow: var(--shadow-lg);
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  box-shadow: 0 0 0 3px var(--primary-bg);
+}
+
+/* Improved Scrolling Performance */
+.card,
+.list-item,
+.btn {
+  will-change: transform;
+}
+
+/* Font Size Adjustment for Better Readability */
+html {
+  font-size: 16px;
+}
+
+@media (max-width: 768px) {
+  html {
+    font-size: 14px;
+  }
+}
+
+/* Line Height Optimization */
+body {
+  line-height: 1.6;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.2;
+}
+
+/* Letter Spacing for Better Readability */
+.card .title,
+.section-title,
+.btn,
+h1, h2, h3 {
+  letter-spacing: -0.01em;
+}
+
+/* Code Block Styling */
+code, pre {
+  font-family: 'Courier New', monospace;
+  background: var(--primary-bg);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+pre {
+  padding: 12px;
+  overflow-x: auto;
+}
+
+/* Table Styling for Better Accessibility */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+}
+
+thead {
+  background: var(--primary-bg);
+  font-weight: 600;
+}
+
+th, td {
+  padding: 12px;
+  text-align: right;
+  border-bottom: 1px solid var(--border);
+}
+
+tbody tr:hover {
+  background: var(--card-hover);
+}

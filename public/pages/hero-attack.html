@@ -1,0 +1,96 @@
+<div class="sub-page-container">
+  <div class="page-top-bar">
+    <a class="page-back-btn" href="#/games">
+      <span class="icon">🎮</span>
+      <span>العودة للألعاب</span>
+    </a>
+  </div>
+  <div class="game-container">
+    <section id="start-screen" class="screen active">
+      <div class="start-card">
+        <div class="start-icon">⚔️</div>
+        <h1>هجوم الأبطال</h1>
+        <p>حل مسائل حسابية، وكل إجابة صحيحة تضرب العدو. لديك 3 قلوب فقط!</p>
+        <div class="start-actions">
+          <button id="startBtn" class="btn primary">ابدأ اللعبة</button>
+          <a class="btn ghost" href="#/games">العودة للألعاب</a>
+        </div>
+      </div>
+    </section>
+
+    <section id="setup-screen" class="screen">
+      <div class="setup-container">
+        <header class="setup-header">
+          <h2>⚔️ إعدادات هجوم الأبطال</h2>
+          <p>اختر الإعدادات ثم ابدأ المعركة</p>
+        </header>
+        <section class="setup-grid">
+          <div class="setup-card">
+            <label for="playerCount">عدد اللاعبين</label>
+            <input type="number" id="playerCount" min="1" max="6" value="2" />
+          </div>
+          <div class="setup-card">
+            <label for="levelSelect">مستوى الصعوبة</label>
+            <select id="levelSelect">
+              <option value="easy">سهل</option>
+              <option value="medium">متوسط</option>
+              <option value="hard">صعب</option>
+            </select>
+          </div>
+          <div class="setup-card">
+            <label>العمليات</label>
+            <div class="operations">
+              <label><input type="checkbox" class="op-check" value="add" checked /> جمع</label>
+              <label><input type="checkbox" class="op-check" value="sub" checked /> طرح</label>
+              <label><input type="checkbox" class="op-check" value="mul" checked /> ضرب</label>
+              <label><input type="checkbox" class="op-check" value="div" /> قسمة</label>
+            </div>
+            <div class="operations-note" id="operationsNote">بدون كسور</div>
+          </div>
+          <div class="setup-card">
+            <label for="targetScore">عدد الإجابات الصحيحة للفوز</label>
+            <input type="number" id="targetScore" min="3" max="30" value="10" />
+          </div>
+        </section>
+
+        <div class="setup-card full" id="playerNames"></div>
+
+        <div class="setup-actions">
+          <button id="startGame" class="btn primary">ابدأ المعركة</button>
+          <button id="backToStart" class="btn ghost">رجوع</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="game-screen" class="screen">
+      <main class="hero-attack-game">
+        <header class="game-header">
+          <div class="game-title">
+            <h2>⚔️ هجوم الأبطال</h2>
+            <p>كل لاعب يجاوب ويهزم عدوه بنفسه</p>
+          </div>
+          <div class="game-actions">
+            <button id="restartGame" class="btn primary">إعادة</button>
+            <button id="backToSetup" class="btn ghost">الإعدادات</button>
+          </div>
+        </header>
+        <section class="game-stage">
+          <div class="player-panels" id="playerPanels"></div>
+        </section>
+      </main>
+
+      <div class="winner-modal" id="winnerModal" style="display:none;">
+        <div class="winner-card">
+          <div class="winner-icon">🏆</div>
+          <h2 id="winnerTitle"></h2>
+          <p id="winnerSubtitle"></p>
+          <div id="winnersStats" style="display: grid; gap: 12px; margin-top: 16px; text-align: right;"></div>
+          <div class="winner-actions">
+            <button id="playAgain" class="btn primary">لعبة جديدة</button>
+            <button id="closeWinner" class="btn ghost">إغلاق</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>

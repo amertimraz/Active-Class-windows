@@ -1,0 +1,107 @@
+<div class="sub-page-container wm-page">
+  <div class="page-top-bar">
+    <a class="page-back-btn" href="#/game-engine">
+      <span class="icon">🎮</span>
+      <span>محرك الألعاب</span>
+    </a>
+    <div class="wm-top-info">
+      <span id="wm-round-info" class="wm-round-badge">الجولة 1</span>
+    </div>
+  </div>
+
+  <div class="wm-game-wrapper">
+    <div id="wm-canvas-container" class="wm-canvas-container game-container"></div>
+
+    <div id="wm-hud" class="wm-hud" style="display:none;">
+      <div class="wm-hud-item">
+        <span class="wm-hud-label">النقاط</span>
+        <span class="wm-hud-val" id="wm-score">0</span>
+      </div>
+      <div class="wm-hud-item wm-hud-timer-wrap">
+        <span class="wm-hud-label">الوقت</span>
+        <span class="wm-hud-val" id="wm-timer">60</span>
+      </div>
+      <div class="wm-hud-item">
+        <span class="wm-hud-label">السؤال</span>
+        <span class="wm-hud-val"><span id="wm-current-q">1</span>/<span id="wm-total-q">10</span></span>
+      </div>
+      <div class="wm-progress-bar">
+        <div id="wm-progress-fill" class="wm-progress-fill"></div>
+      </div>
+    </div>
+
+    <div id="wm-start-screen" class="wm-screen wm-active">
+      <div class="wm-screen-card">
+        <div class="wm-start-icon">🧩</div>
+        <h2>مطابقة الكلمات</h2>
+        <p>اختر الإجابة الصحيحة لكل سؤال. كل إجابة صحيحة تمنحك نقاطاً إضافية!</p>
+
+        <div class="wm-quiz-selector">
+          <label>اختر موضوع اللعبة:</label>
+          <select id="wm-quiz-select" class="wm-select">
+            <option value="">جاري التحميل...</option>
+          </select>
+        </div>
+
+        <div class="wm-difficulty-row">
+          <button class="wm-diff-btn active" data-diff="easy">سهل (120 ث)</button>
+          <button class="wm-diff-btn" data-diff="medium">متوسط (60 ث)</button>
+          <button class="wm-diff-btn" data-diff="hard">صعب (30 ث)</button>
+        </div>
+
+        <button id="wm-start-btn" class="wm-btn wm-btn-primary" disabled>
+          🚀 ابدأ اللعبة
+        </button>
+      </div>
+    </div>
+
+    <div id="wm-question-screen" class="wm-screen">
+      <div class="wm-question-card" id="wm-question-card">
+        <div class="wm-q-header">
+          <span class="wm-q-category" id="wm-q-category">سؤال</span>
+        </div>
+        <h2 class="wm-question-text" id="wm-question-text">...</h2>
+        <div class="wm-options-grid" id="wm-options-grid"></div>
+      </div>
+    </div>
+
+    <div id="wm-result-screen" class="wm-screen">
+      <div class="wm-screen-card">
+        <div class="wm-result-icon" id="wm-result-icon">🏆</div>
+        <h2 id="wm-result-title">انتهت اللعبة!</h2>
+        <div class="wm-result-stats">
+          <div class="wm-result-stat">
+            <span class="wm-stat-val" id="wm-final-score">0</span>
+            <span class="wm-stat-label">النقاط الإجمالية</span>
+          </div>
+          <div class="wm-result-stat">
+            <span class="wm-stat-val" id="wm-final-correct">0/0</span>
+            <span class="wm-stat-label">الإجابات الصحيحة</span>
+          </div>
+          <div class="wm-result-stat">
+            <span class="wm-stat-val" id="wm-final-accuracy">0%</span>
+            <span class="wm-stat-label">نسبة الدقة</span>
+          </div>
+          <div class="wm-result-stat">
+            <span class="wm-stat-val" id="wm-final-time">0 ث</span>
+            <span class="wm-stat-label">متوسط الوقت</span>
+          </div>
+        </div>
+        <div class="wm-result-message" id="wm-result-message"></div>
+        <div class="wm-result-actions">
+          <button id="wm-replay-btn" class="wm-btn wm-btn-primary">🔄 العب مرة أخرى</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/6.5.10/browser/pixi.min.js"></script>
+<script src="/game-engine/engine.js"></script>
+<script src="/game-engine/core/game-loop.js"></script>
+<script src="/game-engine/core/scene-manager.js"></script>
+<script src="/game-engine/core/asset-loader.js"></script>
+<script src="/game-engine/core/input-manager.js"></script>
+<script src="/game-engine/core/audio-engine.js"></script>
+<script src="/game-engine/core/ui-system.js"></script>
+<script src="/game-engine/core/educational-api.js"></script>

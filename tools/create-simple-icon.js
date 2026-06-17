@@ -1,0 +1,34 @@
+// إنشاء أيقونة PNG بسيطة باستخدام Canvas
+const fs = require('fs');
+const path = require('path');
+
+// إنشاء SVG بسيط
+const svgIcon = `
+<svg width="256" height="256" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4f46e5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7c3aed;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- خلفية دائرية -->
+  <circle cx="128" cy="128" r="120" fill="url(#grad1)" stroke="rgba(255,255,255,0.3)" stroke-width="4"/>
+  
+  <!-- النص الرئيسي -->
+  <text x="128" y="140" font-family="Arial, sans-serif" font-size="80" font-weight="bold" 
+        text-anchor="middle" fill="white">AC</text>
+  
+  <!-- النص الفرعي -->
+  <text x="128" y="200" font-family="Arial, sans-serif" font-size="20" font-weight="bold" 
+        text-anchor="middle" fill="white">Active Class</text>
+</svg>
+`;
+
+// حفظ SVG
+const svgPath = path.join(__dirname, 'assets', 'icon.svg');
+fs.writeFileSync(svgPath, svgIcon);
+
+console.log('تم إنشاء أيقونة SVG في:', svgPath);
+console.log('يمكنك الآن تحويلها إلى PNG باستخدام أي أداة تحويل أونلاين');
+console.log('أو استخدام الأيقونة SVG مباشرة');

@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>المؤقت الذكي - Active Class</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/shared-design.css">
+  <link rel="stylesheet" href="/pages/timer.css">
+  <script nonce="ac">
+    // Apply saved theme immediately for standalone window, and live-update on changes
+    (function(){
+      try {
+        var theme = localStorage.getItem('cm_theme') || 'light';
+        document.documentElement.setAttribute('data-theme', theme);
+        window.addEventListener('storage', function(e){
+          if (e.key === 'cm_theme' && e.newValue){
+            document.documentElement.setAttribute('data-theme', e.newValue);
+          }
+        });
+      } catch(_){}
+    })();
+  </script>
+  <style>
+    /* Standalone-specific overrides */
+    :root {
+      --surface: var(--card);
+      --background: transparent;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      background: transparent !important;
+      font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      padding: 0;
+      direction: rtl;
+      -webkit-app-region: no-drag;
+    }
+
+    .timer-modal-backdrop {
+      background: transparent !important;
+      position: static;
+      display: block !important;
+      height: 100%;
+      align-items: stretch;
+      justify-content: center;
+      padding: 0;
+    }
+
+    .timer-modal-card {
+      background: var(--card);
+      border-radius: 18px;
+      box-shadow: 0 18px 48px rgba(15,23,42,.18);
+      width: min(480px, 100%);
+      position: relative;
+      border: none;
+      display: flex;
+      flex-direction: column;
+      transition: transform .15s ease;
+      user-select: none;
+      transform: none;
+      margin: 0;
+      overflow: hidden;
+    }
+
+    .timer-modal-card.is-dragging {
+      transform: none !important;
+      cursor: default;
+    }
+
+    .timer-modal-card.is-fullscreen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: 100vw !important;
+      height: 100vh !important;
+      max-width: none;
+      border-radius: 0;
+      z-index: 9999;
+    }
+
+    .timer-modal-header {
+      -webkit-app-region: drag;
+      cursor: default;
+      background: linear-gradient(135deg, rgba(99,102,241,.08), rgba(168,85,247,.08));
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px 12px;
+      border-bottom: none;
+      user-select: none;
+    }
+
+    .timer-modal-header h3 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+      pointer-events: none;
+    }
+
+    .timer-modal-toolbar,
+    .timer-modal-toolbar *,
+    .timer-collapse-btn,
+    .timer-icon-btn {
+      -webkit-app-region: no-drag;
+    }
+
+    .timer-modal-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .timer-icon-btn {
+      border: none;
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      font-size: 18px;
+      background: rgba(148,163,184,.2);
+      color: var(--text);
+      cursor: pointer;
+      transition: all .2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .timer-icon-btn:hover {
+      background: rgba(148,163,184,.35);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+      border-color: rgba(255,255,255,0.2);
+    }
+
+    .timer-icon-btn:active {
+      transform: scale(0.95) translateY(-1px);
+    }
+
+    .timer-icon-btn.is-active {
+      background: linear-gradient(135deg, var(--primary), #60a5fa);
+      color: white;
+      box-shadow: 0 6px 16px rgba(59,130,246,0.4);
+      border-color: rgba(255,255,255,0.3);
+    }
+
+    .timer-hidden {
+      display: block !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+    }
+
+    .timer-content {
+      padding: 20px;
+      text-align: center;
+    }
+
+    .timer-display {
+      font-size: 6.75rem; /* 50% bigger in normal mode */
+      font-weight: 900;
+      color: var(--primary);
+      margin: 25px 0;
+      font-family: 'Cairo', monospace;
+      text-shadow: 0 4px 8px rgba(59,130,246,0.2), 0 2px 4px rgba(0,0,0,0.1);
+      transition: all 0.3s ease;
+      line-height: 1.1;
+      letter-spacing: 0.05em;
+    }
+
+    .timer-display.is-fullscreen {
+      font-size: clamp(12rem, 28vw, 44rem) !important;
+      margin: 0.2em 0 !important;
+      text-shadow: 0 16px 32px rgba(0,0,0,0.4), 0 0 60px rgba(59,130,246,0.3), 0 0 120px rgba(59,130,246,0.1);
+      letter-spacing: 0.12em;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    /* ثبّت حجم أزرار التحكم في ملء الشاشة */
+    .timer-modal-card.is-fullscreen .timer-btn{
+      font-size:18px !important;
+      padding:14px 28px !important;
+      min-width:140px !important;
+    }
+
+    /* تنظيم الواجهة في وضع ملء الشاشة */
+    .timer-modal-card.is-fullscreen .timer-modal-header { display: flex; }
+    .timer-modal-card.is-fullscreen .timer-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 8vh 3vw 16vh;
+    }
+
+    .timer-display.is-warning {
+      color: var(--warning);
+      animation: pulse 1s infinite;
+    }
+
+    .timer-display.is-danger {
+      color: var(--error);
+      animation: pulse 0.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+
+    .timer-controls {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin: 25px 0 15px;
+      flex-wrap: wrap;
+    }
+
+    /* صف نوع العد + الأوقات المقترحة على سطر واحد */
+    .timer-mode-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: nowrap;
+      margin: 10px 0 6px;
+    }
+
+    .count-type-options {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      white-space: nowrap;
+      font-size: 80%; /* ~20% smaller */
+    }
+
+    .count-type-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #ffffff, #f8fafc);
+      border: 1px solid var(--border);
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .count-type-label input {
+      transform: scale(1.05);
+      accent-color: var(--primary);
+    }
+
+    .preset-inline {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 0 1 auto;
+      min-width: 0;
+    }
+
+    .preset-select-label {
+      font-size: 11.2px; /* ~20% smaller */
+      color: var(--text-muted);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .preset-select--sm {
+      padding: 8px 10px;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      font-size: 11.2px; /* ~20% smaller */
+      font-weight: 700;
+      background: linear-gradient(135deg, #ffffff, #f8fafc);
+      max-width: 200px;
+    }
+
+    .timer-input-group {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      margin: 20px 0;
+      flex-wrap: wrap;
+    }
+
+    .timer-input-group label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .timer-input-group input {
+      width: 80px;
+      padding: 6px 10px; /* Reduce height by ~50% */
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      text-align: center;
+      font-size: 16px; /* smaller to match reduced height */
+      font-weight: 700;
+      font-family: 'Cairo', sans-serif;
+      transition: all .2s ease;
+      background: linear-gradient(135deg, #ffffff, #f8fafc);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .timer-input-group input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.15), 0 4px 8px rgba(0,0,0,0.1);
+      transform: translateY(-1px);
+    }
+
+    .btn {
+      padding: 16px 32px;
+      border: none;
+      border-radius: 14px;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: 'Cairo', sans-serif;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+      min-width: 140px;
+      position: relative;
+      overflow: hidden;
+      border: 2px solid rgba(255,255,255,.2);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), #60a5fa);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+      transform: translateY(-3px);
+      box-shadow: 0 10px 20px rgba(59,130,246,0.4);
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, var(--success), #34d399);
+      color: white;
+    }
+
+    .btn-success:hover {
+      background: linear-gradient(135deg, #059669, var(--success));
+      transform: translateY(-3px);
+      box-shadow: 0 10px 20px rgba(16,185,129,0.4);
+    }
+
+    .btn-warning {
+      background: linear-gradient(135deg, var(--warning), #fbbf24);
+      color: white;
+    }
+
+    .btn-warning:hover {
+      background: linear-gradient(135deg, #d97706, var(--warning));
+      transform: translateY(-3px);
+      box-shadow: 0 10px 20px rgba(245,158,11,0.4);
+    }
+
+    .btn-secondary {
+      background: linear-gradient(135deg, var(--secondary), #64748b);
+      color: white;
+    }
+
+    .btn-secondary:hover {
+      background: linear-gradient(135deg, #475569, var(--secondary));
+      transform: translateY(-3px);
+      box-shadow: 0 10px 20px rgba(100,116,139,0.4);
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none !important;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+    }
+
+    .timer-presets {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin: 15px 0;
+      flex-wrap: wrap;
+    }
+
+    .preset-btn {
+      padding: 12px 24px;
+      border: 2px solid var(--border);
+      background: linear-gradient(135deg, #ffffff, #f8fafc);
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: 'Cairo', sans-serif;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+      min-width: 80px;
+      border: 2px solid rgba(59,130,246,0.2);
+    }
+
+    .preset-btn:hover {
+      border-color: var(--primary);
+      background: linear-gradient(135deg, var(--primary), #60a5fa);
+      color: white;
+      transform: translateY(-3px);
+      box-shadow: 0 8px 16px rgba(59,130,246,0.3);
+    }
+
+    .timer-status {
+      margin: 15px 0;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .timer-progress {
+      width: 100%;
+      height: 6px;
+      background: var(--border-light);
+      border-radius: 3px;
+      overflow: hidden;
+      margin: 20px 0;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .timer-progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--primary-light));
+      transition: width 1s linear;
+      border-radius: 3px;
+    }
+
+    .timer-toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: var(--success);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: 'Cairo', sans-serif;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+      z-index: 10000;
+    }
+
+    .timer-toast.show {
+      transform: translateX(0);
+    }
+
+    .timer-toast.warning {
+      background: var(--warning);
+    }
+
+    .timer-toast.error {
+      background: var(--error);
+    }
+
+    /* أنماط خيارات نوع العد */
+    .timer-mode-group {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      margin: 15px 0 20px;
+      padding: 15px;
+      background: linear-gradient(135deg, rgba(99,102,241,.05), rgba(168,85,247,.05));
+      border-radius: 12px;
+      border: 1px solid rgba(99,102,241,.1);
+    }
+
+    .mode-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-muted);
+      transition: all 0.2s ease;
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 2px solid transparent;
+    }
+
+    .mode-label:hover {
+      color: var(--primary);
+      background: rgba(59,130,246,0.05);
+      border-color: rgba(59,130,246,0.2);
+    }
+
+    .mode-label input[type="radio"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--primary);
+    }
+
+    .mode-label input[type="radio"]:checked + .mode-text {
+      color: var(--primary);
+      font-weight: 700;
+    }
+
+    /* أنماط القائمة المنسدلة للإعدادات المسبقة */
+    .timer-presets-wrapper {
+      margin: 15px 0 20px;
+      text-align: center;
+    }
+
+    .preset-select-label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .preset-select {
+      width: 100%;
+      max-width: 300px;
+      padding: 12px 16px;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      font-family: 'Cairo', sans-serif;
+      background: linear-gradient(135deg, #ffffff, #f8fafc);
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .preset-select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.15), 0 4px 8px rgba(0,0,0,0.1);
+      transform: translateY(-1px);
+    }
+
+    .preset-select:hover {
+      border-color: var(--primary-light);
+      background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+    }
+
+    /* تحسين عرض الأزرار في وضع ملء الشاشة */
+    .timer-modal-card.is-fullscreen .timer-controls {
+      position: fixed;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10000;
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(10px);
+      padding: 20px 30px;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .timer-modal-card.is-fullscreen .timer-status {
+      position: fixed;
+      top: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10000;
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(10px);
+      padding: 15px 25px;
+      border-radius: 15px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+      border: 1px solid rgba(255,255,255,0.2);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+  </style>
+</head>
+<body>
+  <div id="timer-modal" class="timer-modal-backdrop">
+    <div class="timer-modal-card" role="dialog" aria-modal="true" aria-labelledby="timer-modal-title" tabindex="-1" data-modal-card>
+      <div class="timer-modal-header" data-drag-handle>
+        <h3 id="timer-modal-title">المؤقت الذكي</h3>
+        <div class="timer-modal-toolbar">
+          <button type="button" class="timer-icon-btn timer-collapse-btn" data-toggle-form aria-label="طي خيارات الإعداد" aria-expanded="true">
+            <span aria-hidden="true">⌄</span>
+          </button>
+          <button type="button" class="timer-icon-btn timer-fullscreen-btn" data-fullscreen aria-label="ملء الشاشة">⛶</button>
+          <button type="button" class="timer-icon-btn timer-pin-btn" data-pin aria-label="تثبيت النافذة" aria-pressed="false">📌</button>
+          <button type="button" class="timer-icon-btn" data-minimize aria-label="تصغير">—</button>
+          <button type="button" class="timer-icon-btn" data-close aria-label="إغلاق">×</button>
+        </div>
+      </div>
+      
+      <div class="timer-content">
+        <div class="timer-form-wrapper" data-form-wrapper>
+          <!-- خيار نوع العد + الإعداد السريع في سطر واحد -->
+          <div class="timer-mode-row">
+            <div class="count-type-options">
+              <label class="count-type-label" style="display:none">
+                <input type="radio" name="countType" value="countdown" checked>
+                <span class="count-type-text">تنازلي</span>
+              </label>
+              <label class="count-type-label" style="display:none">
+                <input type="radio" name="countType" value="countup">
+                <span class="count-type-text">تصاعدي</span>
+              </label>
+              <label class="preset-select-label" style="margin-inline-end:6px">نوع العد:</label>
+              <select class="preset-select preset-select--sm" data-count-type>
+                <option value="countdown" selected>تنازلي</option>
+                <option value="countup">تصاعدي</option>
+              </select>
+            </div>
+            <div class="preset-inline preset-container">
+              <label class="preset-select-label">الأوقات المقترحة:</label>
+              <select class="preset-select preset-select--sm" data-preset-select>
+                <option value="">اختيار سريع...</option>
+                <option value="30">30 ثانية</option>
+                <option value="60">1 دقيقة</option>
+                <option value="120">2 دقيقة</option>
+                <option value="180">3 دقيقة</option>
+                <option value="300">5 دقائق</option>
+                <option value="600">10 دقائق</option>
+                <option value="900">15 دقيقة</option>
+                <option value="1200">20 دقيقة</option>
+                <option value="1800">30 دقيقة</option>
+                <option value="2700">45 دقيقة</option>
+                <option value="3600">1 ساعة</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="timer-input-group">
+            <label>
+              ساعات
+              <input type="number" min="0" max="23" value="0" data-hours>
+            </label>
+            <label>
+              دقائق
+              <input type="number" min="0" max="59" value="5" data-minutes>
+            </label>
+            <label>
+              ثواني
+              <input type="number" min="0" max="59" value="0" data-seconds>
+            </label>
+          </div>
+        </div>
+
+        <div class="timer-display" data-display>05:00</div>
+        
+        <div class="timer-progress">
+          <div class="timer-progress-bar" data-progress-bar style="width: 100%"></div>
+        </div>
+        
+        <div class="timer-controls">
+          <button class="timer-btn timer-btn-start" data-start-pause>ابدأ</button>
+          <button class="timer-btn timer-btn-reset" data-reset>إعادة تعيين</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script nonce="ac">
+    // Timer Modal State
+    let timerModalState = null;
+    let timerInterval = null;
+    let timerTotalSeconds = 0;
+    let timerRemainingSeconds = 0;
+    let timerIsRunning = false;
+    let timerIsPaused = false;
+
+    function initializeStandaloneTimer() {
+      const backdrop = document.getElementById('timer-modal');
+      const modalCard = backdrop.querySelector('.timer-modal-card');
+      
+      timerModalState = {
+        backdrop,
+        modalCard,
+        formWrapper: backdrop.querySelector('[data-form-wrapper]'),
+        hoursInput: backdrop.querySelector('[data-hours]'),
+        minutesInput: backdrop.querySelector('[data-minutes]'),
+        secondsInput: backdrop.querySelector('[data-seconds]'),
+        display: backdrop.querySelector('[data-display]'),
+        progressBar: backdrop.querySelector('[data-progress-bar]'),
+
+        startPauseBtn: backdrop.querySelector('[data-start-pause]'),
+        resetBtn: backdrop.querySelector('[data-reset]'),
+        countTypeRadios: backdrop.querySelectorAll('input[name="countType"]'),
+        presetSelect: backdrop.querySelector('[data-preset-select]'),
+        closeButtons: backdrop.querySelectorAll('[data-close]'),
+        pinButton: backdrop.querySelector('[data-pin]'),
+        collapseButton: backdrop.querySelector('[data-toggle-form]'),
+        fullscreenButton: backdrop.querySelector('[data-fullscreen]'),
+        dragHandle: backdrop.querySelector('[data-drag-handle]'),
+        isPinned: false,
+        isCollapsed: false,
+        isFullscreen: false,
+        countType: 'countdown',
+        timerState: 'stopped'
+      };
+
+      setupTimerModalInteractions();
+      updateCountTypeUI();
+      updateStartPauseButton();
+      updateTimerDisplay();
+    }
+
+    function setupTimerModalInteractions(){
+      const state = timerModalState;
+      if (!state || state.isBound) return;
+
+      state.isBound = true;
+
+      // أزرار التحكم
+      if (state.startPauseBtn) {
+        state.startPauseBtn.addEventListener('click', () => {
+          if (!timerModalState || !timerModalState.sounds) {
+            try { initTimerSounds(); } catch(e) {}
+          }
+          toggleTimer();
+        });
+      } else {
+        console.error('startPauseBtn not found');
+      }
+      
+      if (state.resetBtn) {
+        state.resetBtn.addEventListener('click', resetTimer);
+      } else {
+        console.error('resetBtn not found');
+      }
+
+      // خيارات نوع العد
+      // محوّل نوع العد (قائمة منسدلة بدلاً من راديو)
+      const countTypeSelect = state.backdrop.querySelector('[data-count-type]');
+      if (countTypeSelect) {
+        countTypeSelect.addEventListener('change', () => {
+          state.countType = countTypeSelect.value;
+          updateCountTypeUI();
+          updateTimerDisplay();
+        });
+      } else {
+        console.error('countType select not found');
+      }
+
+      // القائمة المنسدلة للأوقات المقترحة
+      if (state.presetSelect) {
+        state.presetSelect.addEventListener('change', () => {
+          const value = state.presetSelect.value;
+          if (value) {
+            const seconds = parseInt(value);
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const remainingSeconds = seconds % 60;
+            
+            state.hoursInput.value = hours;
+            state.minutesInput.value = minutes;
+            state.secondsInput.value = remainingSeconds;
+            updateTimerDisplay();
+          }
+        });
+      } else {
+        console.error('presetSelect not found');
+      }
+
+      // تحديث العرض عند تغيير المدخلات
+      [state.hoursInput, state.minutesInput, state.secondsInput].forEach(input => {
+        input.addEventListener('input', updateTimerDisplay);
+      });
+
+      // زر الطي
+      if (state.collapseButton) {
+        state.collapseButton.addEventListener('click', () => toggleTimerForm());
+      }
+
+      // زر ملء الشاشة
+      if (state.fullscreenButton) {
+        state.fullscreenButton.addEventListener('click', () => toggleTimerFullscreen());
+      }
+
+      // أزرار الإغلاق والتثبيت
+      state.closeButtons.forEach(btn => {
+        btn.addEventListener('click', () => window.close());
+      });
+
+      if (state.pinButton) {
+        state.pinButton.addEventListener('click', () => {
+          state.isPinned = !state.isPinned;
+          state.pinButton.setAttribute('aria-pressed', String(state.isPinned));
+          state.pinButton.classList.toggle('is-active', state.isPinned);
+          state.backdrop.classList.toggle('timer-pinned', state.isPinned);
+          // فعليًا ثبّت فوق كل النوافذ في Electron إذا توفر API
+          try {
+            if (window.api && typeof window.api.setAlwaysOnTop === 'function') {
+              window.api.setAlwaysOnTop(state.isPinned);
+            }
+          } catch (e) {}
+        });
+      }
+
+      // زر التصغير
+      const minimizeBtn = state.backdrop.querySelector('[data-minimize]');
+      if (minimizeBtn) {
+        minimizeBtn.addEventListener('click', () => {
+          try {
+            if (window.api && typeof window.api.minimize === 'function') {
+              window.api.minimize();
+            } else if (window.minimize) {
+              window.minimize();
+            } else {
+              window.blur();
+            }
+          } catch (e) {}
+        });
+      }
+    }
+
+    function updateTimerDisplay(){
+      if (!timerModalState) return;
+      
+      const hours = parseInt(timerModalState.hoursInput.value) || 0;
+      const minutes = parseInt(timerModalState.minutesInput.value) || 0;
+      const seconds = parseInt(timerModalState.secondsInput.value) || 0;
+      
+      if (!timerIsRunning) {
+        if (timerModalState.countType === 'countdown') {
+          timerTotalSeconds = hours * 3600 + minutes * 60 + seconds;
+          timerRemainingSeconds = timerTotalSeconds;
+        } else {
+          timerTotalSeconds = 0;
+          timerRemainingSeconds = 0;
+        }
+      }
+      
+      let displayTime;
+      if (timerModalState.countType === 'countdown') {
+        displayTime = timerRemainingSeconds;
+      } else {
+        displayTime = timerTotalSeconds - timerRemainingSeconds;
+      }
+      
+      const displayHours = Math.floor(Math.abs(displayTime) / 3600);
+      const displayMinutes = Math.floor((Math.abs(displayTime) % 3600) / 60);
+      const displaySeconds = Math.abs(displayTime) % 60;
+      
+      let timeString = '';
+      if (displayHours > 0) {
+        timeString = `${displayHours.toString().padStart(2, '0')}:${displayMinutes.toString().padStart(2, '0')}:${displaySeconds.toString().padStart(2, '0')}`;
+      } else {
+        timeString = `${displayMinutes.toString().padStart(2, '0')}:${displaySeconds.toString().padStart(2, '0')}`;
+      }
+      
+      timerModalState.display.textContent = timeString;
+      
+      // تحديث شريط التقدم (للعد التنازلي فقط)
+      if (timerModalState.countType === 'countdown' && timerTotalSeconds > 0) {
+        const progress = ((timerTotalSeconds - timerRemainingSeconds) / timerTotalSeconds) * 100;
+        timerModalState.progressBar.style.width = `${progress}%`;
+      } else {
+        timerModalState.progressBar.style.width = '0%';
+      }
+      
+      // تحديث ألوان العرض (للعد التنازلي فقط)
+      timerModalState.display.classList.remove('is-warning', 'is-danger');
+      if (timerModalState.countType === 'countdown') {
+        if (timerRemainingSeconds <= 10 && timerRemainingSeconds > 0) {
+          timerModalState.display.classList.add('is-danger');
+        } else if (timerRemainingSeconds <= 60 && timerRemainingSeconds > 10) {
+          timerModalState.display.classList.add('is-warning');
+        }
+      }
+    }
+
+    function toggleTimer(){
+      if (timerModalState.timerState === 'stopped') {
+        startTimer();
+      } else if (timerModalState.timerState === 'running') {
+        pauseTimer();
+      } else if (timerModalState.timerState === 'paused') {
+        resumeTimer();
+      }
+    }
+
+    function startTimer(){
+      if (timerModalState.countType === 'countdown' && timerRemainingSeconds <= 0) {
+        showTimerToast('يرجى تعيين وقت صحيح', 'error');
+        return;
+      }
+      
+      timerIsRunning = true;
+      timerIsPaused = false;
+      timerModalState.timerState = 'running';
+      
+      updateStartPauseButton();
+      
+      // طي تلقائي عند البدء
+      if (!timerModalState.isCollapsed) {
+        toggleTimerForm();
+      }
+      
+      timerInterval = setInterval(() => {
+        if (timerModalState.countType === 'countdown') {
+          timerRemainingSeconds--;
+          if (timerRemainingSeconds <= 0) {
+            finishTimer();
+            return;
+          }
+          if (timerRemainingSeconds <= 10 && timerRemainingSeconds > 0) {
+            playTickSound();
+          }
+        } else {
+          timerRemainingSeconds++;
+        }
+        updateTimerDisplay();
+      }, 1000);
+    }
+
+    function pauseTimer(){
+      clearInterval(timerInterval);
+      timerIsPaused = true;
+      timerModalState.timerState = 'paused';
+      
+      updateStartPauseButton();
+    }
+
+    function resumeTimer(){
+      timerIsPaused = false;
+      timerModalState.timerState = 'running';
+      
+      updateStartPauseButton();
+      
+      timerInterval = setInterval(() => {
+        if (timerModalState.countType === 'countdown') {
+          timerRemainingSeconds--;
+          if (timerRemainingSeconds <= 0) {
+            finishTimer();
+            return;
+          }
+          if (timerRemainingSeconds <= 10 && timerRemainingSeconds > 0) {
+            playTickSound();
+          }
+        } else {
+          timerRemainingSeconds++;
+        }
+        updateTimerDisplay();
+      }, 1000);
+    }
+
+    function resetTimer(){
+      clearInterval(timerInterval);
+      timerIsRunning = false;
+      timerIsPaused = false;
+      timerModalState.timerState = 'stopped';
+      
+      updateStartPauseButton();
+      
+      updateTimerDisplay();
+    }
+
+    function finishTimer(){
+      clearInterval(timerInterval);
+      timerIsRunning = false;
+      timerIsPaused = false;
+      timerModalState.timerState = 'stopped';
+      
+      updateStartPauseButton();
+      
+      // تشغيل صوت التنبيه
+      const played = playWinSound();
+      if (!played) {
+        playTimerAlarmSound();
+      }
+      
+      // إظهار إشعار
+      showTimerToast('انتهى الوقت!', 'warning');
+      
+      // إعادة تعيين العرض بعد 3 ثوان
+      setTimeout(() => {
+        resetTimer();
+      }, 3000);
+    }
+
+    function toggleTimerForm(){
+      if (!timerModalState) return;
+      
+      timerModalState.isCollapsed = !timerModalState.isCollapsed;
+      const wrapper = timerModalState.formWrapper;
+      const btn = timerModalState.collapseButton;
+      
+      if (timerModalState.isCollapsed) {
+        wrapper.style.display = 'none';
+        btn.innerHTML = '<span aria-hidden="true">⌃</span>';
+        btn.setAttribute('aria-expanded', 'false');
+      } else {
+        wrapper.style.display = 'block';
+        btn.innerHTML = '<span aria-hidden="true">⌄</span>';
+        btn.setAttribute('aria-expanded', 'true');
+      }
+    }
+
+    function toggleTimerFullscreen(){
+      if (!timerModalState) return;
+      
+      timerModalState.isFullscreen = !timerModalState.isFullscreen;
+      const backdrop = timerModalState.backdrop;
+      const card = timerModalState.modalCard;
+      const display = timerModalState.display;
+      const btn = timerModalState.fullscreenButton;
+      
+      if (timerModalState.isFullscreen) {
+        // تفعيل وضع ملء الشاشة على مستوى المتصفح إن أمكن
+        if (!document.fullscreenElement && backdrop && backdrop.requestFullscreen) {
+          backdrop.requestFullscreen().catch(() => {});
+        }
+        
+        card.classList.add('is-fullscreen');
+        display.classList.add('is-fullscreen');
+        btn.classList.add('is-active');
+        
+        // إخفاء عناصر الإعداد في وضع ملء الشاشة (مع إبقاء الهيدر ظاهراً)
+        if (timerModalState.formWrapper) timerModalState.formWrapper.style.display = 'none';
+        const prog = timerModalState.backdrop.querySelector('.timer-progress');
+        if (prog) prog.style.display = 'none';
+        
+        // إظهار الأزرار والحالة في وضع ملء الشاشة
+        const controls = timerModalState.backdrop.querySelector('.timer-controls');
+        const status = timerModalState.backdrop.querySelector('.timer-status');
+        if (controls) controls.style.display = 'flex';
+        if (status) status.style.display = 'block';
+      } else {
+        // الخروج من وضع ملء الشاشة على المتصفح إن كان مفعلًا
+        if (document.fullscreenElement && document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        }
+        
+        card.classList.remove('is-fullscreen');
+        display.classList.remove('is-fullscreen');
+        btn.classList.remove('is-active');
+        
+        // إظهار عناصر التحكم
+        if (!timerModalState.isCollapsed && timerModalState.formWrapper) {
+          timerModalState.formWrapper.style.display = 'block';
+        }
+        const controls = timerModalState.backdrop.querySelector('.timer-controls');
+        const prog = timerModalState.backdrop.querySelector('.timer-progress');
+        if (controls) controls.style.display = 'flex';
+        if (prog) prog.style.display = 'block';
+      }
+    }
+
+    function updateStartPauseButton(){
+      if (!timerModalState || !timerModalState.startPauseBtn) return;
+      
+      const btn = timerModalState.startPauseBtn;
+      
+      switch (timerModalState.timerState) {
+        case 'stopped':
+          btn.textContent = 'ابدأ';
+          btn.className = 'timer-btn timer-btn-start';
+          break;
+        case 'running':
+          btn.textContent = 'إيقاف مؤقت';
+          btn.className = 'timer-btn timer-btn-pause';
+          break;
+        case 'paused':
+          btn.textContent = 'استئناف';
+          btn.className = 'timer-btn timer-btn-resume';
+          break;
+      }
+    }
+
+    function updateCountTypeUI(){
+      if (!timerModalState) return;
+      
+      const isCountdown = timerModalState.countType === 'countdown';
+      
+      // إظهار/إخفاء الأوقات المقترحة حسب نوع العد
+      const presetContainer = timerModalState.backdrop.querySelector('.preset-container');
+      if (presetContainer) {
+        presetContainer.style.display = isCountdown ? 'flex' : 'none';
+      }
+      
+      // إظهار/إخفاء مدخلات الساعات/الدقائق/الثواني حسب نوع العد
+      const inputGroup = timerModalState.backdrop.querySelector('.timer-input-group');
+      if (inputGroup) {
+        inputGroup.style.display = isCountdown ? 'flex' : 'none';
+      }
+      
+      // إعادة تعيين القيم عند تغيير نوع العد (فقط إذا كان المؤقت متوقف)
+      if (timerModalState.timerState === 'stopped') {
+        timerModalState.hoursInput.value = 0;
+        timerModalState.minutesInput.value = 0;
+        timerModalState.secondsInput.value = 0;
+        if (timerModalState.presetSelect) {
+          timerModalState.presetSelect.value = '';
+        }
+      }
+    }
+
+    // أصوات المؤقت: تهيئة وتشغيل
+    function initTimerSounds(){
+      if (!timerModalState) return;
+      if (timerModalState.sounds) return; // مُهيأة من قبل
+      try {
+        const base = '/assets/sounds/';
+        const tick = new Audio(base + 'tick.wav');
+        tick.preload = 'auto';
+        tick.volume = 0.25;
+        const win = new Audio(base + 'win.wav');
+        win.preload = 'auto';
+        win.volume = 0.7;
+        timerModalState.sounds = { tick, win };
+        // فتح القنوات الصوتية بعد أول تفاعل للمستخدم
+        try { tick.play().then(()=>tick.pause()).catch(()=>{}); } catch(e) {}
+        try { win.play().then(()=>win.pause()).catch(()=>{}); } catch(e) {}
+      } catch (e) {
+        console.warn('تعذّر تهيئة الأصوات:', e);
+      }
+    }
+
+    function playTickSound(){
+      try {
+        if (timerModalState && timerModalState.sounds && timerModalState.sounds.tick) {
+          const a = timerModalState.sounds.tick;
+          a.currentTime = 0; // إعادة الضبط للتشغيل السريع
+          a.play().catch(()=>{});
+        }
+      } catch(e) {}
+    }
+
+    function playWinSound(){
+      try {
+        if (timerModalState && timerModalState.sounds && timerModalState.sounds.win) {
+          const a = timerModalState.sounds.win;
+          a.currentTime = 0;
+          a.play().catch(()=>{});
+          return true;
+        }
+      } catch(e) {}
+      return false;
+    }
+
+    function playTimerAlarmSound(){
+      try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // تشغيل نغمة تنبيه
+        for (let i = 0; i < 3; i++) {
+          setTimeout(() => {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.1);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.5);
+          }, i * 600);
+        }
+      } catch (e) {
+        console.error('خطأ في تشغيل الصوت:', e);
+      }
+    }
+
+    function showTimerToast(message, type = 'success'){
+      const container = timerModalState && timerModalState.modalCard ? timerModalState.modalCard : document.body;
+      let toast = container.querySelector('.timer-toast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.className = 'timer-toast';
+        container.appendChild(toast);
+      }
+      
+      toast.textContent = message;
+      toast.className = `timer-toast ${type}`;
+      toast.classList.add('show');
+      
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3000);
+    }
+
+    // تهيئة التطبيق عند تحميل الصفحة
+    document.addEventListener('DOMContentLoaded', initializeStandaloneTimer);
+  </script>
+</body>
+</html>

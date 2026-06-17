@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+
+# Runtime data & databases (machine-local, not source)
+data/
+*.db
+*.db-wal
+*.db-shm
+*.db.json
+*.db.json.migrated
+public/uploads/
+backups/
+
+# Logs
+logs/
+*.log
+
+# Build output
+dist/
+out/
+build/
+
+# Editor / OS junk
+.DS_Store
+Thumbs.db
+.history/
+.zencoder/
+.zenflow/
+.sixth/
+
+# Large/binary assets that shouldn't be versioned here
+*.zip
+NVIDIA Corporation/
+
+# Stray/temp files
+getComputedStyle(el).visibility
+temp_quizzes.json
+
+# Env / secrets
+.env
+.env.local

@@ -1,0 +1,93 @@
+<div class="sub-page-container">
+  <div class="page-top-bar">
+    <a class="page-back-btn" href="#/games">
+      <span class="icon">🎮</span>
+      <span>العودة للألعاب</span>
+    </a>
+  </div>
+  <div class="game-container">
+    <!-- 1. Start Screen -->
+    <div id="start-screen" class="screen active">
+      <div class="menu-card">
+        <h1 class="game-title">🎯 صائد القواعد</h1>
+        <p class="game-desc">صنف الكلمات المتساقطة في مكانها الصحيح قبل أن تلمس الأرض!</p>
+        
+        <div class="settings-group">
+          <label>اختر النمط:</label>
+          <div class="mode-selector" id="mode-selector">
+            <button class="selector-btn active" data-mode="nvp">اسم/فعل/حرف</button>
+            <button class="selector-btn" data-mode="tenses">الأزمنة</button>
+            <button class="selector-btn" data-mode="gender">مذكر/مؤنث</button>
+            <button class="selector-btn" data-mode="number">مفرد/مثنى/جمع</button>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <label>اختر البيئة:</label>
+          <div class="theme-selector" id="theme-selector">
+            <button class="selector-btn active" data-theme="space">🌌 فضاء</button>
+            <button class="selector-btn" data-theme="forest">🌲 غابة</button>
+            <button class="selector-btn" data-theme="ocean">🌊 محيط</button>
+          </div>
+        </div>
+
+        <button id="start-btn" class="big-action-btn">ابدأ التحدي</button>
+        <a href="#/games" class="btn-secondary">العودة للألعاب</a>
+      </div>
+    </div>
+
+    <!-- 2. Main Game Screen -->
+    <div id="game-screen" class="screen">
+      <header class="game-header">
+        <div class="stat-item">
+          <span class="label">النقاط:</span>
+          <span id="score" class="value">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="label">المحاولات:</span>
+          <div id="lives" class="lives-container">
+            <span class="heart">❤️</span>
+            <span class="heart">❤️</span>
+            <span class="heart">❤️</span>
+          </div>
+        </div>
+        <div class="header-actions">
+          <button id="pause-btn" class="control-btn">⏸️</button>
+          <button class="exit-btn" id="game-exit-btn">🏠</button>
+        </div>
+      </header>
+
+      <div id="falling-area" class="falling-area">
+        <!-- Falling words will be injected here -->
+      </div>
+
+      <div class="classification-bar">
+        <button class="bucket-btn" data-type="noun">
+          <span class="icon">📦</span>
+          <span class="text">اسم</span>
+        </button>
+        <button class="bucket-btn" data-type="verb">
+          <span class="icon">🏃</span>
+          <span class="text">فعل</span>
+        </button>
+        <button class="bucket-btn" data-type="particle">
+          <span class="icon">🔗</span>
+          <span class="text">حرف</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 3. Game Over Screen -->
+    <div id="game-over-screen" class="screen">
+      <div class="victory-card">
+        <span class="icon">🏆</span>
+        <h2 id="result-title">انتهت اللعبة!</h2>
+        <p class="final-score">نقاطك النهائية: <span id="final-score-val">0</span></p>
+        <div class="actions">
+          <button class="big-action-btn" id="play-again-btn">العب مرة أخرى</button>
+          <a href="#/games" class="btn-secondary">قائمة الألعاب</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

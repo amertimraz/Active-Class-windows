@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>العرض التفاعلي للاختبار - محسّن</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css?v=2024" />
+  <link rel="stylesheet" href="/pages/quiz-view.css?v=2024" />
+  <link rel="stylesheet" href="/pages/quiz-view-animations.css?v=2024" />
+<script nonce="ac">
+  (function(){
+    try{
+      var theme = localStorage.getItem('cm_theme');
+      if(!theme){
+        fetch('/api/settings')
+          .then(function(r){ return r.ok ? r.json() : {}; })
+          .then(function(s){
+            var t = (s && s.theme) ? s.theme : 'light';
+            document.documentElement.setAttribute('data-theme', t);
+          })
+          .catch(function(){
+            document.documentElement.setAttribute('data-theme','light');
+          });
+      } else {
+        document.documentElement.setAttribute('data-theme', theme);
+      }
+      window.addEventListener('storage', function(e){
+        if(e.key === 'cm_theme' && e.newValue){
+          document.documentElement.setAttribute('data-theme', e.newValue);
+        }
+      });
+    }catch(_){ }
+  })();
+</script>
+</head>
+<body>
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay" style="display:none;">
+    <div class="loading-spinner">
+      <div class="spinner"></div>
+      <p>⏳ جاري تحميل الاختبار...</p>
+    </div>
+  </div>
+
+  <div class="wrap">
+
+    <!-- Main Quiz Card -->
+    <div class="q-card" id="card">
+      
+      <!-- Enhanced Presentation Header (title on right, timer on left) - مثبت داخل مربع الأسئلة -->
+      <div class="quiz-header quiz-header-enter">
+        <div class="quiz-title-row">
+          <!-- Quiz title and group on the right -->
+          <div class="quiz-title-group">
+            <span class="quiz-title-accent" id="quizHeaderTitle">جاري التحميل...</span>
+            <span id="quizHeaderGroup" class="quiz-group" style="display:none;"></span>
+          </div>
+          
+          <!-- Timer on the left + Fullscreen -->
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span id="headerTimer" class="header-timer" style="display:none;" title="الوقت المتبقي">
+              <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="9"></circle>
+                <path d="M12 7v5l3 3"></path>
+              </svg>
+              <span id="headerTimerText">00:00</span>
+            </span>
+
+          </div>
+        </div>
+        
+        <div class="quiz-sub" id="quizHeaderSub" style="display:none;"></div>
+      </div>
+
+      <!-- Start Overlay (will be auto-minimized for QR visitors) -->
+      <div id="startOverlay">
+        <div class="start-inner">
+          <h2>⚙️ إعدادات الاختبار</h2>
+          <div class="start-row">
+            <label class="pill" title="الوقت المخصص لكل سؤال">
+              <span>⏱️ الوقت (دقائق):</span>
+              <input id="preStartMinutes" type="number" min="0" max="999" value="1" step="1" />
+            </label>
+            <label class="pill" title="ماذا يحدث عند انتهاء الوقت">
+              <span>⏰ انتهاء الوقت:</span>
+              <select id="preTimeUpMode">
+                <option value="auto-next-wrong">احتساب خطأ ثم التالي</option>
+                <option value="wait">انتظار للسماح بالإجابة</option>
+              </select>
+            </label>
+          </div>
+          <div class="start-row">
+            <label class="pill" style="cursor: pointer;" title="إظهار الإجابة الصحيحة عند اختيار إجابة خاطئة">
+              <input id="showCorrectAnswer" type="checkbox" checked />
+              <span>✅ إظهار الإجابة الصحيحة عند الخطأ</span>
+            </label>
+          </div>
+          <!-- Student selector injected for group-bound quizzes -->
+          <div class="start-row" id="studentPickerRow" style="display:none; align-items:center; gap:12px;">
+            <label class="pill" style="flex:1;">
+              <span>👤 اختر اسمك:</span>
+              <select id="studentSelect" class="form-select" style="width:100%"></select>
+            </label>
+          </div>
+          <button id="startBtn" class="btn" style="font-size: 20px; padding: 18px 48px; margin-top: 20px;">
+            🚀 ابدأ الاختبار
+          </button>
+          <div class="ghost" id="startGhost" style="margin-top: 16px; opacity: 0.6; font-size: 13px;">
+            📌 تأكد من الإعدادات قبل البدء
+          </div>
+        </div>
+      </div>
+
+      <!-- Content Box -->
+      <div id="contentBox">
+        <div class="question-card" id="questionCard">
+          <div class="question-meta">
+            <span class="q-number" id="quizIndexBadge">—</span>
+            <span class="spacer"></span>
+            <span class="current-score" style="font-size: 0.9em; color: #666;">0/0 صحيح</span>
+            <span class="spacer"></span>
+            <span class="q-type" id="quizTypeBadge">—</span>
+          </div>
+          <div class="q-text" id="qText">-</div>
+          <div class="question-image" id="questionImage" style="display:none;">
+            <img id="questionImg" src="" alt="صورة السؤال" />
+          </div>
+        </div>
+        <div class="opts" id="opts"></div>
+      </div>
+    </div>
+
+    <!-- Footer Controls -->
+    <div class="footer">
+      <div class="row" style="display:flex; gap:8px; align-items:center;">
+        <button class="btn" id="prevBtn">⬅</button>
+        <button class="btn" id="nextBtn">➡</button>
+        <button class="btn icon-btn" id="toggleSfxBtn" title="تشغيل/إيقاف الأصوات" aria-pressed="true">
+          <span class="icon-sound-on" aria-hidden="true">🔊</span>
+          <span class="icon-sound-off" aria-hidden="true">🔇</span>
+        </button>
+        <div class="ghost" id="footerHints">Space: التالي، ←/→ للتنقل، 1-9 اختيار</div>
+      </div>
+      <div style="flex:1; margin-inline-start:12px;">
+        <div class="progress"><div class="bar" id="bar"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Result Modal -->
+  <div id="resultOverlay" class="modal-overlay">
+    <div class="modal" id="resultModal">
+      <div class="modal-title" id="resultTitle">—</div>
+      <div class="modal-sub" id="resultSub">—</div>
+      <div class="final-wrap" id="finalWrap" style="display:none;">
+        <div class="final-icons">
+          <div class="burst"></div>
+          <div class="medal"></div>
+          <div class="sparkle">✨</div>
+        </div>
+        <div id="finalStats" class="ghost" style="font-size: clamp(16px, 2.4vw, 22px);"></div>
+      </div>
+      <div class="actions">
+        <button id="resultClose" class="btn pill">إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- Review Modal -->
+  <div id="reviewModal" class="modal-overlay" style="display:none;">
+    <div class="modal review-modal">
+      <div class="modal-title">مراجعة الاختبار</div>
+      <div class="modal-sub">تأكد من إجاباتك قبل التسليم النهائي</div>
+      <div class="review-content">
+        <div class="review-stats">
+          <div class="stat-item">
+            <span class="stat-number" id="answeredCount">0</span>
+            <span class="stat-label">مُجاب عليها</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number" id="unansweredCount">0</span>
+            <span class="stat-label">غير مُجابة</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number" id="totalQuestionsReview">0</span>
+            <span class="stat-label">إجمالي الأسئلة</span>
+          </div>
+        </div>
+        <div class="questions-grid" id="questionsGrid">
+          <!-- سيتم إدراج الأسئلة هنا -->
+        </div>
+      </div>
+      <div class="actions">
+        <button id="continueQuiz" class="btn">متابعة الاختبار</button>
+        <button id="finalSubmit" class="btn success">تسليم نهائي</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Final Results Modal -->
+  <div id="finalResultsModal" class="modal-overlay" style="display:none;">
+    <div class="modal final-modal">
+      <div class="modal-title">🎉 انتهى الاختبار!</div>
+      <div class="results-display">
+        <div class="score-circle">
+          <div class="score-value" id="finalScore">0%</div>
+          <div class="score-label">النتيجة النهائية</div>
+        </div>
+        <div class="results-details">
+          <div class="result-item">
+            <span class="result-label">تم الإجابة على:</span>
+            <span class="result-value correct" id="correctCount">0</span>
+            <span class="result-label"> من </span>
+            <span class="result-value" id="totalQuestions">0</span>
+            <span class="result-label"> سؤال</span>
+          </div>
+          <div class="result-item">
+            <span class="result-label">النسبة المئوية:</span>
+            <span class="result-value grade" id="percentageDisplay">0%</span>
+          </div>
+          <div class="result-item">
+            <span class="result-label">الوقت المستغرق:</span>
+            <span class="result-value" id="timeSpent">00:00</span>
+          </div>
+          <div class="result-item">
+            <span class="result-label">التقدير:</span>
+            <span class="result-value grade" id="gradeText">ممتاز</span>
+          </div>
+          <div class="result-item" id="wrongAttemptsInfo" style="display:none;">
+            <span class="result-label">أسئلة بمحاولات خاطئة:</span>
+            <span class="result-value wrong" id="wrongAttemptsCount">0</span>
+            <span class="result-note" style="font-size: 0.8em; color: #666; margin-top: 4px; display: block;">
+              (تم احتسابها خطأ حتى لو كانت الإجابة النهائية صحيحة)
+            </span>
+          </div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn success" id="restartQuiz">🔄 إعادة الاختبار</button>
+        <button class="btn" id="closeResults">🏠 إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Last seconds big countdown -->
+  <div id="countdownOverlay"><div id="countdownNum">10</div></div>
+
+  <!-- Answer Feedback Modals - Enhanced Design -->
+  <div id="correctAnswerModal" class="answer-feedback-modal" style="display:none;">
+    <div class="feedback-content">
+      <div class="feedback-icon correct">✅</div>
+      <div class="feedback-title correct">إجابة صحيحة!</div>
+      <div class="feedback-message">أحسنت! لقد اخترت الإجابة الصحيحة.</div>
+      <div class="feedback-explanation" id="correctExplanation" style="display: none;"></div>
+      <button class="feedback-btn">
+        ➡️ متابعة للسؤال التالي
+      </button>
+    </div>
+  </div>
+
+  <div id="wrongAnswerModal" class="answer-feedback-modal" style="display:none;">
+    <div class="feedback-content">
+      <div class="feedback-icon wrong">❌</div>
+      <div class="feedback-title wrong">إجابة خاطئة!</div>
+      <div class="feedback-message">&nbsp;</div>
+      <div class="feedback-explanation" id="wrongExplanation" style="display: none;"></div>
+      <div class="feedback-correct" style="display:none;">
+        <span>الإجابة الصحيحة:</span>
+        <span id="correctAnswerText"></span>
+      </div>
+      <button class="feedback-btn">
+        🔄 حاول مرة أخرى
+      </button>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script src="/pages/quiz-view.js?v=2024"></script>
+</body>
+</html>

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>مزامنة الاختبارات</title>
+</head>
+<body>
+    <h1>مزامنة بيانات الاختبارات</h1>
+    <p>اضغط على الزر أدناه لمزامنة البيانات:</p>
+    <button onclick="syncData()">مزامنة البيانات</button>
+    <div id="status"></div>
+
+    <script>
+        const quizzesData = [
+  {
+    "id": "mfm7km1y_72pjjq",
+    "name": "1",
+    "description": "",
+    "groupId": "mflj2i8l_dgnd9j",
+    "duration": 1,
+    "questions": [
+      {
+        "id": "mfmaatbf_mkem07",
+        "type": "mcq",
+        "text": "اسمك هو",
+        "image": null,
+        "options": [
+          "123",
+          "456",
+          "789",
+          "101112"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "medium",
+        "points": 1,
+        "explanation": "",
+        "createdAt": "2025-09-16T08:21:41.739Z",
+        "updatedAt": "2025-09-16T08:22:09.940Z"
+      },
+      {
+        "id": "mfml6umw_04ykyw",
+        "type": "mcq",
+        "text": "123",
+        "image": null,
+        "options": [
+          "44",
+          "444",
+          "4444",
+          "4444444"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "medium",
+        "points": 1,
+        "explanation": "",
+        "createdAt": "2025-09-16T13:26:32.600Z",
+        "updatedAt": "2025-09-16T13:26:41.017Z"
+      }
+    ],
+    "status": "active",
+    "createdAt": "2025-09-16T07:05:20.038Z",
+    "updatedAt": "2025-09-16T13:26:44.017Z",
+    "settings": {
+      "showResults": true,
+      "randomizeQuestions": false,
+      "randomizeOptions": false,
+      "allowReview": true
+    }
+  },
+  {
+    "id": "mfm8kl3b_0his78",
+    "name": "أسئلة الدرس الأول",
+    "description": "",
+    "groupId": "mflj2i8l_dgnd9j",
+    "duration": 2,
+    "questions": [
+      {
+        "id": "mfm8l62v_lmfl7g",
+        "type": "mcq",
+        "text": "اسمك",
+        "image": null,
+        "options": [
+          "عامر",
+          "1",
+          "2",
+          "3"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "medium",
+        "points": 1,
+        "explanation": "",
+        "createdAt": "2025-09-16T07:33:45.607Z",
+        "updatedAt": "2025-09-16T09:02:09.225Z"
+      }
+    ],
+    "status": "active",
+    "createdAt": "2025-09-16T07:33:18.407Z",
+    "updatedAt": "2025-09-16T09:02:13.040Z",
+    "settings": {
+      "showResults": true,
+      "randomizeQuestions": false,
+      "randomizeOptions": false,
+      "allowReview": true
+    }
+  },
+  {
+    "id": "mfmaphkb_ab6eik",
+    "name": "أسئلة الدرس الثاني | الوحدة الأولى",
+    "description": "",
+    "groupId": "mflk3752_nh740a",
+    "questions": [
+      {
+        "id": "mfmc1xn2_jei40n",
+        "type": "mcq",
+        "text": "11111111111",
+        "image": null,
+        "options": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "correctAnswer": 0,
+        "difficulty": "medium",
+        "points": 1,
+        "explanation": "",
+        "createdAt": "2025-09-16T09:10:46.670Z",
+        "updatedAt": "2025-09-16T09:10:53.427Z"
+      }
+    ],
+    "status": "active",
+    "createdAt": "2025-09-16T08:33:06.347Z",
+    "updatedAt": "2025-09-16T09:10:57.059Z",
+    "settings": {
+      "showResults": true,
+      "randomizeQuestions": false,
+      "randomizeOptions": false,
+      "allowReview": true
+    }
+  }
+];
+
+        function syncData() {
+            try {
+                localStorage.setItem('cm_quizzes_v1', JSON.stringify(quizzesData));
+                document.getElementById('status').innerHTML = '<p style="color: green;">✅ تم مزامنة البيانات بنجاح!</p>';
+                console.log('Data synced successfully');
+            } catch (error) {
+                document.getElementById('status').innerHTML = '<p style="color: red;">❌ خطأ في المزامنة: ' + error.message + '</p>';
+                console.error('Sync error:', error);
+            }
+        }
+    </script>
+</body>
+</html>

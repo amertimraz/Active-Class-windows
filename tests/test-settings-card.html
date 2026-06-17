@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار بطاقة الإعدادات</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            margin: 20px;
+            background: #f8fafc;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .test-title {
+            color: #1f2937;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1 class="test-title">اختبار بطاقة الإعدادات</h1>
+        <p>اضغط على بطاقة "إعدادات البرنامج" لفتح نافذة الإعدادات:</p>
+        
+        <div class="tools-grid">
+            <div class="card settings-card" role="button" tabindex="0" aria-label="إعدادات البرنامج" title="إعدادات البرنامج والتخصيص">
+                <div class="icon" style="background:#6b7280">⚙️</div>
+                <div class="content">
+                    <h3 class="title">إعدادات البرنامج</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Settings card trigger function
+        function attachSettingsCardTrigger(){
+            const cardElements = document.querySelectorAll('.settings-card');
+            cardElements.forEach((card) => {
+                if (card.dataset.bound === 'true') return;
+                card.dataset.bound = 'true';
+
+                const trigger = async (event) => {
+                    event.preventDefault();
+                    console.log('Settings card clicked!');
+                    
+                    // Open settings modal
+                    try {
+                        // Load settings page if not already loaded
+                        if (!document.querySelector('#settingsModal')) {
+                            console.log('Loading settings modal...');
+                            const response = await fetch('/pages/settings.html');
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+                            const html = await response.text();
+                            const tempDiv = document.createElement('div');
+                            tempDiv.innerHTML = html;
+                            
+                            // Extract the modal and append to body
+                            const modal = tempDiv.querySelector('#settingsModal');
+                            const loadingOverlay = tempDiv.querySelector('#loadingOverlay');
+                            const notification = tempDiv.querySelector('#notification');
+                            
+                            if (modal) document.body.appendChild(modal);
+                            if (loadingOverlay) document.body.appendChild(loadingOverlay);
+                            if (notification) document.body.appendChild(notification);
+                            
+                            // Load CSS
+                            if (!document.querySelector('link[href="/pages/settings.css"]')) {
+                                const link = document.createElement('link');
+                                link.rel = 'stylesheet';
+                                link.href = '/pages/settings.css';
+                                document.head.appendChild(link);
+                            }
+                            
+                            // Load JS
+                            if (!window.settingsManager) {
+                                const script = document.createElement('script');
+                                script.src = '/pages/settings.js';
+                                document.head.appendChild(script);
+                                
+                                // Wait for script to load
+                                await new Promise((resolve, reject) => {
+                                    script.onload = resolve;
+                                    script.onerror = reject;
+                                    setTimeout(reject, 5000); // timeout after 5 seconds
+                                });
+                            }
+                        }
+                        
+                        // Open settings modal
+                        if (window.openSettings) {
+                            console.log('Opening settings modal...');
+                            window.openSettings();
+                        } else {
+                            console.warn('Settings manager not loaded yet, trying again...');
+                            setTimeout(() => {
+                                if (window.openSettings) {
+                                    window.openSettings();
+                                }
+                            }, 500);
+                        }
+                    } catch (e) {
+                        console.error('Settings error:', e);
+                        alert('حدث خطأ في تحميل الإعدادات. يرجى المحاولة مرة أخرى.');
+                    }
+                };
+
+                card.addEventListener('click', trigger);
+                card.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        trigger(event);
+                    }
+                });
+            });
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Page loaded, attaching settings card trigger...');
+            attachSettingsCardTrigger();
+        });
+    </script>
+</body>
+</html>

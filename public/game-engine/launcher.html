@@ -1,0 +1,168 @@
+<div class="sub-page-container ge-launcher fade-in">
+  <div class="sub-page-header">
+    <h1 class="sub-page-title">🎮 محرك الألعاب التعليمي</h1>
+    <p class="sub-page-subtitle">ألعاب تعليمية احترافية مبنية على محرك WebGL عالي الأداء</p>
+  </div>
+
+  <div class="ge-engine-badge">
+    <div class="ge-badge-inner">
+      <span class="ge-badge-icon">⚡</span>
+      <div class="ge-badge-info">
+        <strong>Game Engine v1.0</strong>
+        <span>مدعوم بـ PixiJS WebGL • 60 FPS • ECS Architecture</span>
+      </div>
+      <div class="ge-badge-stats">
+        <div class="ge-stat">
+          <span class="ge-stat-val" id="ge-total-sessions">-</span>
+          <span class="ge-stat-label">جلسات</span>
+        </div>
+        <div class="ge-stat">
+          <span class="ge-stat-val" id="ge-best-score">-</span>
+          <span class="ge-stat-label">أعلى نقاط</span>
+        </div>
+        <div class="ge-stat">
+          <span class="ge-stat-val" id="ge-avg-accuracy">-</span>
+          <span class="ge-stat-label">الدقة</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ge-section-title">🕹️ الألعاب المتاحة</div>
+
+  <div class="ge-games-grid">
+    <a class="ge-game-card ge-card-blue" href="#/game-engine/word-match">
+      <div class="ge-card-glow"></div>
+      <div class="ge-card-icon">🧩</div>
+      <div class="ge-card-content">
+        <h3>مطابقة الكلمات</h3>
+        <p>اختر الإجابة الصحيحة من 4 خيارات مع رسوميات احترافية وأصوات تفاعلية</p>
+        <div class="ge-card-tags">
+          <span class="ge-tag">متعدد المستويات</span>
+          <span class="ge-tag">WebGL</span>
+          <span class="ge-tag">صوت تفاعلي</span>
+        </div>
+      </div>
+      <div class="ge-card-action">
+        <span>العب الآن</span>
+        <span class="ge-arrow">←</span>
+      </div>
+    </a>
+
+    <a class="ge-game-card ge-card-green" href="#/game-engine/edu-platformer">
+      <div class="ge-card-glow"></div>
+      <div class="ge-card-icon">🧑‍🚀</div>
+      <div class="ge-card-content">
+        <h3>مغامرة المعرفة</h3>
+        <p>لعبة منصات بأسلوب ماريو — امش واقفز واضرب صناديق الأسئلة للحصول على نقاط!</p>
+        <div class="ge-card-tags">
+          <span class="ge-tag">WebGL</span>
+          <span class="ge-tag">منصات</span>
+          <span class="ge-tag">أسئلة تفاعلية</span>
+        </div>
+      </div>
+      <div class="ge-card-action">
+        <span>العب الآن</span>
+        <span class="ge-arrow">←</span>
+      </div>
+    </a>
+
+    <a class="ge-game-card ge-card-red" href="#/game-engine/tug-quiz">
+      <div class="ge-card-glow"></div>
+      <div class="ge-card-icon">🪢</div>
+      <div class="ge-card-content">
+        <h3>Tug Quiz — شد الحبل</h3>
+        <p>فريقان يتنافسان على حل مسائل رياضية — كل إجابة صحيحة تسحب الحبل نحو فريقك!</p>
+        <div class="ge-card-tags">
+          <span class="ge-tag">فريقان</span>
+          <span class="ge-tag">رياضيات</span>
+          <span class="ge-tag">Smart Board</span>
+        </div>
+      </div>
+      <div class="ge-card-action">
+        <span>العب الآن</span>
+        <span class="ge-arrow">←</span>
+      </div>
+    </a>
+
+    <a class="ge-game-card ge-card-yellow" href="#/game-engine/spin-compete">
+      <div class="ge-card-glow"></div>
+      <div class="ge-card-icon">🎡</div>
+      <div class="ge-card-content">
+        <h3>عجلة التنافس</h3>
+        <p>أدر العجلة الأمريكية وتنافس مع فريقك — حتى ٦ فرق، مؤقت، وأوضاع ضرب وجمع!</p>
+        <div class="ge-card-tags">
+          <span class="ge-tag">٢-٦ فرق</span>
+          <span class="ge-tag">عجلة دوّارة</span>
+          <span class="ge-tag">Smart Board</span>
+        </div>
+      </div>
+      <div class="ge-card-action">
+        <span>العب الآن</span>
+        <span class="ge-arrow">←</span>
+      </div>
+    </a>
+
+    <div class="ge-game-card ge-card-coming">
+      <div class="ge-card-icon">🌍</div>
+      <div class="ge-card-content">
+        <h3>مغامرة الفضاء 2</h3>
+        <p>قريباً — رحلة في الفضاء بمحرك جديد وقصة تعليمية متكاملة</p>
+        <div class="ge-card-tags">
+          <span class="ge-tag ge-tag-soon">قريباً</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ge-section-title">📊 آخر الجلسات</div>
+  <div id="ge-history-list" class="ge-history-list">
+    <div class="ge-history-empty">لا توجد جلسات سابقة بعد. ابدأ لعبة!</div>
+  </div>
+
+  <div class="ge-section-title">🔧 مكونات المحرك</div>
+  <div class="ge-components-grid">
+    <div class="ge-component"><span>🔄</span><strong>Game Loop</strong><span>60 FPS بـ requestAnimationFrame</span></div>
+    <div class="ge-component"><span>🎬</span><strong>Scene Manager</strong><span>إدارة مشاهد مع انتقالات سلسة</span></div>
+    <div class="ge-component"><span>📦</span><strong>Asset Loader</strong><span>تحميل غير متزامن للموارد</span></div>
+    <div class="ge-component"><span>⌨️</span><strong>Input Manager</strong><span>لوحة مفاتيح وماوس ولمس</span></div>
+    <div class="ge-component"><span>🔊</span><strong>Audio Engine</strong><span>Web Audio API للمؤثرات الصوتية</span></div>
+    <div class="ge-component"><span>🖥️</span><strong>UI System</strong><span>نقاط ومؤقت وتغذية راجعة</span></div>
+    <div class="ge-component"><span>📚</span><strong>Educational API</strong><span>ربط مع بيانات التطبيق</span></div>
+    <div class="ge-component"><span>⚙️</span><strong>ECS Architecture</strong><span>نظام كيانات ومكونات قابل للتوسعة</span></div>
+  </div>
+</div>
+
+<script>
+(function() {
+  try {
+    const results = JSON.parse(localStorage.getItem('ge_game_results') || '[]');
+    if (results.length > 0) {
+      const totalEl = document.getElementById('ge-total-sessions');
+      const bestEl  = document.getElementById('ge-best-score');
+      const accEl   = document.getElementById('ge-avg-accuracy');
+      if (totalEl) totalEl.textContent = results.length;
+      if (bestEl)  bestEl.textContent  = Math.max(...results.map(r => r.score || 0)).toLocaleString('ar-EG');
+      const avgAcc = Math.round(results.reduce((s, r) => s + (r.accuracy || 0), 0) / results.length);
+      if (accEl) accEl.textContent = avgAcc + '%';
+
+      const list = document.getElementById('ge-history-list');
+      if (list) {
+        const recent = results.slice(-5).reverse();
+        list.innerHTML = recent.map(r => {
+          const date = new Date(r.endTime || r.startTime);
+          const dateStr = date.toLocaleDateString('ar-EG', { month: 'short', day: 'numeric' });
+          const timeStr = date.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+          return `
+            <div class="ge-history-item">
+              <span class="ge-history-game">${r.gameName || r.gameId}</span>
+              <span class="ge-history-score">${(r.score || 0).toLocaleString('ar-EG')} نقطة</span>
+              <span class="ge-history-acc">${r.accuracy || 0}% دقة</span>
+              <span class="ge-history-date">${dateStr} ${timeStr}</span>
+            </div>`;
+        }).join('');
+      }
+    }
+  } catch(e) {}
+})();
+</script>

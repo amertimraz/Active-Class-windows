@@ -1,0 +1,189 @@
+<div class="sub-page-container">
+  <div class="page-top-bar">
+    <a class="page-back-btn" href="#/games">
+      <span class="icon">🎮</span>
+      <span>العودة للألعاب</span>
+    </a>
+  </div>
+  <main class="container">
+    <div class="panel">
+      <h2>لعبة خريطة الكنز</h2>
+      <p class="subtitle">ابنِ خريطتك التفاعلية وشغّل الاختبارات فورًا.</p>
+
+      <div class="status-toolbar compact">
+        <div class="status-chip" id="level-status">لا يوجد اختبار نشط</div>
+        <div class="status-chip" id="target-status">اختر نقطة لعرض السؤال</div>
+      </div>
+
+      <div class="page-layout">
+        <section class="map-column">
+          <div class="map-shell compact-card">
+            <div class="upload-header map-shell-header">
+              <div>
+                <h3>تحضير الخريطة</h3>
+                <p>ارفع صورة جاهزة ثم ضع النقاط مباشرة داخل المعاينة.</p>
+              </div>
+              <div class="map-upload-actions">
+                <label class="upload-btn cta-emphasis">
+                  <input type="file" id="map-image-input" accept="image/*" />
+                  رفع صورة
+                </label>
+                <button class="text-btn" type="button" id="clear-map-image-btn">إزالة الصورة</button>
+              </div>
+            </div>
+            <div class="map-shortcuts">
+              <span>استخدم تكبير المتصفح للتفاصيل</span>
+              <span>يمكنك حفظ أكثر من اختبار للصورة نفسها</span>
+            </div>
+            <div class="map-preview" id="map-preview">
+              <div class="map-placeholder" id="map-placeholder">لم يتم رفع أي صورة بعد.</div>
+              <img id="custom-map-image" alt="الخريطة المرفوعة" class="hidden" />
+              <div class="map-marker-layer" id="map-marker-layer" aria-live="polite"></div>
+              <div class="map-tap-layer" id="map-tap-layer"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="side-column">
+          <div class="builder-panel compact-card slim">
+            <div class="builder-heading sticky-heading">
+              <div>
+                <h3>الأسئلة</h3>
+                <p>حدد نقطة، اكتب السؤال، ثم أضفه للقائمة.</p>
+              </div>
+            </div>
+            <div class="builder-editing-banner hidden" id="builder-editing-banner">
+              <div>
+                <strong>جارٍ تعديل اختبار: <span id="builder-editing-title"></span></strong>
+                <p>يمكنك إضافة أسئلة جديدة أو تعديلها وتحديث صورة الخريطة بحرية.</p>
+              </div>
+              <button class="text-btn" type="button" id="cancel-edit-test-btn">إنهاء التحرير</button>
+            </div>
+            <div class="builder-grid-fields">
+              <div class="builder-field">
+                <label for="builder-test-title">اسم الاختبار</label>
+                <input id="builder-test-title" class="field-emphasis" type="text" placeholder="مثلًا: درس مصر العليا" />
+              </div>
+              <div class="builder-field">
+                <label for="builder-point-label">عنوان النقطة</label>
+                <input id="builder-point-label" class="field-emphasis" type="text" placeholder="مثلًا: القلعة" />
+              </div>
+            </div>
+            <div class="builder-field builder-inline">
+              <button class="btn secondary cta-emphasis" type="button" id="place-point-btn">تحديد نقطة</button>
+              <span class="builder-status" id="builder-point-preview">لم يتم اختيار نقطة بعد</span>
+            </div>
+            <button class="text-btn hidden builder-cancel-edit" type="button" id="cancel-question-edit-btn">إلغاء تعديل السؤال الحالي</button>
+            <form id="question-builder-form" class="question-builder-form">
+              <div class="builder-field">
+                <label for="builder-question">نص السؤال</label>
+                <textarea id="builder-question" class="field-emphasis" rows="3" placeholder="اكتب السؤال بإيجاز"></textarea>
+              </div>
+              <div class="builder-field">
+                <label for="builder-type">نوع السؤال</label>
+                <select id="builder-type" class="field-emphasis">
+                  <option value="choice">اختيار من متعدد</option>
+                  <option value="boolean">صح أم خطأ</option>
+                </select>
+              </div>
+              <div class="builder-field" id="choice-fields">
+                <label>الاختيارات</label>
+                <div class="choice-row">
+                  <label class="choice-radio">
+                    <input type="radio" name="choice-correct" value="0" />
+                    <span>إجابة صحيحة</span>
+                  </label>
+                  <input type="text" class="choice-input field-emphasis" data-index="0" placeholder="اختيار 1" />
+                </div>
+                <div class="choice-row">
+                  <label class="choice-radio">
+                    <input type="radio" name="choice-correct" value="1" />
+                    <span>إجابة صحيحة</span>
+                  </label>
+                  <input type="text" class="choice-input field-emphasis" data-index="1" placeholder="اختيار 2" />
+                </div>
+                <div class="choice-row">
+                  <label class="choice-radio">
+                    <input type="radio" name="choice-correct" value="2" />
+                    <span>إجابة صحيحة</span>
+                  </label>
+                  <input type="text" class="choice-input field-emphasis" data-index="2" placeholder="اختيار 3" />
+                </div>
+              </div>
+              <div class="builder-field hidden" id="boolean-field">
+                <label>الإجابة الصحيحة</label>
+                <div class="boolean-options">
+                  <label>
+                    <input type="radio" name="boolean-correct" value="true" />
+                    <span>صح</span>
+                  </label>
+                  <label>
+                    <input type="radio" name="boolean-correct" value="false" />
+                    <span>خطأ</span>
+                  </label>
+                </div>
+              </div>
+              <div class="builder-feedback" id="builder-feedback"></div>
+              <div class="builder-actions">
+                <button class="btn cta-emphasis" type="submit">إضافة للسجل</button>
+              </div>
+            </form>
+            <div class="builder-questions" id="builder-question-list">
+              <p class="empty-placeholder">لم تتم إضافة أسئلة بعد.</p>
+            </div>
+            <div class="builder-actions builder-actions-stack">
+              <button class="btn primary cta-emphasis" type="button" id="save-test-btn">حفظ الاختبار</button>
+              <button class="btn success hidden" type="button" id="update-test-btn">تحديث الاختبار</button>
+            </div>
+          </div>
+
+          <div class="saved-tests-panel compact-card slim">
+            <div class="builder-heading">
+              <div>
+                <h3>الاختبارات</h3>
+                <p>شغّل أي بطاقة أو احذفها بسرعة.</p>
+              </div>
+            </div>
+            <div class="saved-tests-grid" id="saved-tests-grid">
+              <div class="empty-placeholder">لا توجد اختبارات محفوظة بعد.</div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="actions" style="margin-top: 30px;">
+        <a class="btn" href="#/games">العودة للألعاب التعليمية</a>
+      </div>
+    </div>
+  </main>
+
+  <div class="play-modal" id="play-modal" aria-hidden="true">
+    <div class="play-modal-backdrop" id="play-modal-backdrop"></div>
+    <div class="play-modal-dialog" role="dialog" aria-modal="true">
+      <button class="modal-close" type="button" id="close-play-modal" aria-label="إغلاق النافذة">×</button>
+      <div class="play-modal-body">
+        <div class="play-map-wrapper">
+          <div class="play-map-preview">
+            <div class="play-map-placeholder" id="play-map-placeholder">لم يتم العثور على خريطة لهذا الاختبار.</div>
+            <img id="play-map-image" alt="خريطة الاختبار" class="hidden" />
+            <div class="play-marker-layer" id="play-marker-layer"></div>
+          </div>
+          <p class="play-map-status" id="play-map-status">اضغط على أي نقطة للبدء</p>
+        </div>
+        <div class="play-question-area" id="play-question-area">
+          <p class="empty-placeholder">سيظهر السؤال هنا بعد اختيار نقطة من الخريطة.</p>
+        </div>
+        <div class="play-results-panel hidden" id="play-results-panel">
+          <div>
+            <strong>نتيجة الاختبار</strong>
+            <p id="play-results-label">أجب على جميع النقاط لعرض النتيجة.</p>
+          </div>
+          <div class="play-results-stats">
+            <span class="result-chip success" id="play-results-correct">0 صحيحة</span>
+            <span class="result-chip danger" id="play-results-incorrect">0 خاطئة</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

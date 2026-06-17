@@ -1,0 +1,550 @@
+/* الأنماط الخاصة بمودال الأرقام العشوائية */
+
+.numbers-modal-backdrop{
+  position:fixed;
+  inset:0;
+  background:color-mix(in oklab, var(--bg-solid) 35%, #000 65%);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  z-index:999;
+  backdrop-filter:blur(6px);
+  transition:opacity .2s ease, visibility .2s ease;
+}
+
+/* حالة التثبيت - المودال لا يختفي عند النقر خارجه */
+.numbers-modal-backdrop.numbers-pinned{
+  background:color-mix(in oklab, var(--bg-solid) 20%, #000 80%);
+  backdrop-filter:blur(8px);
+}
+
+.numbers-modal-backdrop.numbers-hidden{
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+}
+
+.numbers-modal-card{
+  background:var(--card);
+  border-radius:18px;
+  box-shadow:0 18px 48px rgba(15,23,42,.18);
+  width:min(418px, 100%);
+  position:relative;
+  border:none; /* إزالة الحدود تماماً */
+  display:flex;
+  flex-direction:column;
+  transition:transform .15s ease;
+  user-select:none;
+  /* إلغاء أي شعور بنافذة منفصلة - لا تكبير */
+  transform:none;
+}
+
+/* المودال أثناء السحب */
+.numbers-modal-card.is-dragging{
+  transform:none; /* بدون تغيير الحجم أثناء السحب */
+  box-shadow:0 24px 64px rgba(15,23,42,.24);
+  cursor:move;
+  transition:none;
+}
+
+.numbers-modal-card.is-dragging .numbers-modal-header{
+  cursor:move;
+}
+
+.numbers-modal-card:focus{outline:none;}
+
+/* هيدر المودال مع شريط الأدوات */
+.numbers-modal-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:16px 20px 12px;
+  border-bottom:1px solid var(--border);
+  cursor:move;
+  user-select:none;
+  position:relative;
+  background:var(--card);
+}
+
+.numbers-modal-header:active{
+  cursor:move;
+}
+
+.numbers-modal-header h3{
+  margin:0;
+  font-size:18px;
+  font-weight:700;
+  color:var(--text);
+  pointer-events:none;
+}
+
+/* شريط الأدوات */
+.numbers-modal-toolbar{
+  display:flex;
+  align-items:center;
+  gap:4px;
+}
+
+.numbers-icon-btn{
+  border:1px solid var(--border);
+  width:28px;
+  height:28px;
+  border-radius:8px;
+  font-size:14px;
+  background:var(--card);
+  color:var(--text);
+  cursor:pointer;
+  transition:background .15s ease, transform .1s ease, border-color .15s ease, box-shadow .15s ease;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-shrink:0;
+  box-shadow:var(--shadow-xs);
+}
+
+.numbers-icon-btn:hover{
+  background:var(--card-hover);
+  transform:translateY(-1px);
+  border-color:var(--primary-border);
+  box-shadow:var(--shadow-sm);
+}
+
+.numbers-icon-btn:active{
+  transform:translateY(0);
+}
+
+/* زر التثبيت النشط */
+.numbers-pin-btn.is-active{
+  background:#22c55e;
+  color:white;
+}
+
+.numbers-pin-btn.is-active:hover{
+  background:#16a34a;
+}
+
+/* زر الطي/الفرد */
+.numbers-collapse-btn{
+  transition:transform .2s ease, background .15s ease;
+  position:relative;
+  overflow:hidden;
+}
+
+.numbers-collapse-btn::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  border-radius:6px;
+  background:linear-gradient(135deg, var(--primary-bg), var(--info-bg));
+  opacity:0;
+  transition:opacity .2s ease;
+}
+
+.numbers-collapse-btn:hover::before{
+  opacity:1;
+}
+
+.numbers-collapse-btn span{
+  display:inline-block;
+  transition:transform .2s ease;
+  font-size:16px;
+  line-height:1;
+  font-weight:bold;
+  position:relative;
+  z-index:1;
+}
+
+.numbers-collapse-btn.is-collapsed{
+  transform:rotate(180deg);
+}
+
+/* منطقة المحتوى */
+.numbers-form-wrapper{
+  padding:0 20px;
+  overflow:hidden;
+  transition:max-height .3s ease, opacity .2s ease;
+}
+
+.numbers-form-wrapper.is-collapsed{
+  max-height:0;
+  opacity:0;
+  padding-top:0;
+  padding-bottom:0;
+}
+
+.numbers-form{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  padding-bottom:16px;
+}
+
+.numbers-form label{
+  display:flex;
+  flex-direction:column;
+  font-size:12px;
+  color:var(--muted);
+  gap:4px;
+  font-weight:600;
+}
+
+.numbers-form input{
+  border-radius:8px;
+  border:1px solid var(--border);
+  padding:8px 10px;
+  font-family:inherit;
+  font-size:14px;
+  text-align:center;
+  background:var(--card);
+  color:var(--text);
+  transition:border-color .15s ease, box-shadow .15s ease, background .15s ease;
+  min-width:0;
+  box-shadow:var(--shadow-xs);
+}
+
+.numbers-form input:focus{
+  outline:none;
+  border-color:var(--primary);
+  box-shadow:0 0 0 2px var(--primary-bg);
+}
+
+.numbers-input-row{
+  display:flex;
+  gap:8px;
+  align-items:end;
+}
+
+.numbers-input-row > label{
+  flex:1;
+  min-width:0;
+}
+
+.numbers-count-field{
+  flex:0.8 !important;
+}
+
+.numbers-options{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.numbers-sound-toggle{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:4px 10px;
+  font-size:12px;
+  white-space:nowrap;
+  box-shadow:var(--shadow-xs);
+}
+
+.numbers-sound-toggle input{accent-color:var(--primary);}
+
+/* حركة الأرقام قبل الاختيار */
+.numbers-runner{
+  margin:0 20px;
+  height:40px;
+  background:var(--card);
+  border-radius:12px;
+  overflow:hidden;
+  position:relative;
+  border:1px solid var(--border);
+  display:none;
+  box-shadow:var(--shadow-xs);
+}
+
+.numbers-runner.is-active{
+  display:block;
+}
+
+.numbers-runner-track{
+  display:flex;
+  align-items:center;
+  height:100%;
+  position:absolute;
+  white-space:nowrap;
+  animation:numbersRun 1.5s linear infinite;
+}
+
+.numbers-runner-number{
+  padding:0 16px;
+  font-weight:700;
+  font-size:18px;
+  color:var(--text);
+}
+
+@keyframes numbersRun{
+  from{transform:translateX(100%);}
+  to{transform:translateX(-100%);}
+}
+
+.numbers-error{
+  margin:0 20px 0;
+  color:#ef4444;
+  min-height:16px;
+  font-size:12px;
+  text-align:center;
+}
+
+.numbers-display{
+  margin:0 20px;
+  background:linear-gradient(135deg, var(--primary), var(--primary-light));
+  color:#fff;
+  border-radius:16px;
+  font-size:120px; /* تضخيم إلى الضعف */
+  font-weight:800;
+  text-align:center;
+  padding:21px 16px; /* تقليل حجم الصندوق 25% دون تغيير الرقم */
+  letter-spacing:3px;
+  transition:transform .3s ease;
+  box-shadow:0 4px 20px var(--primary-bg);
+}
+
+.numbers-display.is-empty{font-size:72px;opacity:.6;}
+
+/* الأرقام المتحركة */
+.numbers-display.running-numbers{
+  animation:numbers-pulse 0.1s ease-in-out infinite alternate;
+  background:linear-gradient(135deg, var(--success), #34d399);
+  border:3px solid color-mix(in oklab, var(--success) 50%, #fff 50%);
+  color:#ffffff;
+  transform:scale(1.05);
+}
+
+@keyframes numbers-pulse{
+  from{ box-shadow:0 4px 20px rgba(5,150,105,.4); }
+  to{ box-shadow:0 8px 32px rgba(5,150,105,.6); }
+}
+
+.numbers-multi-results{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  justify-content:center;
+  margin:0 20px 20px;
+}
+
+/* زر التوليد */
+.numbers-generate-wrapper{
+  margin:16px 20px 20px;
+  display:flex;
+  direction:ltr; /* ضمان أن البداية تكون يساراً في سياق RTL */
+  justify-content:flex-start; /* زر الاختيار إلى أقصى اليسار */
+}
+
+.numbers-generate-btn{
+  background:linear-gradient(135deg, var(--success), var(--success-bg));
+  color:#ffffff;
+  border:none;
+  border-radius:12px;
+  padding:14px 28px;
+  font-size:18px;
+  font-weight:700;
+  cursor:pointer;
+  transition:all 0.2s ease;
+  box-shadow:0 4px 12px var(--success-bg);
+  border:2px solid rgba(255,255,255,.2);
+  min-width:140px;
+}
+
+.numbers-generate-btn:hover{
+  background:linear-gradient(135deg, #047857, #059669);
+  transform:translateY(-2px);
+  box-shadow:0 6px 16px rgba(5,150,105,.4);
+}
+
+.numbers-generate-btn:active{
+  transform:translateY(0);
+  box-shadow:0 2px 8px rgba(5,150,105,.3);
+}
+
+.numbers-generate-btn:disabled{
+  background:linear-gradient(135deg, #64748b, #94a3b8);
+  cursor:not-allowed;
+  transform:none;
+  box-shadow:0 2px 8px rgba(100,116,139,.2);
+}
+
+/* حالة الطي */
+.numbers-form-wrapper{
+  overflow:hidden;
+  transition:max-height 0.3s ease;
+}
+
+.numbers-form-wrapper.is-collapsed{
+  max-height:0 !important;
+  margin:0;
+  padding:0;
+}
+
+.numbers-generate-wrapper.is-collapsed{
+  margin-top:0;
+}
+
+.numbers-pill{
+  background:#e0f2fe;
+  color:#0f172a;
+  border-radius:999px;
+  padding:8px 16px;
+  font-weight:700;
+  font-size:20px;
+  display:inline-flex;
+  justify-content:center;
+  align-items:center;
+  animation:numbersFadeUp .28s ease both;
+}
+
+@keyframes numbersFadeUp{
+  from{opacity:0;transform:translateY(12px);}
+  to{opacity:1;transform:translateY(0);}
+}
+
+/* تنسيق الأرقام المتعددة في مربعات منفصلة */
+.numbers-display.multiple-numbers,
+.numbers-main-display.multiple-numbers{
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+  justify-content:center;
+  align-items:center;
+  padding:20px;
+  min-height:80px;
+}
+
+.number-box{
+  background:linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color:#ffffff;
+  border-radius:12px;
+  padding:15px 21px; /* تقليل حجم الصندوق 25% دون تغيير الرقم */
+  font-weight:800;
+  font-size:56px; /* تضخيم إلى الضعف */
+  min-width:75px; /* تقليل العرض الأدنى 25% */
+  text-align:center;
+  box-shadow:0 4px 12px var(--primary-bg);
+  border:2px solid rgba(255,255,255,.2);
+  animation:numberBoxAppear 0.5s ease-out both;
+  transform:scale(1);
+  transition:transform 0.2s ease;
+}
+
+.number-box:hover{
+  transform:scale(1.05);
+}
+
+@keyframes numberBoxAppear{
+  from{
+    opacity:0;
+    transform:scale(0.8) translateY(-10px);
+  }
+  to{
+    opacity:1;
+    transform:scale(1) translateY(0);
+  }
+}
+
+@media (max-width:520px){
+  .numbers-modal-card{width:min(340px, 95%);}
+  .numbers-modal-header{padding:12px 16px 8px;}
+  .numbers-modal-header h3{font-size:16px;}
+  .numbers-form-wrapper{padding:0 16px;}
+  .numbers-input-row{gap:6px;}
+  .numbers-options{gap:8px;}
+  .numbers-display{
+    font-size:72px; /* الضعف للشاشات الصغيرة أيضاً */
+    padding:18px 14px;
+    margin:0 16px;
+  }
+  .numbers-multi-results{margin:0 16px 16px;}
+  .numbers-runner{margin:0 16px;}
+  .numbers-error{margin:0 16px 0;}
+  .numbers-count-field{flex:1 !important;}
+  
+  /* تحسين المربعات المتعددة للشاشات الصغيرة */
+  .numbers-main-display.multiple-numbers{
+    gap:8px;
+    padding:16px;
+  }
+  
+  .number-box{
+    font-size:40px; /* مضاعف عن السابق في الموبايل */
+    padding:14px 18px;
+    min-width:70px;
+  }
+}
+
+/* Toast لإشعار نهاية النطاق - يظهر داخل المودال نفسه */
+.numbers-toast{
+  position:absolute; /* داخل بطاقة المودال */
+  right:16px;
+  bottom:16px;
+  background:rgba(30,41,59,.95);
+  color:#fff;
+  border-radius:12px;
+  padding:10px 14px;
+  font-weight:700;
+  font-size:14px;
+  box-shadow:0 10px 28px rgba(0,0,0,.25);
+  opacity:0;
+  transform:translateY(6px);
+  transition:opacity .2s ease, transform .2s ease;
+  z-index:100; /* أقل من طبقة المودال لكن فوق المحتوى */
+  pointer-events:auto; /* للسماح بالنقر على الزر */
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.numbers-toast .toast-text{
+  line-height:1.2;
+}
+
+.numbers-toast .action-btn{
+  background:#ffffff;
+  color:#0f172a;
+  border:none;
+  border-radius:8px;
+  padding:6px 10px;
+  font-weight:800;
+  font-size:13px;
+  cursor:pointer;
+}
+
+.numbers-toast .action-btn:hover{
+  background:#e2e8f0;
+}
+
+.numbers-toast.is-visible{
+  opacity:1;
+  transform:translateY(0);
+}
+
+.numbers-toast.warn{ background:rgba(245,158,11,.95); }
+.numbers-toast.success{ background: var(--primary); }
+
+/* تنسيقات بسيطة لصفحة القائمة القديمة */
+.numbers-standalone{
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:32px 16px;
+}
+
+.numbers-standalone-card{
+  background:var(--card);
+  border-radius:18px;
+  padding:24px 28px;
+  max-width:420px;
+  text-align:center;
+  box-shadow:var(--shadow);
+  border:1px solid rgba(148,163,184,.16);
+}
+
+.numbers-standalone-card h1{margin-top:0;}

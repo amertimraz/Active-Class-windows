@@ -1,0 +1,514 @@
+/* ========================================
+   QUIZ VIEW ANIMATIONS - OPTIMIZED
+   Smooth, performant animations
+   ======================================== */
+
+/* ===== Performance-First Animation Rules ===== */
+/* Only animate transform and opacity for best performance */
+
+/* ===== Smooth Entrance Animations ===== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ===== Gentle Pulse - Optimized ===== */
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.03);
+  }
+}
+
+/* ===== Subtle Shake for Wrong Answer ===== */
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-8px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(8px);
+  }
+}
+
+/* ===== Bounce for Success ===== */
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+/* ===== Smooth Rotate for Loading ===== */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ===== Scale Pop for Icons ===== */
+@keyframes iconPop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ===== Gradient Animation ===== */
+@keyframes slideGradient {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 200% 0%;
+  }
+}
+
+/* ===== Pulse Warnings ===== */
+@keyframes pulseWarn {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 4px 16px rgba(245, 158, 11, 0.2);
+  }
+  50% {
+    transform: scale(1.04);
+    box-shadow: 0 8px 24px rgba(245, 158, 11, 0.4);
+  }
+}
+
+@keyframes pulseDanger {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3);
+  }
+  50% {
+    transform: scale(1.06);
+    box-shadow: 0 8px 32px rgba(239, 68, 68, 0.6);
+  }
+}
+
+/* ===== Count Pulse for Countdown ===== */
+@keyframes countPulse {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ===== Loading Overlay ===== */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.loading-spinner {
+  text-align: center;
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 40px 60px;
+  border-radius: 24px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  animation: slideInUp 0.4s ease-out;
+}
+
+.loading-spinner p {
+  margin-top: 20px;
+  font-size: 20px;
+  font-weight: 700;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.spinner {
+  border: 5px solid rgba(255, 255, 255, 0.2);
+  border-top-color: white;
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  margin: 0 auto;
+  animation: spin 0.8s linear infinite;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* ===== Start Overlay Animations ===== */
+/* Staggered entrance for smooth appearance */
+.start-inner {
+  animation: slideInUp 0.5s ease-out;
+}
+
+.start-inner h2 {
+  animation: slideInDown 0.5s ease-out;
+}
+
+.start-row {
+  animation: fadeIn 0.6s ease-out 0.1s backwards;
+}
+
+.start-row:nth-child(3) {
+  animation-delay: 0.15s;
+}
+
+.start-row:nth-child(4) {
+  animation-delay: 0.2s;
+}
+
+#startBtn {
+  animation: slideInUp 0.6s ease-out 0.25s backwards;
+}
+
+#startGhost {
+  animation: fadeIn 0.8s ease-out 0.4s backwards;
+}
+
+/* ===== Quiz Header Entrance ===== */
+.quiz-header-enter {
+  animation: slideInDown 0.5s ease-out;
+}
+
+/* ===== Question Card Animations ===== */
+.question-card {
+  animation: fadeIn 0.4s ease-out;
+}
+
+/* ===== Options Entrance - Optimized Stagger ===== */
+.opts .opt {
+  animation: slideInUp 0.3s ease-out backwards;
+}
+
+.opts .opt:nth-child(1) {
+  animation-delay: 0.05s;
+}
+
+.opts .opt:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.opts .opt:nth-child(3) {
+  animation-delay: 0.15s;
+}
+
+.opts .opt:nth-child(4) {
+  animation-delay: 0.2s;
+}
+
+.opts .opt:nth-child(5) {
+  animation-delay: 0.25s;
+}
+
+.opts .opt:nth-child(6) {
+  animation-delay: 0.3s;
+}
+
+/* ===== Correct Answer Animation ===== */
+.opt.correct {
+  animation: correctPulse 0.5s ease-out;
+}
+
+@keyframes correctPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
+  100% {
+    transform: scale(1.02);
+  }
+}
+
+/* ===== Wrong Answer Animation ===== */
+.opt.wrong {
+  animation: shake 0.4s ease-out;
+}
+
+/* ===== Modal Animations ===== */
+.modal-overlay {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.modal {
+  animation: slideInUp 0.4s ease-out;
+}
+
+/* ===== Toast Animations ===== */
+.toast {
+  animation: slideInRight 0.4s ease-out;
+}
+
+.toast.removing {
+  animation: slideInRight 0.3s ease-out reverse;
+}
+
+/* ===== Countdown Overlay ===== */
+#countdownOverlay {
+  animation: fadeIn 0.2s ease-out;
+}
+
+#countdownNum {
+  animation: countPulse 0.8s ease-out;
+}
+
+/* ===== Progress Bar Animation ===== */
+.bar {
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ===== Button Hover States - Optimized ===== */
+.btn,
+.opt,
+.control-btn,
+.pill {
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.2s ease,
+              background 0.2s ease;
+  will-change: transform;
+}
+
+/* Optimize for GPU acceleration */
+.btn:hover,
+.opt:hover,
+.control-btn:hover,
+.pill:hover {
+  backface-visibility: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ===== Reduce Motion Support ===== */
+/* Honor user preferences for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  /* Disable all animations */
+  .spinner {
+    animation: none;
+    border-top-color: transparent;
+    border-right-color: white;
+  }
+}
+
+/* ===== Focus Visible Animations ===== */
+*:focus-visible {
+  outline: 3px solid rgba(68, 114, 196, 0.5);
+  outline-offset: 3px;
+  transition: outline-offset 0.2s ease;
+}
+
+/* ===== Subtle Hover Glow for Important Elements ===== */
+.btn:hover:not(:disabled),
+.opt:hover:not(.disabled),
+.control-btn:hover {
+  position: relative;
+}
+
+/* ===== Performance Hints ===== */
+/* Add will-change only when necessary */
+.opt:hover,
+.btn:hover,
+.control-btn:hover {
+  will-change: transform, box-shadow;
+}
+
+/* Remove will-change after transition */
+.opt,
+.btn,
+.control-btn {
+  will-change: auto;
+}
+
+/* ===== Score Circle Animation ===== */
+.score-circle {
+  animation: iconPop 0.6s ease-out;
+}
+
+/* ===== Result Details Stagger ===== */
+.result-item {
+  animation: slideInUp 0.4s ease-out backwards;
+}
+
+.result-item:nth-child(1) { animation-delay: 0.1s; }
+.result-item:nth-child(2) { animation-delay: 0.15s; }
+.result-item:nth-child(3) { animation-delay: 0.2s; }
+.result-item:nth-child(4) { animation-delay: 0.25s; }
+.result-item:nth-child(5) { animation-delay: 0.3s; }
+
+/* ===== Feedback Modal Animations - Enhanced ===== */
+.answer-feedback-modal {
+  /* Controlled by .show class in CSS */
+}
+
+.answer-feedback-modal.show {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.answer-feedback-modal.show .feedback-content {
+  animation: modalBounceIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes modalBounceIn {
+  0% {
+    transform: scale(0.3) translateY(-100px);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.05) translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+.feedback-icon {
+  /* Animation defined in main CSS */
+}
+
+/* ===== Header Timer State Transitions ===== */
+.header-timer {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.header-timer.warn {
+  animation: pulseWarn 1s ease-in-out infinite;
+}
+
+.header-timer.danger {
+  animation: pulseDanger 0.6s ease-in-out infinite;
+}
+
+/* ===== Optimized Question Text Transition ===== */
+.q-text {
+  transition: opacity 0.3s ease-out,
+              transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ===== Footer Entrance ===== */
+.footer {
+  animation: slideInUp 0.5s ease-out 0.3s backwards;
+}
+
+/* ===== Card Entrance ===== */
+.q-card {
+  animation: fadeIn 0.5s ease-out;
+}
+
+/* ===== Prevent Layout Shift ===== */
+/* Use transform instead of position changes */
+@keyframes preventShift {
+  from {
+    transform: translateZ(0);
+  }
+  to {
+    transform: translateZ(0);
+  }
+}
+
+/* ===== Optimize Repaints ===== */
+/* Contain paint for animated elements */
+.opt,
+.btn,
+.control-btn,
+.modal,
+.toast,
+.loading-spinner {
+  contain: layout style paint;
+}
+
+/* ===== Smooth Scroll ===== */
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}

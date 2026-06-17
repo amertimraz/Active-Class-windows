@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>عرض الدرس</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/pages/lesson-viewer.css">
+<script nonce="ac">
+  (function(){
+    try{
+      var theme = localStorage.getItem('cm_theme');
+      if(!theme){
+        fetch('/api/settings')
+          .then(function(r){ return r.ok ? r.json() : {}; })
+          .then(function(s){
+            var t = (s && s.theme) ? s.theme : 'light';
+            document.documentElement.setAttribute('data-theme', t);
+          })
+          .catch(function(){
+            document.documentElement.setAttribute('data-theme','light');
+          });
+      } else {
+        document.documentElement.setAttribute('data-theme', theme);
+      }
+      window.addEventListener('storage', function(e){
+        if(e.key === 'cm_theme' && e.newValue){
+          document.documentElement.setAttribute('data-theme', e.newValue);
+        }
+      });
+    }catch(_){ }
+  })();
+</script>
+</head>
+<body>
+  <div class="lesson-viewer-container">
+    <header class="lesson-header">
+      <h1 id="lesson-title">جارٍ تحميل عنوان الدرس...</h1>
+      <a href="/pages/content.html" class="btn back-btn">العودة لإدارة المحتوى</a>
+    </header>
+
+    <main class="lesson-body">
+      <aside class="content-menu">
+        <h2>محتويات الدرس</h2>
+        <ul id="content-items-list">
+          <!-- سيتم ملء القائمة هنا بواسطة JavaScript -->
+        </ul>
+      </aside>
+
+      <section class="content-display">
+        <div id="display-area" class="display-area">
+          <p class="placeholder">الرجاء اختيار عنصر من القائمة لعرضه.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/pages/lesson-viewer.js"></script>
+</body>
+</html>

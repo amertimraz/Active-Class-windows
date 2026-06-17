@@ -1,0 +1,27 @@
+{
+  "name": "active-class",
+  "version": "1.0.0",
+  "description": "Active Class - تطبيق إدارة الفصل التفاعلي باستخدام Electron",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "server": "node server/server.js",
+    "migrate:sqlite": "node server/migrate-sqlite.js"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "better-sqlite3": "^12.10.0",
+    "express": "^4.21.2",
+    "multer": "^2.0.2",
+    "pdf-parse": "^2.4.5",
+    "sql.js": "^1.14.1",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.5.0",
+    "electron": "^22.3.27",
+    "playwright": "^1.58.2",
+    "postcss": "^8.5.14",
+    "tailwindcss": "^4.3.0"
+  }
+}

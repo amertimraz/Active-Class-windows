@@ -1,0 +1,45 @@
+/* إضافات CSS لتحسين نموذج إضافة الطالب وأزرار الإجراءات */
+
+/* تصغير حجم الأزرار في نموذج إضافة الطالب */
+.add-student-form .btn {
+  font-size: 11px !important;
+  padding: 6px 8px !important;
+  min-width: 70px;
+  white-space: nowrap;
+}
+
+/* تصغير عنوان نموذج إضافة الطالب */
+.add-student-title {
+  font-size: 14px !important;
+  margin-bottom: 8px !important;
+  font-weight: 600;
+  gap: 6px;
+}
+
+/* تحسين أزرار الإجراءات في شريط التحكم */
+.controls-actions .btn {
+  font-size: 10px !important;
+  padding: 4px 6px !important;
+  min-width: 50px;
+}
+
+/* تحسين حقول الإدخال في النموذج */
+.add-student-form .form-input,
+.add-student-form .form-select {
+  font-size: 13px;
+  padding: 6px 8px;
+}
+
+/* تحسين الاستجابة للشاشات الكبيرة */
+@media (min-width: 1024px) {
+  .students-controls-row {
+    grid-template-columns: 3fr 1fr 1fr auto;
+    gap: 8px;
+  }
+  
+  .add-student-form .btn {
+    font-size: 12px !important;
+    padding: 7px 10px !important;
+    min-width: 80px;
+  }
+}

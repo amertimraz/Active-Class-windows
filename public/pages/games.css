@@ -1,0 +1,124 @@
+/* Modern Games Page Design — Final Fix */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 2rem;
+  margin-top: 2rem;
+  padding-bottom: 3rem;
+}
+
+.game-card {
+  background: var(--card) !important;
+  border-radius: 24px !important;
+  padding: 2rem !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  text-align: center !important;
+  text-decoration: none !important;
+  color: var(--text) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: var(--shadow-sm) !important;
+  position: relative;
+  min-height: 320px;
+  justify-content: space-between;
+}
+
+.game-card:hover {
+  transform: translateY(-8px) !important;
+  box-shadow: var(--shadow-lg) !important;
+  border-color: var(--primary) !important;
+}
+
+.game-icon-container {
+  width: 90px;
+  height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3.5rem;
+  margin-bottom: 1.5rem;
+  transition: transform 0.3s ease;
+}
+
+.game-card:hover .game-icon-container {
+  transform: scale(1.1) rotate(5deg);
+}
+
+.game-card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  width: 100%;
+}
+
+.game-card-title {
+  font-size: 1.5rem !important;
+  font-weight: 800 !important;
+  margin: 0 !important;
+  color: var(--text) !important;
+}
+
+[data-theme="dark"] .game-card-title {
+  color: #f1f5f9 !important;
+}
+
+.game-card-desc {
+  font-size: 1rem !important;
+  color: var(--text-muted) !important;
+  line-height: 1.6 !important;
+  margin: 0 !important;
+}
+
+.game-card-badge {
+  padding: 0.6rem 1.5rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: white;
+  align-self: center; /* تذكر: لجعل الزر في المنتصف مثل الصورة */
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Specific Card Themes with exact colors from UI */
+.game-card.blue { border: 2px solid #00b0ff !important; background-color: #f0f9ff !important; }
+.game-card.blue .game-card-title { color: #0081cb !important; }
+.game-card.blue .game-card-badge { background-color: #00b0ff !important; }
+
+.game-card.green { border: 2px solid #16a34a !important; background-color: #f0fdf4 !important; }
+.game-card.green .game-card-title { color: #16a34a !important; }
+.game-card.green .game-card-badge { background-color: #16a34a !important; }
+
+.game-card.purple { border: 2px solid #6366f1 !important; background-color: #f5f3ff !important; }
+.game-card.purple .game-card-title { color: #6366f1 !important; }
+.game-card.purple .game-card-badge { background-color: #6366f1 !important; }
+
+.game-card.teal { border: 2px solid #10b981 !important; background-color: #ecfdf5 !important; }
+.game-card.teal .game-card-title { color: #10b981 !important; }
+.game-card.teal .game-card-badge { background-color: #10b981 !important; }
+
+.game-card.orange { border: 2px solid #f97316 !important; background-color: #fff7ed !important; }
+.game-card.orange .game-card-title { color: #f97316 !important; }
+.game-card.orange .game-card-badge { background-color: #f97316 !important; }
+
+.game-card.pink { border: 2px solid #ec4899 !important; background-color: #fdf2f8 !important; }
+.game-card.pink .game-card-title { color: #ec4899 !important; }
+.game-card.pink .game-card-badge { background-color: #ec4899 !important; }
+
+.game-card.gold { border: 2px solid #eab308 !important; background-color: #fefce8 !important; }
+.game-card.gold .game-card-title { color: #854d0e !important; }
+.game-card.gold .game-card-badge { background-color: #eab308 !important; }
+
+.game-card.gray { border: 2px solid #64748b !important; background-color: #f8fafc !important; }
+.game-card.gray .game-card-title { color: #1e293b !important; }
+.game-card.gray .game-card-badge { background-color: #64748b !important; }
+
+/* Modal Customization if needed */
+.game-modal-content {
+  border: none !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+}

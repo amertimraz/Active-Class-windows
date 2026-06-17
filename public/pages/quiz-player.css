@@ -1,0 +1,68 @@
+/* public/pages/quiz-player.css */
+
+.slide-enter {
+    animation: slideIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+}
+
+.slide-exit {
+    animation: slideOut 0.3s ease-in forwards;
+}
+
+@keyframes slideIn {
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes slideOut {
+    to {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+    }
+}
+
+.option-btn {
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+}
+
+.option-btn:hover:not(:disabled) {
+    transform: translateX(-5px);
+    border-color: #6366f1; /* indigo-500 */
+    background-color: #eef2ff; /* indigo-50 */
+}
+
+.option-btn.correct {
+    background-color: #ecfdf5; /* emerald-50 */
+    border-color: #10b981; /* emerald-500 */
+    color: #065f46; /* emerald-800 */
+    transform: scale(1.02);
+    box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.1);
+}
+
+.option-btn.incorrect {
+    background-color: #fef2f2; /* red-50 */
+    border-color: #ef4444; /* red-500 */
+    color: #991b1b; /* red-800 */
+    animation: shake 0.4s ease-in-out;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+.animate-bounce-short {
+    animation: bounceShort 1s ease-in-out forwards;
+}
+
+@keyframes bounceShort {
+    0% { transform: scale(0) translateY(50px); opacity: 0; }
+    50% { transform: scale(1.2) translateY(-20px); opacity: 1; }
+    70% { transform: scale(0.9) translateY(10px); }
+    100% { transform: scale(1) translateY(0); opacity: 0; }
+}

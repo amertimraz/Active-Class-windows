@@ -1,0 +1,1596 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>عجلة الحظ - Active Class</title>
+  <link rel="stylesheet" href="/shared-design.css">
+  <script nonce="ac">
+    // Apply saved theme immediately for standalone window, and live-update on changes
+    (function(){
+      try {
+        var theme = localStorage.getItem('cm_theme') || 'light';
+        document.documentElement.setAttribute('data-theme', theme);
+        window.addEventListener('storage', function(e){
+          if (e.key === 'cm_theme' && e.newValue){
+            document.documentElement.setAttribute('data-theme', e.newValue);
+          }
+        });
+      } catch(_){ }
+    })();
+  </script>
+  <style>
+    :root {
+      --background: transparent; /* window background transparent */
+      --surface: var(--card);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      background: transparent !important; /* transparent window */
+    }
+
+    body {
+      font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+      padding: 0; /* no padding to fit exact window size */
+      direction: rtl;
+      -webkit-app-region: no-drag; /* default non-draggable */
+    }
+
+    /* خلفية المودال في نافذة منفصلة يجب أن تكون شفافة */
+    .wheel-modal-backdrop {
+      background: transparent !important;
+      position: static;
+      display: block !important;
+      height: 100%;
+      align-items: stretch;
+      justify-content: center;
+      padding: 0;
+    }
+
+    .wheel-modal-card {
+      margin: 0;
+      border-radius: 14px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+      transform: none !important; /* no scale */
+      background: var(--card);
+      overflow: hidden;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      position: relative; /* for absolute collapse toggle */
+    }
+
+    /* External scale handle */
+    .scale-handle {
+      position: absolute;
+      left: -12px; /* outside left edge */
+      top: 50%;
+      transform: translate(-100%, -50%);
+      width: 14px;
+      height: 80px;
+      border-radius: 8px;
+      background: rgba(0,0,0,0.06);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: ew-resize;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      user-select: none;
+      -webkit-app-region: no-drag;
+    }
+    .scale-handle:hover { background: rgba(0,0,0,0.1); }
+    .scale-handle span { font-size: 12px; color: var(--text-muted); transform: rotate(90deg); }
+
+    /* Bottom-right resize grip (touch-friendly) */
+    .resize-grip {
+      position: absolute;
+      right: 6px;
+      bottom: 6px;
+      width: 16px;
+      height: 16px;
+      border-right: 2px solid #cbd5e1;
+      border-bottom: 2px solid #cbd5e1;
+      opacity: 0.75;
+      cursor: nwse-resize;
+      -webkit-app-region: no-drag;
+      user-select: none;
+    }
+    .resize-grip:hover { opacity: 1; }
+
+    .wheel-modal-card.is-dragging {
+      transform: none !important;
+      cursor: default;
+    }
+
+    /* شريط العنوان قابل للسحب */
+    .wheel-modal-header {
+      -webkit-app-region: drag; /* drag region */
+      cursor: default;
+      background: linear-gradient(135deg, rgba(99,102,241,.08), rgba(168,85,247,.08));
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .wheel-modal-header h3 {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text);
+      margin: 0;
+    }
+
+    /* عناصر التحكم يجب ألا تكون قابلة للسحب */
+    .wheel-modal-toolbar,
+    .wheel-modal-toolbar *,
+    .wheel-collapse-btn,
+    .wheel-icon-btn {
+      -webkit-app-region: no-drag;
+    }
+
+    .wheel-modal-toolbar {
+      display: flex;
+      gap: 4px;
+    }
+
+    .wheel-icon-btn {
+      width: 28px;
+      height: 28px;
+      border: none;
+      background: rgba(0,0,0,0.05);
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      transition: all 0.2s ease;
+    }
+
+    .wheel-icon-btn:hover {
+      background: rgba(0,0,0,0.1);
+    }
+
+    .wheel-icon-btn.is-active {
+      background: var(--primary);
+      color: white;
+    }
+
+    /* تحسين العرض في النافذة المنفصلة */
+    .wheel-hidden {
+      display: block !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+    }
+
+    /* محتوى المودال */
+    .wheel-modal-body {
+      flex: 1;
+      padding: 20px;
+      display: flex;
+      gap: 20px;
+      overflow: hidden;
+      transition: all .25s ease;
+    }
+
+    /* Collapse toggle button */
+    .collapse-toggle {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 20;
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      transition: all .2s ease;
+    }
+    .collapse-toggle:hover { background: var(--border-light); }
+
+    /* Collapsed layout */
+    .wheel-modal-card.is-collapsed .controls-panel {
+      display: none !important; /* hide side panel only */
+    }
+
+    .wheel-modal-card.is-collapsed .wheel-modal-body {
+      padding: 10px; /* 10px gap around content */
+    }
+
+    /* Align wheel to top with 10px gap from header in collapsed mode */
+    .wheel-modal-card.is-collapsed .wheel-container {
+      align-items: flex-start; /* top-align wheel */
+      justify-content: center;
+      flex: 0 0 auto; /* don't stretch; keep content-height so bottom gap = body padding (10px) */
+    }
+    .wheel-modal-card.is-collapsed .wheel-pointer {
+      top: 0; /* remove -10px overlap so gap stays 10px */
+    }
+
+    /* Keep wheel size unchanged when collapsed */
+    .wheel-modal-card.is-collapsed .spin-button {
+      transform: translate(-50%, -50%) scale(1.0);
+    }
+
+    /* لوحة التحكم */
+    .controls-panel {
+      width: 300px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      overflow-y: auto;
+    }
+
+    .input-section, .group-section, .participants-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .input-section h3, .group-section h3, .participants-section h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--text);
+    }
+
+    .input-group {
+      display: flex;
+      gap: 8px;
+    }
+
+    .input-group input {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+    }
+
+    .btn-secondary {
+      background: var(--secondary);
+      color: white;
+    }
+
+    .btn-secondary:hover {
+      background: #475569;
+    }
+
+    .btn-success {
+      background: var(--success);
+      color: white;
+    }
+
+    .btn-success:hover {
+      background: #059669;
+    }
+
+    .btn-warning {
+      background: var(--warning);
+      color: white;
+    }
+
+    .btn-warning:hover {
+      background: #d97706;
+    }
+
+    .btn-danger {
+      background: var(--error);
+      color: white;
+    }
+
+    .btn-danger:hover {
+      background: #dc2626;
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-outline:hover {
+      background: var(--border-light);
+    }
+
+    .group-controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    .group-controls select {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .participants-list {
+      /* Show only 3 items with scroll */
+      --item-h: 40px; /* tighter in standalone UI */
+      --gap-v: 4px;   /* margin-bottom on item */
+      --pad-v: 8px;   /* vertical padding top+bottom */
+      max-height: calc((var(--item-h) * 3) + (var(--gap-v) * 2) + (var(--pad-v) * 2));
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px;
+      margin-bottom: 12px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 20px;
+      color: var(--text-muted);
+    }
+
+    .empty-state .hint {
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    .participant-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 8px;
+      border-radius: 4px;
+      margin-bottom: 4px;
+      background: var(--border-light);
+      min-height: var(--item-h); /* keep list row height consistent */
+    }
+
+    .participant-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .participant-name {
+      font-size: 14px;
+      color: var(--text);
+    }
+
+    .remove-participant {
+      background: none;
+      border: none;
+      color: var(--error);
+      cursor: pointer;
+      font-size: 16px;
+      padding: 2px;
+    }
+
+    .participants-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    /* حاوية العجلة */
+    .wheel-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .wheel-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #wheelCanvas {
+      border-radius: 50%;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+      transition: transform 0.1s ease;
+    }
+
+    .wheel-pointer {
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 15px solid transparent;
+      border-right: 15px solid transparent;
+      border-top: 25px solid #ff4444;
+      z-index: 10;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+    }
+
+    .spin-button {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      border: none;
+      background: linear-gradient(135deg, #ff6b6b, #ff4444);
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      box-shadow: 0 4px 16px rgba(255, 68, 68, 0.4);
+      transition: all 0.2s ease;
+      z-index: 10;
+    }
+
+    .spin-button:hover:not(:disabled) {
+      transform: translate(-50%, -50%) scale(1.05);
+      box-shadow: 0 6px 20px rgba(255, 68, 68, 0.5);
+    }
+
+    .spin-button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .spin-text {
+      font-size: 11px;
+      line-height: 1;
+    }
+
+    .spin-icon {
+      font-size: 16px;
+    }
+
+    /* تذييل المودال */
+    .wheel-modal-footer {
+      padding: 16px 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      -webkit-app-region: no-drag;
+    }
+
+    /* مودال الفائز */
+    .winner-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .winner-modal.show {
+      display: flex;
+    }
+
+    .winner-content {
+      background: white;
+      border-radius: 16px;
+      padding: 40px;
+      text-align: center;
+      max-width: 400px;
+      width: 90%;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .winner-animation {
+      position: relative;
+    }
+
+    .confetti {
+      position: absolute;
+      top: -20px;
+      left: -20px;
+      right: -20px;
+      bottom: -20px;
+      pointer-events: none;
+    }
+
+    .winner-info h2 {
+      font-size: 28px;
+      margin-bottom: 16px;
+      color: var(--primary);
+    }
+
+    .winner-name {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--text);
+      margin: 20px 0;
+      padding: 16px;
+      background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+      border-radius: 12px;
+      border: 2px solid var(--primary-light);
+    }
+
+    .winner-info p {
+      font-size: 18px;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+
+    .winner-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    /* Toast notifications */
+    .wheel-toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: var(--success);
+      color: white;
+      padding: 12px 16px;
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 1001;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .wheel-toast.is-visible {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .wheel-toast.warn {
+      background: var(--warning);
+    }
+
+    .wheel-toast.error {
+      background: var(--error);
+    }
+
+    .toast-text {
+      flex: 1;
+    }
+
+    .action-btn {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .action-btn:hover {
+      background: rgba(255,255,255,0.3);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .wheel-modal-body {
+        flex-direction: column;
+        gap: 16px;
+      }
+      
+      .controls-panel {
+        width: 100%;
+        max-height: 300px;
+      }
+      
+      .wheel-container {
+        min-height: 400px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- محتوى عجلة الحظ -->
+  <div id="wheel-modal" class="wheel-modal-backdrop">
+    <div class="wheel-modal-card" role="dialog" aria-modal="true" aria-labelledby="wheel-modal-title" tabindex="-1" data-modal-card>
+      <div class="wheel-modal-header" data-drag-handle>
+        <h3 id="wheel-modal-title">🎯 عجلة الحظ</h3>
+        <div class="wheel-modal-toolbar">
+          <button type="button" class="wheel-icon-btn wheel-pin-btn" data-pin aria-label="تثبيت النافذة" aria-pressed="false">📌</button>
+          <button type="button" class="wheel-icon-btn" data-minimize aria-label="تصغير">—</button>
+          <button type="button" class="wheel-icon-btn" data-close aria-label="إغلاق">×</button>
+        </div>
+      </div>
+
+      <!-- Modal Content -->
+      <div class="scale-handle" id="scaleHandle" title="تصغير/تكبير"><span>↔</span></div>
+      <button class="collapse-toggle" id="collapseToggle" title="طي/إظهار لوحة التحكم" aria-label="طي الواجهة" aria-expanded="false">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M8 5l8 7-8 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <div class="wheel-modal-body">
+        <div class="resize-grip" id="resizeGrip" title="سحب للتكبير/التصغير"></div>
+        <!-- Controls Panel -->
+        <div class="controls-panel">
+          <!-- Manual Input -->
+          <div class="input-section">
+            <h3>إضافة مشارك</h3>
+            <div class="input-group">
+              <input type="text" id="nameInput" placeholder="اكتب اسم المشارك..." maxlength="50">
+              <button id="addNameBtn" class="btn btn-primary">إضافة</button>
+            </div>
+          </div>
+
+          <!-- Group Selection -->
+          <div class="group-section">
+            <h3>تحميل من مجموعة</h3>
+            <div class="group-controls">
+              <select id="groupSelect">
+                <option value="">اختر مجموعة...</option>
+              </select>
+              <button id="loadGroupBtn" class="btn btn-secondary">تحميل المجموعة</button>
+            </div>
+          </div>
+
+          <!-- Participants List -->
+          <div class="participants-section">
+            <h3>المشاركون (<span id="participantsCount">0</span>)</h3>
+            <div class="participants-list" id="participantsList">
+              <div class="empty-state">
+                <p>لا يوجد مشاركون بعد</p>
+                <p class="hint">أضف أسماء أو اختر مجموعة للبدء</p>
+              </div>
+            </div>
+            <div class="participants-actions">
+              <button id="clearAllBtn" class="btn btn-danger">مسح الكل</button>
+              <button id="shuffleBtn" class="btn btn-secondary">خلط الأسماء</button>
+            </div>
+
+
+          </div>
+        </div>
+
+        <!-- Wheel Container -->
+        <div class="wheel-container">
+          <div class="wheel-wrapper">
+            <canvas id="wheelCanvas" width="520" height="520"></canvas>
+            <div class="wheel-pointer"></div>
+            <button id="spinBtn" class="spin-button" disabled>
+              <span class="spin-text">ابدأ الدوران</span>
+              <span class="spin-icon">🎯</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="wheel-modal-footer">
+        <button id="resetWheelBtn" class="btn btn-secondary">إعادة تعيين</button>
+        <button id="soundToggleBtn" class="btn btn-warning">🔊 إيقاف الصوت</button>
+        <button id="excludeWinnerBtn" class="btn btn-secondary">❌ استثناء الفائز</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Winner Modal -->
+  <div id="winnerModal" class="winner-modal">
+    <div class="winner-content">
+      <div class="winner-animation">
+        <div class="confetti"></div>
+        <div class="winner-info">
+          <div class="winner-name" id="winnerName"></div>
+          <p>تم الاختيار</p>
+          <div class="winner-actions">
+            <button id="spinAgainBtn" class="btn btn-primary">دوران آخر</button>
+            <button id="closeWinnerModal" class="btn btn-secondary">إغلاق</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script nonce="ac">
+    // نفس منطق الـ router.js ولكن للنافذة المنفصلة
+    let wheelModalState = null;
+
+    function initializeStandaloneWheel() {
+      const backdrop = document.getElementById('wheel-modal');
+      const modalCard = backdrop.querySelector('.wheel-modal-card');
+      
+      wheelModalState = {
+        backdrop,
+        modalCard,
+        nameInput: document.getElementById('nameInput'),
+        addNameBtn: document.getElementById('addNameBtn'),
+        groupSelect: document.getElementById('groupSelect'),
+        loadGroupBtn: document.getElementById('loadGroupBtn'),
+        participantsList: document.getElementById('participantsList'),
+        participantsCount: document.getElementById('participantsCount'),
+        clearAllBtn: document.getElementById('clearAllBtn'),
+        shuffleBtn: document.getElementById('shuffleBtn'),
+        wheelCanvas: document.getElementById('wheelCanvas'),
+        spinBtn: document.getElementById('spinBtn'),
+        resetWheelBtn: document.getElementById('resetWheelBtn'),
+        soundToggleBtn: document.getElementById('soundToggleBtn'),
+        excludeWinnerBtn: document.getElementById('excludeWinnerBtn'),
+        winnerModal: document.getElementById('winnerModal'),
+        winnerName: document.getElementById('winnerName'),
+        spinAgainBtn: document.getElementById('spinAgainBtn'),
+        closeWinnerModal: document.getElementById('closeWinnerModal'),
+        dragHandle: backdrop.querySelector('[data-drag-handle]'),
+        isPinned: false,
+        participants: [],
+        originalParticipants: [], // baseline to restore after exclusions
+        isSpinning: false,
+        soundEnabled: true,
+        // sound engine (sequencer-style ticks)
+        spinAudioCtx: null, spinOsc: null, spinGain: null,
+        seqActive: false,
+        seqStep: 0,
+        lastTickAt: 0,
+        excludeWinner: false,
+        ctx: null,
+        currentRotation: 0,
+        colors: [
+          '#FF1744', '#00E676', '#2196F3', '#FF9800', '#E91E63',
+          '#9C27B0', '#00BCD4', '#8BC34A', '#FF5722', '#795548',
+          '#607D8B', '#FFC107', '#4CAF50', '#F44336', '#3F51B5',
+          '#009688', '#CDDC39', '#FF6F00', '#AD1457', '#6A1B9A'
+        ]
+      };
+
+      setupWheelModalInteractions();
+      initializeCanvas();
+      loadGroups();
+      loadSettings();
+
+      // Force default wheel size to 520px (UI control removed)
+      localStorage.setItem('wheelSizePx', '520');
+
+      // Load baseline participants from localStorage if available and none loaded yet
+      try {
+        const baseline = JSON.parse(localStorage.getItem('wheelBaseline_v1') || '[]');
+        if (Array.isArray(baseline) && baseline.length > 0) {
+          state.participants = [...baseline];
+          state.originalParticipants = [...baseline];
+          updateParticipantsList();
+          drawWheel();
+        }
+      } catch(_) {}
+    }
+
+    function setupWheelModalInteractions() {
+      const state = wheelModalState;
+      if (!state || state.isBound) return;
+
+      state.isBound = true;
+
+      // Collapse toggle
+      const collapseToggle = document.getElementById('collapseToggle');
+      collapseToggle.addEventListener('click', async () => {
+        const card = state.modalCard;
+        const collapsed = card.classList.toggle('is-collapsed');
+        collapseToggle.setAttribute('aria-expanded', String(!collapsed));
+        // rotate icon to indicate state
+        collapseToggle.style.transform = collapsed ? 'translateY(-50%) rotate(180deg)' : 'translateY(-50%) rotate(0deg)';
+        try {
+          // Keep wheel canvas logical size fixed at user setting (default 520)
+          const desired = parseInt(localStorage.getItem('wheelSizePx') || '520', 10);
+          const dpr = window.devicePixelRatio || 1;
+          state.ctx.setTransform(1,0,0,1,0,0); // reset before re-scale
+          state.wheelCanvas.style.width = desired + 'px';
+          state.wheelCanvas.style.height = desired + 'px';
+          state.wheelCanvas.width = Math.floor(desired * dpr);
+          state.wheelCanvas.height = Math.floor(desired * dpr);
+          if (dpr !== 1) state.ctx.scale(dpr, dpr);
+          drawWheel();
+
+          // Resize the whole window when collapsed/expanded
+          if (window.api && window.api.resizeWindow) {
+            // If collapsed, tightly wrap the wheel with 10px horizontal margin and 10px bottom gap before footer
+            const s = Math.min(1, Math.max(0.5, (wheelModalState?.scale ?? parseFloat(localStorage.getItem('wheelUiScale') || '1'))));
+            if (collapsed) {
+              const margin = 10; // horizontal body padding around wheel
+              const logical = parseInt(localStorage.getItem('wheelSizePx') || '520', 10);
+              const headerEl = state.backdrop.querySelector('.wheel-modal-header');
+              const footerEl = state.backdrop.querySelector('.wheel-modal-footer');
+              const headerH = headerEl ? headerEl.offsetHeight : 56; // fallback
+              const footerH = footerEl ? footerEl.offsetHeight : 56; // fallback
+              const verticalPadding = margin * 2; // 10 top + 10 bottom
+              const w = Math.round((logical + margin * 2) * s);
+              const h = Math.round((headerH + verticalPadding + logical + footerH) * s);
+              try { await window.api.resizeWindow(w, h); } catch(_) {}
+            } else {
+              // Expanded: use configurable sizes scaled by s
+              let collapsedCfg, expandedCfg;
+              try { collapsedCfg = JSON.parse(localStorage.getItem('wheelCollapsedSize') || '{}'); } catch(_) { collapsedCfg = {}; }
+              try { expandedCfg = JSON.parse(localStorage.getItem('wheelExpandedSize') || '{}'); } catch(_) { expandedCfg = {}; }
+              const ew = Number.isFinite(+expandedCfg.w) ? +expandedCfg.w : 980;
+              const eh = Number.isFinite(+expandedCfg.h) ? +expandedCfg.h : 740;
+              const width = Math.round(ew * s);
+              const height = Math.round(eh * s);
+              try { await window.api.resizeWindow(width, height); } catch(_) {}
+            }
+          }
+        } catch(e) { console.warn(e); }
+      });
+
+      // Pin/Minimize/Close controls for floating window
+      const pinBtn = state.backdrop.querySelector('[data-pin]');
+      const minimizeBtn = state.backdrop.querySelector('[data-minimize]');
+      const closeBtn = state.backdrop.querySelector('[data-close]');
+
+      // External scale handle to scale the entire UI (use CSS transform for smoothness)
+      const scaleHandle = document.getElementById('scaleHandle');
+      state.scale = parseFloat(localStorage.getItem('wheelUiScale') || '1');
+      const applyScale = () => {
+        const s = Math.min(1, Math.max(0.5, state.scale)); // clamp 0.5x - 1x
+        state.modalCard.style.transformOrigin = 'top left';
+        state.modalCard.style.transform = `scale(${s})`;
+        // After scaling, also adjust window size to keep content visible
+        const cardRect = state.modalCard.getBoundingClientRect();
+        if (window.api && window.api.resizeWindow) {
+          window.api.resizeWindow(Math.ceil(cardRect.width), Math.ceil(cardRect.height));
+        }
+      };
+      applyScale();
+      if (scaleHandle) {
+        // Use Pointer Events for consistent mouse/touch/pen behavior
+        scaleHandle.style.touchAction = 'none';
+        let startX = 0;
+        let startScale = state.scale;
+        const onPointerMove = (e) => {
+          const dx = e.clientX - startX;
+          state.scale = Math.min(1, Math.max(0.5, startScale + dx / 600));
+          applyScale();
+        };
+        const onPointerUp = (e) => {
+          try { scaleHandle.releasePointerCapture?.(e.pointerId); } catch(_) {}
+          window.removeEventListener('pointermove', onPointerMove);
+          window.removeEventListener('pointerup', onPointerUp);
+          localStorage.setItem('wheelUiScale', String(state.scale));
+        };
+        scaleHandle.addEventListener('pointerdown', (e) => {
+          try { scaleHandle.setPointerCapture?.(e.pointerId); } catch(_) {}
+          startX = e.clientX; startScale = state.scale;
+          window.addEventListener('pointermove', onPointerMove, { passive: true });
+          window.addEventListener('pointerup', onPointerUp, { passive: true });
+        });
+      }
+
+      // Touch-friendly bottom-right grip for scaling
+      const resizeGrip = document.getElementById('resizeGrip');
+      if (resizeGrip) {
+        // Use Pointer Events for consistent touch/mouse behavior
+        resizeGrip.style.touchAction = 'none';
+        let startPoint = { x: 0, y: 0 };
+        let startScale = state.scale;
+        const onPointerMove = (e) => {
+          const dx = e.clientX - startPoint.x;
+          const dy = e.clientY - startPoint.y;
+          const delta = Math.max(dx, dy); // diagonal feel
+          state.scale = Math.min(1, Math.max(0.5, startScale + delta / 600));
+          applyScale();
+        };
+        const onPointerUp = (e) => {
+          try { resizeGrip.releasePointerCapture?.(e.pointerId); } catch(_) {}
+          window.removeEventListener('pointermove', onPointerMove);
+          window.removeEventListener('pointerup', onPointerUp);
+          localStorage.setItem('wheelUiScale', String(state.scale));
+        };
+        resizeGrip.addEventListener('pointerdown', (e) => {
+          try { resizeGrip.setPointerCapture?.(e.pointerId); } catch(_) {}
+          startPoint = { x: e.clientX, y: e.clientY }; startScale = state.scale;
+          window.addEventListener('pointermove', onPointerMove, { passive: true });
+          window.addEventListener('pointerup', onPointerUp, { passive: true });
+        });
+      }
+
+      if (pinBtn && window.api && window.api.setAlwaysOnTop) {
+        pinBtn.addEventListener('click', async () => {
+          try {
+            state.isPinned = !state.isPinned;
+            pinBtn.setAttribute('aria-pressed', String(state.isPinned));
+            pinBtn.classList.toggle('is-active', state.isPinned);
+            await window.api.setAlwaysOnTop(state.isPinned);
+          } catch (e) { console.error(e); }
+        });
+      }
+      if (minimizeBtn && window.api && window.api.minimize) {
+        minimizeBtn.addEventListener('click', async () => {
+          try { await window.api.minimize(); } catch (e) { console.error(e); }
+        });
+      }
+      if (closeBtn && window.api && window.api.close) {
+        closeBtn.addEventListener('click', async () => {
+          try { await window.api.close(); } catch (e) { console.error(e); }
+        });
+      }
+
+      // Add participant
+      state.addNameBtn.addEventListener('click', addParticipant);
+      state.nameInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') addParticipant();
+      });
+
+      // Apply wheel size change
+
+
+      // Load group
+      state.loadGroupBtn.addEventListener('click', loadSelectedGroup);
+
+      // Clear all
+      state.clearAllBtn.addEventListener('click', clearAllParticipants);
+
+      // Shuffle
+      state.shuffleBtn.addEventListener('click', shuffleParticipants);
+
+      // Spin or Restart
+      state.spinBtn.addEventListener('click', handleSpinButtonClick);
+
+      // Reset wheel
+      state.resetWheelBtn.addEventListener('click', resetWheel);
+
+      // Sound toggle
+      state.soundToggleBtn.addEventListener('click', toggleSound);
+
+      // Exclude winner toggle
+      state.excludeWinnerBtn.addEventListener('click', toggleExcludeWinner);
+
+      // Winner modal
+      state.spinAgainBtn.addEventListener('click', () => {
+        closeWinnerModal();
+        if (state.participants.length > 0) {
+          setTimeout(() => spinWheel(), 500);
+        }
+      });
+
+      state.closeWinnerModal.addEventListener('click', closeWinnerModal);
+    }
+
+    function initializeCanvas() {
+      const state = wheelModalState;
+      state.ctx = state.wheelCanvas.getContext('2d');
+
+      // Improve sharpness on HiDPI screens
+      const dpr = window.devicePixelRatio || 1;
+      const desired = parseInt(localStorage.getItem('wheelSizePx') || '520', 10); // logical size
+      state.wheelCanvas.style.width = desired + 'px';
+      state.wheelCanvas.style.height = desired + 'px';
+      state.wheelCanvas.width = Math.floor(desired * dpr);
+      state.wheelCanvas.height = Math.floor(desired * dpr);
+      if (dpr !== 1) {
+        state.ctx.scale(dpr, dpr);
+      }
+      drawWheel();
+    }
+
+    function addParticipant() {
+      const state = wheelModalState;
+      const name = state.nameInput.value.trim();
+      
+      if (!name) {
+        showWheelToast('يرجى إدخال اسم المشارك', 'error');
+        return;
+      }
+
+      if (state.participants.includes(name)) {
+        showWheelToast('هذا الاسم موجود بالفعل', 'warn');
+        return;
+      }
+
+      state.participants.push(name);
+      // Also record in baseline so reset restores manual entries
+      state.originalParticipants.push(name);
+      try { localStorage.setItem('wheelBaseline_v1', JSON.stringify(state.originalParticipants)); } catch(_) {}
+
+      state.nameInput.value = '';
+      updateParticipantsList();
+      drawWheel();
+      showWheelToast(`تم إضافة "${name}" بنجاح`, 'success');
+    }
+
+    async function loadGroups() {
+      const state = wheelModalState;
+      try {
+        let groups = [];
+        if (window.api && window.api.loadGroups) {
+          groups = await window.api.loadGroups() || [];
+        } else {
+          groups = JSON.parse(localStorage.getItem('cm_groups_v1') || '[]');
+        }
+        state.groupSelect.innerHTML = '<option value="">اختر مجموعة...</option>';
+        
+        groups.forEach(group => {
+          const option = document.createElement('option');
+          option.value = group.id;
+          option.textContent = group.name || group.title || 'مجموعة بدون اسم';
+          state.groupSelect.appendChild(option);
+        });
+      } catch (error) {
+        console.error('Error loading groups:', error);
+      }
+    }
+
+    async function loadSelectedGroup() {
+      const state = wheelModalState;
+      const groupId = state.groupSelect.value;
+      
+      if (!groupId) {
+        showWheelToast('يرجى اختيار مجموعة أولاً', 'warn');
+        return;
+      }
+
+      try {
+        let students = [];
+        if (window.api && window.api.loadStudents) {
+          students = await window.api.loadStudents() || [];
+        } else {
+          students = JSON.parse(localStorage.getItem('cm_students_v1') || '[]');
+        }
+        const groupStudents = students
+          .filter(s => String(s.groupId) === String(groupId))
+          .map(s => s.name || s.fullName || s.displayName || s.code || 'طالب');
+
+        if (groupStudents.length === 0) {
+          showWheelToast('لا يوجد طلاب في هذه المجموعة', 'warning');
+          return;
+        }
+
+        state.participants = [...groupStudents];
+        state.originalParticipants = [...groupStudents]; // baseline for reset
+        try { localStorage.setItem('wheelBaseline_v1', JSON.stringify(state.originalParticipants)); } catch(_) {}
+        updateSpinButtonUI();
+        updateParticipantsList();
+        drawWheel();
+        showWheelToast(`تم تحميل ${groupStudents.length} مشارك من المجموعة`, 'success');
+      } catch (error) {
+        console.error('Error loading group:', error);
+        showWheelToast('حدث خطأ في تحميل المجموعة', 'error');
+      }
+    }
+
+    function updateParticipantsList() {
+      const state = wheelModalState;
+      const container = state.participantsList;
+      const count = state.participantsCount;
+      
+      count.textContent = state.participants.length;
+      
+      if (state.participants.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <p>لا يوجد مشاركون بعد</p>
+            <p class="hint">أضف أسماء أو اختر مجموعة للبدء</p>
+          </div>
+        `;
+        updateSpinButtonUI();
+        return;
+      }
+
+      container.innerHTML = '';
+      state.participants.forEach((name, index) => {
+        const item = document.createElement('div');
+        item.className = 'participant-item';
+        item.innerHTML = `
+          <span class="participant-name">${name}</span>
+          <button class="remove-participant" onclick="removeParticipant(${index})">×</button>
+        `;
+        container.appendChild(item);
+      });
+
+      updateSpinButtonUI();
+    }
+
+    function removeParticipant(index) {
+      const state = wheelModalState;
+      const name = state.participants[index];
+      state.participants.splice(index, 1);
+      updateParticipantsList();
+      drawWheel();
+      showWheelToast(`تم حذف "${name}"`, 'success');
+    }
+
+    function clearAllParticipants() {
+      const state = wheelModalState;
+      if (state.participants.length === 0) return;
+      
+      state.participants = [];
+      updateParticipantsList();
+      drawWheel();
+      showWheelToast('تم مسح جميع المشاركين', 'success');
+    }
+
+    function shuffleParticipants() {
+      const state = wheelModalState;
+      if (state.participants.length < 2) return;
+      
+      for (let i = state.participants.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [state.participants[i], state.participants[j]] = [state.participants[j], state.participants[i]];
+      }
+      
+      updateParticipantsList();
+      drawWheel();
+      showWheelToast('تم خلط الأسماء', 'success');
+    }
+
+    function drawWheel() {
+      const state = wheelModalState;
+      const canvas = state.wheelCanvas;
+      const ctx = state.ctx;
+      const centerX = (canvas.clientWidth || canvas.width) / 2;
+      const centerY = (canvas.clientHeight || canvas.height) / 2;
+      const radius = Math.min(centerX, centerY) - 12;
+
+      // Clear canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (state.participants.length === 0) {
+        // Draw empty wheel
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+        ctx.fillStyle = '#f0f0f0';
+        ctx.fill();
+        ctx.strokeStyle = '#ddd';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Draw empty text
+        ctx.fillStyle = '#999';
+        ctx.font = 'bold 18px Cairo, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('أضف مشاركين للبدء', centerX, centerY);
+        return;
+      }
+
+      const anglePerSegment = (2 * Math.PI) / state.participants.length;
+
+      // Draw segments
+      state.participants.forEach((name, index) => {
+        const startAngle = index * anglePerSegment + state.currentRotation;
+        const endAngle = startAngle + anglePerSegment;
+        const color = state.colors[index % state.colors.length];
+
+        // Draw segment
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Draw text
+        const textAngle = startAngle + anglePerSegment / 2;
+        const textRadius = radius * 0.65; // move text slightly inward to stay within the wheel
+        const textX = centerX + Math.cos(textAngle) * textRadius;
+        const textY = centerY + Math.sin(textAngle) * textRadius;
+
+        ctx.save();
+        ctx.translate(textX, textY);
+        
+        // Rotate text to follow segment direction
+        let rotationAngle = textAngle;
+        // Prevent text from being upside down
+        if (textAngle > Math.PI / 2 && textAngle < 3 * Math.PI / 2) {
+          rotationAngle += Math.PI;
+        }
+        ctx.rotate(rotationAngle);
+
+        ctx.fillStyle = '#fff';
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 3;
+        ctx.font = 'bold 18px Cairo, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        // Draw text with stroke for better visibility
+        ctx.strokeText(name, 0, 0);
+        ctx.fillText(name, 0, 0);
+        
+        ctx.restore();
+      });
+
+      // Draw center circle
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 20, 0, 2 * Math.PI);
+      ctx.fillStyle = '#fff';
+      ctx.fill();
+      ctx.strokeStyle = '#ddd';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    function updateSpinButtonUI(){
+      const state = wheelModalState;
+      // Always show start label (no restart mode)
+      state.spinBtn.innerHTML = '<span class="spin-text">ابدأ الدوران</span><span class="spin-icon">🎯</span>';
+      state.spinBtn.disabled = state.participants.length === 0;
+    }
+
+    function handleSpinButtonClick(){
+      const state = wheelModalState;
+      // If only one participant, show winner directly without spinning
+      if (state.participants && state.participants.length === 1) {
+        showWinner(state.participants[0]);
+        // If exclude is enabled, remove them immediately
+        if (state.excludeWinner) {
+          state.participants.splice(0, 1);
+          updateParticipantsList();
+          drawWheel();
+        }
+        updateSpinButtonUI();
+        return;
+      }
+      // Otherwise, spin normally
+      spinWheel();
+    }
+
+    function ensureAudioNodes(){
+      const state = wheelModalState;
+      if (!state.spinAudioCtx){
+        try {
+          state.spinAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        } catch (e) { console.warn('WebAudio init failed:', e); }
+      }
+    }
+
+    // Sequenced tick sound instead of continuous tone
+    function startSpinSound(){
+      const state = wheelModalState;
+      ensureAudioNodes();
+      if (!state.spinAudioCtx) return;
+      state.seqActive = true;
+      state.seqStep = 0;
+      state.lastTickAt = 0;
+    }
+
+    function stopSpinSound(){
+      const state = wheelModalState;
+      state.seqActive = false;
+    }
+
+    function spinWheel() {
+      const state = wheelModalState;
+      if (state.isSpinning || state.participants.length === 0) return;
+
+      state.isSpinning = true;
+      state.spinBtn.disabled = true;
+      state.spinBtn.innerHTML = '<span class="spin-text">جاري الدوران...</span><span class="spin-icon">🌀</span>';
+
+      // Random spin duration and final angle
+      const spinDuration = 3200 + Math.random() * 2200;
+      const finalRotation = state.currentRotation + (Math.PI * 2 * 5) + Math.random() * Math.PI * 2;
+      const startTime = Date.now();
+      const startRotation = state.currentRotation;
+
+      if (state.soundEnabled) startSpinSound();
+
+      function animate() {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / spinDuration, 1);
+        
+        // Easing function for smooth deceleration
+        const easeOut = 1 - Math.pow(1 - progress, 3);
+        
+        state.currentRotation = startRotation + (finalRotation - startRotation) * easeOut;
+        drawWheel();
+
+        // Run sequenced tick sound while spinning
+        if (state.soundEnabled && state.seqActive) {
+          runTickSequencer(progress);
+        }
+
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          finishSpin();
+        }
+      }
+
+      animate();
+    }
+
+    function finishSpin() {
+      const state = wheelModalState;
+      state.isSpinning = false;
+      state.spinBtn.disabled = false;
+
+      // Calculate winner
+      const anglePerSegment = (2 * Math.PI) / state.participants.length;
+      const normalizedRotation = (state.currentRotation % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+      const pointerAngle = (3 * Math.PI / 2 - normalizedRotation + 2 * Math.PI) % (2 * Math.PI);
+      const winnerIndex = Math.floor(pointerAngle / anglePerSegment);
+      const winner = state.participants[winnerIndex];
+
+      if (state.soundEnabled) {
+        stopSpinSound();
+      }
+
+      showWinner(winner);
+
+      // Exclude winner if enabled
+      if (state.excludeWinner) {
+        setTimeout(() => {
+          state.participants.splice(winnerIndex, 1);
+          updateParticipantsList();
+          drawWheel();
+          showWheelToast(`تم استثناء "${winner}" من القائمة`, 'success');
+
+          // If exhausted, notify only (no restart mode on spin button)
+          if (state.participants.length === 0 && state.originalParticipants.length > 0) {
+            showWheelToast('انتهت الأسماء. استخدم زر إعادة التعيين لإعادة تحميل الأسماء.', 'info');
+          }
+          updateSpinButtonUI();
+        }, 600); // slightly quicker feedback
+      } else {
+        updateSpinButtonUI();
+      }
+    }
+
+    function showWinner(winner) {
+      const state = wheelModalState;
+      state.winnerName.textContent = winner;
+      state.winnerModal.classList.add('show');
+      
+      // Add confetti animation
+      createConfetti();
+    }
+
+    function closeWinnerModal() {
+      const state = wheelModalState;
+      state.winnerModal.classList.remove('show');
+    }
+
+    function createConfetti() {
+      const confettiContainer = document.querySelector('.confetti');
+      confettiContainer.innerHTML = '';
+      
+      for (let i = 0; i < 50; i++) {
+        const confetti = document.createElement('div');
+        confetti.style.position = 'absolute';
+        confetti.style.width = '10px';
+        confetti.style.height = '10px';
+        confetti.style.backgroundColor = wheelModalState.colors[Math.floor(Math.random() * wheelModalState.colors.length)];
+        confetti.style.left = Math.random() * 100 + '%';
+        confetti.style.top = Math.random() * 100 + '%';
+        confetti.style.borderRadius = '50%';
+        confetti.style.animation = `confetti-fall ${Math.random() * 2 + 1}s linear infinite`;
+        confettiContainer.appendChild(confetti);
+      }
+    }
+
+    function resetWheel() {
+      const state = wheelModalState;
+      // Restore participants from baseline (localStorage) and reset rotation
+      try {
+        const baseline = JSON.parse(localStorage.getItem('wheelBaseline_v1') || '[]');
+        if (Array.isArray(baseline) && baseline.length > 0) {
+          state.originalParticipants = [...baseline];
+          state.participants = [...baseline];
+        } else if (state.originalParticipants && state.originalParticipants.length) {
+          state.participants = [...state.originalParticipants];
+        }
+      } catch(_) {
+        if (state.originalParticipants && state.originalParticipants.length) {
+          state.participants = [...state.originalParticipants];
+        }
+      }
+      state.currentRotation = 0;
+      updateParticipantsList();
+      drawWheel();
+      showWheelToast('تمت إعادة تحميل الأسماء وبداية جديدة', 'success');
+    }
+
+    function toggleSound() {
+      const state = wheelModalState;
+      state.soundEnabled = !state.soundEnabled;
+      state.soundToggleBtn.textContent = state.soundEnabled ? '🔊 إيقاف الصوت' : '🔇 تشغيل الصوت';
+      state.soundToggleBtn.className = state.soundEnabled ? 'btn btn-warning' : 'btn btn-secondary';
+      
+      // If turning sound off while spinning, stop sequencer
+      if (!state.soundEnabled) {
+        stopSpinSound();
+      }
+      
+      localStorage.setItem('wheelSoundEnabled', state.soundEnabled);
+      showWheelToast(state.soundEnabled ? 'تم تشغيل الصوت' : 'تم إيقاف الصوت', 'success');
+    }
+
+    function toggleExcludeWinner() {
+      const state = wheelModalState;
+      state.excludeWinner = !state.excludeWinner;
+      state.excludeWinnerBtn.textContent = state.excludeWinner ? '✅ إلغاء الاستثناء' : '❌ استثناء الفائز';
+      state.excludeWinnerBtn.className = state.excludeWinner ? 'btn btn-success' : 'btn btn-secondary';
+      
+      localStorage.setItem('wheelExcludeWinner', state.excludeWinner);
+      showWheelToast(
+        state.excludeWinner ? 'سيتم استثناء الفائز تلقائياً' : 'تم إلغاء استثناء الفائز',
+        'success'
+      );
+    }
+
+    function loadSettings() {
+      const state = wheelModalState;
+      
+      // Load sound setting
+      const soundEnabled = localStorage.getItem('wheelSoundEnabled');
+      if (soundEnabled !== null) {
+        state.soundEnabled = soundEnabled === 'true';
+        state.soundToggleBtn.textContent = state.soundEnabled ? '🔊 إيقاف الصوت' : '🔇 تشغيل الصوت';
+        state.soundToggleBtn.className = state.soundEnabled ? 'btn btn-warning' : 'btn btn-secondary';
+      }
+
+      // Load exclude winner setting
+      const excludeWinner = localStorage.getItem('wheelExcludeWinner');
+      if (excludeWinner !== null) {
+        state.excludeWinner = excludeWinner === 'true';
+        state.excludeWinnerBtn.textContent = state.excludeWinner ? '✅ إلغاء الاستثناء' : '❌ استثناء الفائز';
+        state.excludeWinnerBtn.className = state.excludeWinner ? 'btn btn-success' : 'btn btn-secondary';
+      }
+    }
+
+    function playSpinSound() {
+      try {
+        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT');
+        audio.volume = 0.3;
+        audio.play().catch(() => {});
+      } catch (e) {}
+    }
+
+    function playWinSound() {
+      try {
+        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT');
+        audio.volume = 0.5;
+        audio.play().catch(() => {});
+      } catch (e) {}
+    }
+
+    function showWheelToast(message, type = 'success', action) {
+      const container = wheelModalState && wheelModalState.modalCard ? wheelModalState.modalCard : document.body;
+      let toast = container.querySelector('.wheel-toast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.className = 'wheel-toast';
+        const textSpan = document.createElement('span');
+        textSpan.className = 'toast-text';
+        toast.appendChild(textSpan);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'action-btn';
+        btn.style.display = 'none';
+        toast.appendChild(btn);
+        container.appendChild(toast);
+      }
+      const textSpan = toast.querySelector('.toast-text');
+      const btn = toast.querySelector('.action-btn');
+      toast.className = `wheel-toast ${type}`;
+      textSpan.textContent = message;
+      if (action && action.label && typeof action.onClick === 'function') {
+        btn.textContent = action.label;
+        btn.style.display = '';
+        btn.onclick = () => {
+          try { action.onClick(); } catch(_) {}
+          toast.classList.remove('is-visible');
+        };
+      } else {
+        btn.style.display = 'none';
+        btn.onclick = null;
+      }
+      requestAnimationFrame(() => { toast.classList.add('is-visible'); });
+      clearTimeout(showWheelToast._t);
+      showWheelToast._t = setTimeout(() => {
+        toast.classList.remove('is-visible');
+      }, 3000);
+    }
+
+    // Add confetti animation styles
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes confetti-fall {
+        0% {
+          transform: translateY(-100px) rotate(0deg);
+          opacity: 1;
+        }
+        100% {
+          transform: translateY(400px) rotate(360deg);
+          opacity: 0;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+
+    // Initialize when page loads
+    document.addEventListener('DOMContentLoaded', initializeStandaloneWheel);
+
+    // Simple sequenced "tick" generator; tempo increases then decreases with easing
+    function runTickSequencer(progress){
+      const state = wheelModalState;
+      if (!state.spinAudioCtx || !state.seqActive) return;
+      const now = state.spinAudioCtx.currentTime;
+      
+      // Map progress [0..1] to tick interval in seconds: fast at start, slower near end
+      // Start ~12 ticks/sec (0.083s), end ~2.8 ticks/sec (0.36s)
+      const startInterval = 0.083;
+      const endInterval = 0.36;
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const interval = startInterval + (endInterval - startInterval) * eased;
+      
+      // Use audio click via short noise burst using oscillator/gain per tick
+      if (!runTickSequencer._lastTime) runTickSequencer._lastTime = 0;
+      if (now - runTickSequencer._lastTime >= interval){
+        runTickSequencer._lastTime = now;
+        try {
+          const ctx = state.spinAudioCtx;
+          const gain = ctx.createGain();
+          gain.gain.value = 0.0;
+          gain.connect(ctx.destination);
+          const osc = ctx.createOscillator();
+          osc.type = 'square';
+          // Pitch rises slightly with speed
+          const minF = 800; const maxF = 2000;
+          const freq = minF + (maxF - minF) * (1 - eased);
+          osc.frequency.value = freq;
+          osc.connect(gain);
+          osc.start(now);
+          // Short percussive envelope
+          gain.gain.linearRampToValueAtTime(0.2, now + 0.005);
+          gain.gain.exponentialRampToValueAtTime(0.0008, now + 0.06);
+          osc.stop(now + 0.07);
+          // Auto-disconnect
+          osc.onended = () => { try { osc.disconnect(); gain.disconnect(); } catch(_){} };
+        } catch(_){}
+      }
+    }
+  </script>
+</body>
+</html>

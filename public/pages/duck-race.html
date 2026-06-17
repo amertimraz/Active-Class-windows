@@ -1,0 +1,128 @@
+<div class="sub-page-container">
+  <div class="page-top-bar">
+    <a class="page-back-btn" href="#/games">
+      <span class="icon">🎮</span>
+      <span>العودة للألعاب</span>
+    </a>
+  </div>
+  <div class="game-container">
+    <!-- 1. Start Screen -->
+    <div id="start-screen" class="screen active">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 20px;">
+        <div class="duck-hero-icon">🦆</div>
+        <h1 class="game-title">سباق البط الحسابي</h1>
+        <p class="game-subtitle">أجب على الأسئلة الحسابية ليفوز بطك في السباق</p>
+        <button id="start-btn" class="big-start-btn">ابدأ اللعب</button>
+      </div>
+    </div>
+
+    <!-- 2. Setup Screen -->
+    <div id="setup-screen" class="screen">
+      <div class="setup-container">
+        <header class="setup-header">
+          <h1>🦆 سباق البط الحسابي</h1>
+          <p>اختر الإعدادات لبدء السباق</p>
+        </header>
+        <section class="race-setup" id="setupSection">
+          <div class="setup-grid">
+            <div class="setup-card">
+              <label for="playerCount">عدد اللاعبين</label>
+              <input type="number" id="playerCount" min="2" max="6" value="2" />
+            </div>
+            <div class="setup-card">
+              <label for="levelSelect">مستوى الصعوبة</label>
+              <select id="levelSelect">
+                <option value="easy">سهل</option>
+                <option value="medium">متوسط</option>
+                <option value="hard">صعب</option>
+              </select>
+            </div>
+            <div class="setup-card">
+              <label for="modeSelect">نوع اللعبة</label>
+              <select id="modeSelect">
+                <option value="math">حساب (رياضيات)</option>
+                <option value="english">لغة إنجليزية (Dino English)</option>
+                <option value="arabic">لغة عربية (دينو العربي)</option>
+              </select>
+            </div>
+            <div class="setup-card" id="topicCard" style="display: none;">
+              <label for="topicSelect">الموضوع التعليمي</label>
+              <select id="topicSelect">
+                <!-- سيتم ملؤه بواسطة JS -->
+              </select>
+            </div>
+            <div class="setup-card" id="mathOpsCard">
+              <label>العمليات</label>
+              <div class="operations">
+                <label><input type="checkbox" class="op-check" value="add" checked /> جمع</label>
+                <label><input type="checkbox" class="op-check" value="sub" checked /> طرح</label>
+                <label><input type="checkbox" class="op-check" value="mul" checked /> ضرب</label>
+                <label><input type="checkbox" class="op-check" value="div" /> قسمة</label>
+              </div>
+              <div class="operations-note" id="operationsNote">بدون كسور</div>
+            </div>
+            <div class="setup-card">
+              <label for="targetScore">عدد الإجابات الصحيحة للفوز</label>
+              <input type="number" id="targetScore" min="5" max="30" value="15" />
+            </div>
+          </div>
+
+          <div class="setup-card full" id="playerNames"></div>
+
+          <div class="setup-actions">
+            <button id="startRace" class="btn primary">ابدأ السباق</button>
+            <a class="btn ghost" href="#/games">العودة للألعاب</a>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- 3. Game Screen -->
+    <div id="game-screen" class="screen">
+      <main class="duck-race">
+        <header class="race-header">
+          <div class="header-row">
+            <div class="header-title">
+              <h1>🦆 سباق البط الحسابي</h1>
+              <p>أجب على الأسئلة بسرعة!</p>
+            </div>
+            <div class="header-actions">
+              <div class="header-run-actions">
+                <button class="btn ghost" id="fullscreenToggle" type="button">تكبير المساحة</button>
+                <button id="restartRace" class="btn primary" type="button">إعادة السباق</button>
+                <button id="backToSetup" class="btn ghost" type="button">رجوع للإعدادات</button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <section class="race-game" id="gameSection">
+          <div class="countdown" id="countdownOverlay" style="display: none;">
+            <div class="countdown-number" id="countdownNumber">3</div>
+          </div>
+          <div class="race-track" id="raceTrack">
+            <div class="finish-line"></div>
+            <div class="track-overlay">
+              <div class="track-title">خط النهاية</div>
+            </div>
+            <div class="lanes" id="lanes"></div>
+          </div>
+
+          <div class="player-panels" id="playerPanels"></div>
+        </section>
+
+        <div class="winner-modal" id="winnerModal" style="display: none;">
+          <div class="winner-card">
+            <div class="winner-icon">🏁</div>
+            <h2 id="winnerTitle"></h2>
+            <p id="winnerSubtitle"></p>
+            <div class="winner-actions">
+              <button id="playAgain" class="btn primary">لعبة جديدة</button>
+              <button id="closeWinner" class="btn ghost">إغلاق</button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,64 @@
+<link rel="stylesheet" href="pages/quiz-player.css">
+<div id="ai-player-container" class="h-full w-full flex flex-col items-center justify-center p-4 sm:p-8 animate-fade-in" style="direction: rtl; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);">
+    
+    <!-- Loading State -->
+    <div id="player-loading" class="flex flex-col items-center">
+        <div class="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
+        <h2 class="text-xl font-bold text-gray-700">جاري تحميل الدرس التفاعلي...</h2>
+    </div>
+
+    <!-- Error State -->
+    <div id="player-error" class="hidden flex-col items-center bg-white p-8 rounded-2xl shadow-xl max-w-md w-full text-center">
+        <div class="w-20 h-20 bg-red-100 text-red-500 rounded-full flex items-center justify-center text-4xl mb-4 mx-auto">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <h2 class="text-xl font-bold text-gray-800 mb-2">عذراً، حدث خطأ!</h2>
+        <p id="player-error-text" class="text-gray-600 mb-6">تعذر تحميل الدرس.</p>
+        <button onclick="window.history.back()" class="bg-indigo-600 text-white px-6 py-2 rounded-xl hover:bg-indigo-700 transition-colors">
+            العودة
+        </button>
+    </div>
+
+    <!-- Main Player UI -->
+    <div id="player-ui" class="hidden flex-col w-full max-w-4xl h-[90%] bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border border-white/50 relative">
+        
+        <!-- Header & Progress -->
+        <div class="p-6 border-b border-gray-100 flex flex-col gap-4 z-10 relative bg-white/50">
+            <div class="flex justify-between items-center">
+                <button id="btn-close-player" class="w-10 h-10 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center hover:bg-red-100 hover:text-red-500 transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+                <h1 id="player-title" class="text-2xl font-bold text-indigo-900 text-center flex-1 mx-4">عنوان الدرس</h1>
+                <div class="w-10 h-10 flex items-center justify-center font-bold text-indigo-500 bg-indigo-50 rounded-full">
+                    <span id="slide-counter">1/1</span>
+                </div>
+            </div>
+            
+            <!-- Progress Bar -->
+            <div class="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+                <div id="player-progress" class="h-full bg-gradient-to-r from-indigo-500 to-purple-600 w-0 transition-all duration-500 ease-out"></div>
+            </div>
+        </div>
+
+        <!-- Slide Content Area -->
+        <div id="slide-container" class="flex-1 overflow-y-auto p-6 sm:p-12 relative flex items-center justify-center">
+            <!-- Dynamic content injected here -->
+        </div>
+
+        <!-- Footer Controls -->
+        <div class="p-6 border-t border-gray-100 bg-gray-50 flex justify-between items-center z-10 relative">
+            <button id="btn-prev" class="px-6 py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                <i class="fas fa-arrow-right ml-2"></i> السابق
+            </button>
+            
+            <button id="btn-next" class="px-8 py-3 rounded-xl font-bold text-white bg-gradient-to-l from-indigo-600 to-purple-600 hover:shadow-lg hover:shadow-indigo-500/30 transform hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none">
+                التالي <i class="fas fa-arrow-left mr-2"></i>
+            </button>
+        </div>
+
+        <!-- Celebration Overlay (Hidden by default) -->
+        <div id="celebration-overlay" class="absolute inset-0 pointer-events-none z-50 flex items-center justify-center hidden">
+            <div class="text-9xl animate-bounce-short drop-shadow-2xl">🎉</div>
+        </div>
+    </div>
+</div>

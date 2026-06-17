@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>🎲 اختيار اسم عشوائي</title>
+  <link rel="stylesheet" href="/shared-design.css">
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/pages/names.css">
+  <script nonce="ac">
+    // Apply saved theme immediately for standalone window, and live-update on changes
+    (function(){
+      try {
+        var theme = localStorage.getItem('cm_theme') || 'light';
+        document.documentElement.setAttribute('data-theme', theme);
+        window.addEventListener('storage', function(e){
+          if (e.key === 'cm_theme' && e.newValue){
+            document.documentElement.setAttribute('data-theme', e.newValue);
+          }
+        });
+      } catch(_){ }
+    })();
+  </script>
+</head>
+<body>
+  <div class="tool-shell">
+    <div class="tool-header">
+      <div class="header-main">
+        <span class="tool-icon">🎲</span>
+        <h2 class="tool-title">اختيار اسم عشوائي</h2>
+      </div>
+      <div class="header-actions">
+        <button class="tool-btn fold-btn" title="طي/عرض">▲</button>
+        <button class="tool-btn pin-btn" title="تثبيت">📌</button>
+        <button class="tool-btn close-btn" title="إغلاق">✕</button>
+      </div>
+    </div>
+
+    <div class="tool-body">
+      <div class="controls-section">
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="icon-source"></i> المصدر</label>
+            <select id="sourceSelect" class="custom-select">
+              <option value="group">📋 من المجموعات</option>
+              <option value="manual">✏️ إدخال يدوي</option>
+            </select>
+          </div>
+
+          <div id="groupControl" class="form-group">
+            <label><i class="icon-group"></i> المجموعة</label>
+            <select id="groupSelect" class="custom-select">
+              <option value="">— اختر مجموعة —</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="manualControl" class="manual-input-area" style="display:none">
+          <label>أدخل الأسماء (كل اسم في سطر)</label>
+          <textarea id="manualNames" placeholder="أدخل الأسماء هنا..."></textarea>
+          <div class="manual-actions">
+            <button id="addSampleBtn" class="action-link">إضافة تجريبية</button>
+            <button id="clearManualBtn" class="action-link danger">مسح الكل</button>
+          </div>
+        </div>
+
+        <div class="options-row">
+          <div class="toggle-group">
+            <label class="toggle-item">
+              <input type="checkbox" id="excludePicked" checked>
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">عدم تكرار الأسماء</span>
+            </label>
+            <label class="toggle-item">
+              <input type="checkbox" id="soundToggle" checked>
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">تأثيرات صوتية</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="display-section">
+        <div class="result-container" id="display">
+          <div class="placeholder">
+            <div class="placeholder-icon">🎲</div>
+            <p>اختر مجموعة وابدأ السحب العشوائي</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="action-section">
+        <button id="pickBtn" class="main-pick-btn" disabled>
+          <span class="btn-text">اختيار الآن</span>
+          <span class="btn-icon">⚡</span>
+        </button>
+      </div>
+
+      <div class="stats-bar">
+        <div class="stat-item">
+          <span class="stat-label">المتاح</span>
+          <span class="stat-value" id="availableCount">0</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-label">المختار</span>
+          <span class="stat-value" id="pickedCount">0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/pages/names.js"></script>
+</body>
+</html>

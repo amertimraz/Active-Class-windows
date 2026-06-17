@@ -1,0 +1,161 @@
+<div class="ep-root game-container">
+
+  <!-- ── Start Modal ── -->
+  <div id="ep-start-modal" class="ep-start-overlay">
+    <div class="ep-start-frame">
+      <div class="ep-start-bolt ep-start-bolt-tl"></div>
+      <div class="ep-start-bolt ep-start-bolt-tr"></div>
+      <div class="ep-start-bolt ep-start-bolt-bl"></div>
+      <div class="ep-start-bolt ep-start-bolt-br"></div>
+
+      <div class="ep-start-top-bar"></div>
+
+      <div class="ep-start-body">
+        <div class="ep-start-logo">🎮</div>
+        <h2 class="ep-start-title">مغامرة المعرفة</h2>
+        <p class="ep-start-sub">اختر مصدر الأسئلة وابدأ رحلتك!</p>
+
+        <div class="ep-start-divider"></div>
+
+        <label class="ep-start-label">📚 مصدر الأسئلة</label>
+        <div class="ep-start-select-wrap">
+          <select id="ep-quiz-select" class="ep-start-select">
+            <option value="__default__">جاري تحميل الاختبارات...</option>
+          </select>
+          <span class="ep-select-arrow">▼</span>
+        </div>
+
+        <button id="ep-start-btn" class="ep-start-btn" disabled>
+          <span class="ep-start-btn-icon">▶</span>
+          ابدأ اللعبة
+        </button>
+
+        <p class="ep-start-hint">⌨️ ← → للتحرك &nbsp;|&nbsp; ↑ أو Shift للقفز &nbsp;|&nbsp; اضرب صناديق ❓ من الأسفل</p>
+      </div>
+
+      <div class="ep-start-bottom-bar"></div>
+    </div>
+  </div>
+
+  <div id="ep-canvas" class="ep-canvas-wrap"></div>
+
+  <!-- HUD Bar -->
+  <div class="ep-hud">
+    <div class="ep-hud-pill ep-pill-xp">
+      <span class="ep-pill-icon ep-logo-icon">A</span>
+      <div class="ep-xp-wrap">
+        <span class="ep-xp-label">XP</span>
+        <div class="ep-xp-track"><div id="ep-xp-fill" class="ep-xp-fill"></div></div>
+        <span id="ep-xp-num" class="ep-xp-num">0</span>
+      </div>
+    </div>
+
+    <div class="ep-hud-pill ep-pill-lives">
+      <span class="ep-heart" id="ep-h1">❤️</span>
+      <span class="ep-heart" id="ep-h2">❤️</span>
+      <span class="ep-heart" id="ep-h3">❤️</span>
+    </div>
+
+    <div class="ep-hud-pill ep-pill-qcount">
+      <span id="ep-q-done">0</span>
+      <span class="ep-pill-sep">/</span>
+      <span id="ep-q-total">15</span>
+    </div>
+
+    <div class="ep-hud-pill ep-pill-timer">
+      <span class="ep-pill-icon">⏱</span>
+      <span id="ep-timer">00:00</span>
+    </div>
+
+    <div class="ep-hud-pill ep-pill-coins">
+      <span class="ep-pill-icon">🪙</span>
+      <span id="ep-score">0</span>
+    </div>
+
+    <div class="ep-hud-pill ep-pill-controls">
+      <button id="ep-mute-btn" class="ep-ctrl-btn" title="كتم الصوت">🔊</button>
+      <span class="ep-ctrl-divider"></span>
+      <button id="ep-fs-btn" class="ep-ctrl-btn" title="ملء الشاشة">⛶</button>
+      <span class="ep-ctrl-divider"></span>
+      <button id="ep-back-btn" class="ep-ctrl-btn" title="رجوع">←</button>
+    </div>
+  </div>
+
+  <!-- Question Modal -->
+  <div id="ep-modal" class="ep-modal" style="display:none">
+    <div class="ep-modal-frame">
+      <div class="ep-modal-bolt ep-bolt-tl"></div>
+      <div class="ep-modal-bolt ep-bolt-tr"></div>
+      <div class="ep-modal-bolt ep-bolt-bl"></div>
+      <div class="ep-modal-bolt ep-bolt-br"></div>
+      <div class="ep-modal-header">
+        <span class="ep-modal-header-icon">❓</span>
+      </div>
+      <div class="ep-modal-divider"></div>
+      <div class="ep-modal-inner">
+        <p id="ep-q-text" class="ep-q-text"></p>
+        <div id="ep-q-opts" class="ep-q-opts"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- End Modal (Game Over / Victory) -->
+  <div id="ep-end-modal" class="ep-end-overlay ep-hidden">
+    <div class="ep-end-frame">
+      <div class="ep-end-bolt ep-end-bolt-tl"></div>
+      <div class="ep-end-bolt ep-end-bolt-tr"></div>
+      <div class="ep-end-bolt ep-end-bolt-bl"></div>
+      <div class="ep-end-bolt ep-end-bolt-br"></div>
+      <div class="ep-end-top-bar"></div>
+      <div class="ep-end-body">
+        <div id="ep-end-icon" class="ep-end-icon">🏆</div>
+        <h2 id="ep-end-title" class="ep-end-title">أحسنت!</h2>
+        <p id="ep-end-sub" class="ep-end-sub">أكملت المغامرة بنجاح!</p>
+        <div class="ep-end-divider"></div>
+        <div class="ep-end-stats">
+          <div class="ep-stat-box">
+            <span id="ep-end-score" class="ep-stat-val">0</span>
+            <span class="ep-stat-lbl">النقاط</span>
+          </div>
+          <div class="ep-stat-box">
+            <span id="ep-end-correct" class="ep-stat-val">0/0</span>
+            <span class="ep-stat-lbl">إجابات صحيحة</span>
+          </div>
+          <div class="ep-stat-box">
+            <span id="ep-end-time" class="ep-stat-val">00:00</span>
+            <span class="ep-stat-lbl">الوقت</span>
+          </div>
+          <div class="ep-stat-box">
+            <span id="ep-end-acc" class="ep-stat-val">0%</span>
+            <span class="ep-stat-lbl">الدقة</span>
+          </div>
+        </div>
+        <div class="ep-end-btns">
+          <button id="ep-end-retry" class="ep-end-btn ep-end-btn-retry">🔄 العب مرة أخرى</button>
+          <button id="ep-end-exit" class="ep-end-btn ep-end-btn-exit">← الخروج</button>
+        </div>
+      </div>
+      <div class="ep-end-bottom-bar"></div>
+    </div>
+  </div>
+
+  <!-- Touch Controls -->
+  <div class="ep-touch-bar">
+    <button class="ep-touch-btn" data-key="left">◀</button>
+    <button class="ep-touch-btn ep-touch-jump" data-key="jump">▲</button>
+    <button class="ep-touch-btn" data-key="right">▶</button>
+  </div>
+
+  <div class="ep-hint">⌨️ ← → للتحرك &nbsp;|&nbsp; ↑ أو Shift للقفز &nbsp;|&nbsp; اضرب صناديق ❓ من الأسفل!</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/6.5.10/browser/pixi.min.js"></script>
+<script src="/game-engine/engine.js"></script>
+<script src="/game-engine/core/game-loop.js"></script>
+<script src="/game-engine/core/scene-manager.js"></script>
+<script src="/game-engine/core/asset-loader.js"></script>
+<script src="/game-engine/core/input-manager.js"></script>
+<script src="/game-engine/core/audio-engine.js"></script>
+<script src="/game-engine/core/ui-system.js"></script>
+<script src="/game-engine/core/educational-api.js"></script>

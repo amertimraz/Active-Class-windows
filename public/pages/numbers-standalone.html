@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>مولد الأرقام العشوائية - Active Class</title>
+  <link rel="stylesheet" href="/shared-design.css">
+  <link rel="stylesheet" href="/pages/numbers.css">
+  <script nonce="ac">
+    // Apply saved theme immediately for standalone window, and live-update on changes
+    (function(){
+      try {
+        var theme = localStorage.getItem('cm_theme') || 'light';
+        document.documentElement.setAttribute('data-theme', theme);
+        window.addEventListener('storage', function(e){
+          if (e.key === 'cm_theme' && e.newValue){
+            document.documentElement.setAttribute('data-theme', e.newValue);
+          }
+        });
+      } catch(_){ }
+    })();
+  </script>
+  <style>
+    :root {
+      --background: transparent; /* window background transparent */
+      --surface: var(--card);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      background: transparent !important; /* transparent window */
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+      padding: 0; /* no padding to fit exact window size */
+      direction: rtl;
+      -webkit-app-region: no-drag; /* default non-draggable */
+    }
+
+    /* خلفية المودال في نافذة منفصلة يجب أن تكون شفافة */
+    .numbers-modal-backdrop {
+      background: transparent !important;
+      position: static;
+      display: block !important;
+      height: 100%;
+      align-items: stretch;
+      justify-content: center;
+      padding: 0;
+    }
+
+    .numbers-modal-card {
+      margin: 0;
+      border-radius: 14px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+      transform: none !important; /* no scale */
+      background: var(--card);
+      overflow: hidden;
+    }
+
+    .numbers-modal-card.is-dragging {
+      transform: none !important;
+      cursor: default;
+    }
+
+    /* زر التثبيت للنافذة المنفصلة */
+    .numbers-pin-btn {
+      display: inline-flex;
+    }
+
+    /* شريط العنوان قابل للسحب */
+    .numbers-modal-header {
+      -webkit-app-region: drag; /* drag region */
+      cursor: default;
+      background: linear-gradient(135deg, rgba(99,102,241,.08), rgba(168,85,247,.08));
+    }
+
+    /* عناصر التحكم يجب ألا تكون قابلة للسحب */
+    .numbers-modal-toolbar,
+    .numbers-modal-toolbar *,
+    .numbers-collapse-btn,
+    .numbers-icon-btn {
+      -webkit-app-region: no-drag;
+    }
+
+    /* تحسين العرض في النافذة المنفصلة */
+    .numbers-hidden {
+      display: block !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+    }
+  </style>
+</head>
+<body>
+  <!-- محتوى مولد الأرقام -->
+  <div id="numbers-modal" class="numbers-modal-backdrop">
+    <div class="numbers-modal-card" role="dialog" aria-modal="true" aria-labelledby="numbers-modal-title" tabindex="-1" data-modal-card>
+      <div class="numbers-modal-header" data-drag-handle>
+        <h3 id="numbers-modal-title">مولد الأرقام العشوائية</h3>
+        <div class="numbers-modal-toolbar">
+          <button type="button" class="numbers-icon-btn numbers-collapse-btn" data-toggle-form aria-label="طي خيارات التوليد" aria-expanded="true">
+            <span aria-hidden="true">⌄</span>
+          </button>
+          <button type="button" class="numbers-icon-btn numbers-pin-btn" data-pin aria-label="تثبيت النافذة" aria-pressed="false">📌</button>
+          <button type="button" class="numbers-icon-btn" data-minimize aria-label="تصغير">—</button>
+          <button type="button" class="numbers-icon-btn" data-close aria-label="إغلاق">×</button>
+        </div>
+      </div>
+      <div class="numbers-form-wrapper" data-form-wrapper>
+        <form class="numbers-form" data-form>
+          <div class="numbers-input-row" data-inputs-row>
+            <label>من
+              <input type="number" inputmode="numeric" value="1" min="1" max="999999" data-min required>
+            </label>
+            <label>إلى
+              <input type="number" inputmode="numeric" value="10" min="1" max="999999" data-max required>
+            </label>
+            <label class="numbers-count-field">عدد الأرقام
+              <input type="number" inputmode="numeric" value="1" min="1" max="50" data-count required>
+            </label>
+          </div>
+          <div class="numbers-options" data-options-row>
+            <div class="numbers-sound-toggle">
+              <input type="checkbox" checked data-sound id="snd-toggle-standalone" />
+              <label for="snd-toggle-standalone">صوت</label>
+            </div>
+            <div class="numbers-sound-toggle">
+              <input type="checkbox" data-no-repeat id="norepeat-toggle-standalone" />
+              <label for="norepeat-toggle-standalone">عدم تكرار</label>
+            </div>
+          </div>
+        </form>
+      </div>
+      <p class="numbers-error" data-error></p>
+      <div class="numbers-runner" data-runner>
+        <div class="numbers-runner-track" data-runner-track></div>
+      </div>
+      <div class="numbers-display is-empty" data-main-number>ـ</div>
+      <div class="numbers-multi-results" data-result-list></div>
+      <div class="numbers-generate-wrapper" data-generate-wrapper>
+        <button class="btn numbers-generate-btn" type="submit" data-generate>اختيار الآن</button>
+      </div>
+    </div>
+  </div>
+
+  <script nonce="ac">
+    // نفس منطق الـ router.js ولكن للنافذة المنفصلة
+    let numbersModalState = null;
+
+    function initializeStandaloneNumbers() {
+      const backdrop = document.getElementById('numbers-modal');
+      const modalCard = backdrop.querySelector('.numbers-modal-card');
+      
+      numbersModalState = {
+        backdrop,
+        modalCard,
+        formWrapper: backdrop.querySelector('[data-form-wrapper]'),
+        form: backdrop.querySelector('[data-form]'),
+        inputsRow: backdrop.querySelector('[data-inputs-row]'),
+        optionsRow: backdrop.querySelector('[data-options-row]'),
+        minInput: backdrop.querySelector('[data-min]'),
+        maxInput: backdrop.querySelector('[data-max]'),
+        countInput: backdrop.querySelector('[data-count]'),
+        soundToggle: backdrop.querySelector('[data-sound]'),
+        noRepeatToggle: backdrop.querySelector('[data-no-repeat]'),
+        generateButton: backdrop.querySelector('[data-generate]'),
+        generateWrapper: backdrop.querySelector('[data-generate-wrapper]'),
+        errorLabel: backdrop.querySelector('[data-error]'),
+        runner: backdrop.querySelector('[data-runner]'),
+        runnerTrack: backdrop.querySelector('[data-runner-track]'),
+        mainDisplay: backdrop.querySelector('[data-main-number]'),
+        listContainer: backdrop.querySelector('[data-result-list]'),
+        collapseButton: backdrop.querySelector('[data-toggle-form]'),
+        dragHandle: backdrop.querySelector('[data-drag-handle]'),
+        isPinned: false,
+        isCollapsed: false,
+        usedNumbers: []
+      };
+
+      setupNumbersModalInteractions();
+    }
+
+    // نفس الدوال من router.js
+    function setupNumbersModalInteractions(){
+      const state = numbersModalState;
+      if (!state || state.isBound) return;
+
+      state.isBound = true;
+
+      state.form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        handleNumbersGeneration();
+      });
+
+      state.generateButton.addEventListener('click', (event) => {
+        event.preventDefault();
+        handleNumbersGeneration();
+      });
+
+      state.collapseButton.addEventListener('click', () => toggleNumbersForm());
+
+      // Pin/Minimize/Close controls for floating window
+      const pinBtn = state.backdrop.querySelector('[data-pin]');
+      const minimizeBtn = state.backdrop.querySelector('[data-minimize]');
+      const closeBtn = state.backdrop.querySelector('[data-close]');
+
+      if (pinBtn && window.api && window.api.setAlwaysOnTop) {
+        pinBtn.addEventListener('click', async () => {
+          try {
+            state.isPinned = !state.isPinned;
+            pinBtn.setAttribute('aria-pressed', String(state.isPinned));
+            pinBtn.classList.toggle('is-active', state.isPinned);
+            await window.api.setAlwaysOnTop(state.isPinned);
+          } catch (e) { console.error(e); }
+        });
+      }
+      if (minimizeBtn && window.api && window.api.minimize) {
+        minimizeBtn.addEventListener('click', async () => {
+          try { await window.api.minimize(); } catch (e) { console.error(e); }
+        });
+      }
+      if (closeBtn && window.api && window.api.close) {
+        closeBtn.addEventListener('click', async () => {
+          try { await window.api.close(); } catch (e) { console.error(e); }
+        });
+      }
+
+      state.noRepeatToggle.addEventListener('change', () => {
+        if (!state.noRepeatToggle.checked) {
+          state.usedNumbers = [];
+        }
+      });
+
+      setupNumbersRunner();
+    }
+
+    function handleNumbersGeneration(){
+      const state = numbersModalState;
+      const min = parseInt(state.minInput.value, 10);
+      const max = parseInt(state.maxInput.value, 10);
+      const count = parseInt(state.countInput.value, 10);
+      const noRepeat = state.noRepeatToggle.checked;
+
+      if ([min, max, count].some(Number.isNaN)){
+        return showNumbersError('يرجى إدخال أرقام صحيحة.');
+      }
+
+      if (min > max){
+        return showNumbersError('القيمة الصغرى يجب أن تكون أقل من أو تساوي القيمة الكبرى.');
+      }
+
+      if (count < 1){
+        return showNumbersError('عدد الأرقام يجب أن يكون واحداً على الأقل.');
+      }
+
+      const rangeSize = (max - min) + 1;
+      
+      if (noRepeat) {
+        const remainingNumbers = rangeSize - state.usedNumbers.length;
+        if (remainingNumbers < count) {
+          return showNumbersError(`لا يوجد أرقام كافية متبقية. متبقي: ${remainingNumbers}`);
+        }
+      }
+
+      clearNumbersError();
+
+      state.generateButton.disabled = true;
+      state.generateButton.textContent = '...جاري الاختيار';
+
+      // موحدة مع المودال: تشغيل الحركة ثم إيقافها قبل العرض
+      startNumbersRunner(min, max, 1200);
+
+      setTimeout(() => {
+        stopNumbersRunner();
+
+        const generatedNumbers = noRepeat 
+          ? pickNoRepeatRandomNumbers(min, max, count, state.usedNumbers)
+          : pickUniqueRandomNumbers(min, max, count);
+            
+        renderGeneratedNumbers(generatedNumbers);
+        state.mainDisplay.classList.remove('is-empty');
+
+        if (noRepeat) {
+          state.usedNumbers.push(...generatedNumbers);
+        }
+
+        if (state.soundToggle.checked){
+          playSuccessSound();
+        }
+
+        // إشعار المتبقي + نهاية النطاق عند عدم التكرار
+        if (noRepeat) {
+          const totalInRange = (max - min) + 1;
+          const remaining = totalInRange - state.usedNumbers.length;
+          if (remaining <= 0) {
+            showNumbersToast('انتهت جميع الأرقام في هذا النطاق.', 'warn', {
+              label: 'إعادة وتوليد',
+              onClick: () => {
+                state.usedNumbers = [];
+                handleNumbersGeneration();
+              }
+            });
+          } else {
+            const msg = remaining === 1 ? 'متبقي: رقم واحد' : `متبقي: ${remaining} أرقام`;
+            showNumbersToast(msg, 'success');
+          }
+        }
+
+        state.generateButton.disabled = false;
+        state.generateButton.textContent = 'اختيار الآن';
+      }, 1200);
+    }
+
+    function showNumbersError(message){
+      if (!numbersModalState) return;
+      numbersModalState.errorLabel.textContent = message;
+    }
+
+    function clearNumbersError(){
+      if (!numbersModalState) return;
+      numbersModalState.errorLabel.textContent = '';
+    }
+
+    // Toast helper to show small hint/notification, with optional action button
+    function showNumbersToast(message, type = 'success', action){
+      // Scope toast inside the modal card (not the document body)
+      const container = numbersModalState && numbersModalState.modalCard ? numbersModalState.modalCard : document.body;
+      let toast = container.querySelector('.numbers-toast');
+      if (!toast){
+        toast = document.createElement('div');
+        toast.className = 'numbers-toast';
+        const textSpan = document.createElement('span');
+        textSpan.className = 'toast-text';
+        toast.appendChild(textSpan);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'action-btn';
+        btn.style.display = 'none';
+        toast.appendChild(btn);
+        container.appendChild(toast);
+      }
+      const textSpan = toast.querySelector('.toast-text');
+      const btn = toast.querySelector('.action-btn');
+      toast.className = `numbers-toast ${type}`;
+      textSpan.textContent = message;
+      if (action && action.label && typeof action.onClick === 'function'){
+        btn.textContent = action.label;
+        btn.style.display = '';
+        btn.onclick = () => {
+          try { action.onClick(); } catch(_) {}
+          toast.classList.remove('is-visible');
+        };
+      } else {
+        btn.style.display = 'none';
+        btn.onclick = null;
+      }
+      requestAnimationFrame(() => { toast.classList.add('is-visible'); });
+      clearTimeout(showNumbersToast._t);
+      if (!action){
+        showNumbersToast._t = setTimeout(() => { toast.classList.remove('is-visible'); }, 2600);
+      }
+    }
+
+    function pickUniqueRandomNumbers(min, max, count){
+      const availableNumbers = [];
+      for (let i = min; i <= max; i++){
+        availableNumbers.push(i);
+      }
+
+      const result = [];
+      for (let i = 0; i < count; i++){
+        const index = Math.floor(Math.random() * availableNumbers.length);
+        result.push(availableNumbers.splice(index, 1)[0]);
+      }
+      return result;
+    }
+
+    function pickNoRepeatRandomNumbers(min, max, count, usedNumbers){
+      const availableNumbers = [];
+      for (let i = min; i <= max; i++){
+        if (!usedNumbers.includes(i)) {
+          availableNumbers.push(i);
+        }
+      }
+
+      const result = [];
+      for (let i = 0; i < count; i++){
+        const index = Math.floor(Math.random() * availableNumbers.length);
+        result.push(availableNumbers.splice(index, 1)[0]);
+      }
+      return result;
+    }
+
+    function renderGeneratedNumbers(numbers){
+      if (!numbersModalState) return;
+
+      clearNumbersError();
+
+      if (numbers.length === 1) {
+        numbersModalState.mainDisplay.textContent = numbers[0];
+        numbersModalState.mainDisplay.className = 'numbers-display';
+      } else {
+        numbersModalState.mainDisplay.innerHTML = '';
+        numbersModalState.mainDisplay.className = 'numbers-display multiple-numbers';
+        
+        numbers.forEach((number, index) => {
+          const numberBox = document.createElement('div');
+          numberBox.className = 'number-box';
+          numberBox.textContent = number;
+          numberBox.style.animationDelay = `${index * 0.1}s`;
+          numbersModalState.mainDisplay.appendChild(numberBox);
+        });
+      }
+      
+      numbersModalState.mainDisplay.classList.remove('is-empty');
+      numbersModalState.listContainer.innerHTML = '';
+      numbersModalState.listContainer.classList.remove('is-visible');
+    }
+
+    function toggleNumbersForm(){
+      const state = numbersModalState;
+      if (!state) return;
+      
+      const isCollapsed = state.formWrapper.classList.contains('is-collapsed');
+      
+      if (isCollapsed) {
+        state.formWrapper.style.maxHeight = state.formWrapper.scrollHeight + 'px';
+        state.formWrapper.classList.remove('is-collapsed');
+        state.collapseButton.classList.remove('is-collapsed');
+        state.collapseButton.setAttribute('aria-expanded', 'true');
+        state.collapseButton.setAttribute('aria-label', 'طي خيارات التوليد');
+        state.generateWrapper.classList.remove('is-collapsed');
+        state.isCollapsed = false;
+      } else {
+        state.formWrapper.style.maxHeight = state.formWrapper.scrollHeight + 'px';
+        requestAnimationFrame(() => {
+          state.formWrapper.style.maxHeight = '0';
+          state.formWrapper.classList.add('is-collapsed');
+          state.collapseButton.classList.add('is-collapsed');
+          state.collapseButton.setAttribute('aria-expanded', 'false');
+          state.collapseButton.setAttribute('aria-label', 'فرد خيارات التوليد');
+          state.generateWrapper.classList.add('is-collapsed');
+          state.isCollapsed = true;
+        });
+      }
+    }
+
+    function setupNumbersRunner(){
+      const state = numbersModalState;
+      if (!state) return;
+      
+      state.runnerAnimation = {
+        isRunning: false,
+        timeout: null,
+        interval: null
+      };
+    }
+
+    function startNumbersRunner(min, max, duration = 1500){
+      const state = numbersModalState;
+      if (!state || state.runnerAnimation.isRunning) return;
+      
+      state.runnerAnimation.isRunning = true;
+      
+      const numbers = [];
+      for (let i = min; i <= max; i++) {
+        numbers.push(i);
+      }
+      
+      for (let shuffle = 0; shuffle < 3; shuffle++) {
+        for (let i = numbers.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [numbers[i], numbers[j]] = [numbers[j], numbers[i]];
+        }
+      }
+      
+      const sequence = [];
+      const extendedLength = Math.max(30, numbers.length * 3);
+      
+      for (let i = 0; i < extendedLength; i++) {
+        sequence.push(numbers[i % numbers.length]);
+      }
+      
+      const speed = Math.max(30, duration / sequence.length);
+      let currentIndex = 0;
+      
+      state.mainDisplay.classList.add('running-numbers');
+      
+      // Use shared AudioContext and soft tick sounds (same as modal)
+      try {
+        if (state.soundToggle && state.soundToggle.checked) {
+          const audioContext = getNumbersAudioContext();
+          if (audioContext) {
+            const runnerSound = setInterval(() => {
+              if (state.runnerAnimation.isRunning) {
+                playTickSound(audioContext);
+              }
+            }, 70);
+            state.runnerAnimation.audioContext = audioContext;
+            state.runnerAnimation.runnerSound = runnerSound;
+          }
+        }
+      } catch (e) { /* ignore audio errors */ }
+      
+      const showNumber = () => {
+        if (!state.runnerAnimation.isRunning) return;
+        
+        if (currentIndex < sequence.length) {
+          state.mainDisplay.textContent = sequence[currentIndex];
+          currentIndex++;
+          state.runnerAnimation.timeout = setTimeout(showNumber, speed);
+        }
+      };
+      
+      showNumber();
+      
+      state.runnerAnimation.timeout = setTimeout(() => {
+        stopNumbersRunner();
+      }, duration);
+    }
+
+    function stopNumbersRunner(){
+      const state = numbersModalState;
+      if (!state) return;
+      
+      state.runnerAnimation.isRunning = false;
+      state.mainDisplay.classList.remove('running-numbers');
+      
+      if (state.runnerAnimation.timeout) {
+        clearTimeout(state.runnerAnimation.timeout);
+        state.runnerAnimation.timeout = null;
+      }
+      
+      if (state.runnerAnimation.interval) {
+        clearInterval(state.runnerAnimation.interval);
+        state.runnerAnimation.interval = null;
+      }
+      
+      if (state.runnerAnimation.runnerSound) {
+        clearInterval(state.runnerAnimation.runnerSound);
+        state.runnerAnimation.runnerSound = null;
+      }
+      
+      // Suspend shared AudioContext so subsequent plays work without re-creation
+      if (state.runnerAnimation.audioContext) {
+        try {
+          if (state.runnerAnimation.audioContext.state === 'running') {
+            state.runnerAnimation.audioContext.suspend();
+          }
+        } catch(_) {}
+      }
+    }
+
+    // Shared AudioContext helper (aligned with modal)
+    function getNumbersAudioContext(){
+      try{
+        const Ctor = (window.AudioContext || window.webkitAudioContext);
+        if (!Ctor) return null;
+        if (!window._numbersAudioCtx){
+          window._numbersAudioCtx = new Ctor();
+        } else {
+          if (window._numbersAudioCtx.state === 'closed'){
+            window._numbersAudioCtx = new Ctor();
+          } else if (window._numbersAudioCtx.state === 'suspended'){
+            try { window._numbersAudioCtx.resume(); } catch(_) {}
+          }
+        }
+        return window._numbersAudioCtx;
+      } catch(e){
+        return null;
+      }
+    }
+
+    // Tick sound using the shared context (aligned with modal)
+    function playTickSound(audioContext) {
+      if (!audioContext) return;
+      try {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.05);
+        gainNode.gain.setValueAtTime(0.001, audioContext.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0.1, audioContext.currentTime + 0.01);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.05);
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.05);
+      } catch (e) { /* ignore */ }
+    }
+
+    function playSuccessSound(){
+      try {
+        const audioContext = getNumbersAudioContext();
+        if (!audioContext) return;
+        const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
+        notes.forEach((freq, index) => {
+          const startAt = audioContext.currentTime + index * 0.1;
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+          oscillator.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+          oscillator.frequency.setValueAtTime(freq, startAt);
+          gainNode.gain.setValueAtTime(0.001, startAt);
+          gainNode.gain.linearRampToValueAtTime(0.12, startAt + 0.02);
+          gainNode.gain.exponentialRampToValueAtTime(0.001, startAt + 0.2);
+          oscillator.start(startAt);
+          oscillator.stop(startAt + 0.2);
+        });
+      } catch (e) {
+        // تجاهل أخطاء الصوت
+      }
+    }
+
+    // تهيئة التطبيق عند تحميل الصفحة
+    document.addEventListener('DOMContentLoaded', () => {
+      initializeStandaloneNumbers();
+      // تركيز على أول حقل
+      if (numbersModalState) {
+        numbersModalState.minInput.focus();
+        numbersModalState.minInput.select();
+      }
+    });
+  </script>
+</body>
+</html>

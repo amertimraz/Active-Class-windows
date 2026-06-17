@@ -1,0 +1,74 @@
+<div class="sub-page-container">
+  <div class="page-top-bar">
+    <a class="page-back-btn" href="#/games">
+      <span class="icon">🎮</span>
+      <span>العودة للألعاب</span>
+    </a>
+  </div>
+  <main class="container">
+    <div class="panel ethics-panel">
+      <div class="hero">
+        <div class="hero-icon">🧭</div>
+        <div>
+          <h2>طريق الأخلاق</h2>
+          <p class="hero-subtitle">اختر السلوك الصحيح في المواقف اليومية لتكمل رحلتك في طريق القيم</p>
+        </div>
+      </div>
+
+      <section id="startScreen" class="screen is-active">
+        <div class="intro-card">
+          <h3>قبل أن تبدأ</h3>
+          <p>ستواجه 10 مواقف واقعية، اختر التصرف الأخلاقي الصحيح لتحصل على النقاط وتصل للنهاية.</p>
+          <ul class="rules">
+            <li>اقرأ الموقف جيداً قبل الاختيار</li>
+            <li>كل إجابة صحيحة تمنحك 10 نقاط</li>
+            <li>لا توجد خصومات على الإجابات الخاطئة، حاول التركيز</li>
+          </ul>
+          <div class="actions">
+            <button class="btn" id="startGame">ابدأ الرحلة</button>
+            <a class="btn secondary" href="#/games">العودة للألعاب</a>
+          </div>
+        </div>
+      </section>
+
+      <section id="gameScreen" class="screen">
+        <div class="status-bar">
+          <div class="status-item">
+            <span class="status-label">النقاط</span>
+            <span class="status-value" id="scoreValue">0</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">الموقف</span>
+            <span class="status-value" id="progressValue">1</span>
+          </div>
+        </div>
+
+        <div class="path-track" id="pathTrack"></div>
+
+        <div class="scenario-card">
+          <div class="scenario-title">الموقف الحالي</div>
+          <p class="scenario-text" id="scenarioText"></p>
+          <div class="options" id="options"></div>
+          <div class="feedback" id="feedback"></div>
+          <div class="actions">
+            <button class="btn" id="nextBtn" disabled>التالي</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="endScreen" class="screen">
+        <div class="result-card">
+          <div class="result-icon">🏁</div>
+          <h3 id="resultTitle">أحسنت!</h3>
+          <p>لقد أكملت طريق الأخلاق. نتيجتك النهائية:</p>
+          <div class="score-pill" id="finalScore">0</div>
+          <div class="result-summary" id="resultSummary"></div>
+          <div class="actions">
+            <button class="btn" id="restartBtn">ابدأ من جديد</button>
+            <a class="btn secondary" href="#/games">قائمة الألعاب</a>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>

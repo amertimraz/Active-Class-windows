@@ -1,0 +1,307 @@
+.ge-launcher {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.ge-engine-badge {
+  margin: 0 0 2rem;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #0d1b2a 0%, #1a3a5c 50%, #0d1b2a 100%);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  overflow: hidden;
+}
+
+.ge-badge-inner {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.5rem 2rem;
+  flex-wrap: wrap;
+}
+
+.ge-badge-icon {
+  font-size: 2.5rem;
+  animation: ge-pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes ge-pulse-glow {
+  0%, 100% { filter: drop-shadow(0 0 8px #3b82f6); }
+  50% { filter: drop-shadow(0 0 20px #60a5fa); }
+}
+
+@keyframes ge-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.ge-badge-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ge-badge-info strong {
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: #60a5fa;
+}
+
+.ge-badge-info span {
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.7);
+}
+
+.ge-badge-stats {
+  display: flex;
+  gap: 2rem;
+}
+
+.ge-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.ge-stat-val {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: #fbbf24;
+}
+
+.ge-stat-label {
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.6);
+}
+
+.ge-section-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text, #1e293b);
+  margin: 1.5rem 0 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--border, #e2e8f0);
+}
+
+.ge-games-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.ge-game-card {
+  border-radius: 20px;
+  padding: 1.5rem;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  border: 1px solid transparent;
+}
+
+.ge-game-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+}
+
+.ge-card-blue {
+  background: linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%);
+  color: #fff;
+  border-color: rgba(96,165,250,0.3);
+}
+
+.ge-card-blue:hover {
+  box-shadow: 0 20px 40px rgba(30,64,175,0.4);
+  color: #fff;
+}
+
+.ge-card-green {
+  background: linear-gradient(135deg, #1b4332 0%, #2d6a4f 100%);
+  color: #fff;
+  border-color: rgba(74,222,128,0.3);
+}
+.ge-card-green:hover {
+  box-shadow: 0 20px 40px rgba(45,106,79,0.45);
+  color: #fff;
+}
+
+.ge-card-red {
+  background: linear-gradient(135deg, #5e0d0d 0%, #c62828 100%);
+  color: #fff;
+  border-color: rgba(239,83,80,0.35);
+}
+.ge-card-red:hover {
+  box-shadow: 0 20px 40px rgba(198,40,40,0.45);
+  color: #fff;
+}
+
+.ge-card-yellow {
+  background: linear-gradient(135deg, #78350f 0%, #b45309 100%);
+  color: #fff;
+  border-color: rgba(251,191,36,0.4);
+}
+.ge-card-yellow:hover {
+  box-shadow: 0 20px 40px rgba(180,83,9,0.45);
+  color: #fff;
+}
+.ge-card-yellow .ge-card-glow {
+  background: radial-gradient(circle at 70% 30%, rgba(251,191,36,0.18) 0%, transparent 60%);
+}
+
+.ge-card-coming {
+  background: var(--card, #fff);
+  border: 2px dashed var(--border, #e2e8f0);
+  opacity: 0.7;
+  cursor: default;
+}
+
+.ge-card-coming:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.ge-card-glow {
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at 70% 30%, rgba(96,165,250,0.15) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.ge-card-icon {
+  font-size: 2.5rem;
+  line-height: 1;
+}
+
+.ge-card-content h3 {
+  margin: 0 0 0.4rem;
+  font-size: 1.2rem;
+  font-weight: 900;
+}
+
+.ge-card-content p {
+  margin: 0;
+  font-size: 0.88rem;
+  opacity: 0.85;
+  line-height: 1.5;
+}
+
+.ge-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 0.5rem;
+}
+
+.ge-tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+}
+
+.ge-card-coming .ge-tag {
+  color: var(--text-muted, #64748b);
+  background: var(--bg, #f8fafc);
+}
+
+.ge-tag-soon {
+  background: rgba(251,191,36,0.2) !important;
+  color: #f59e0b !important;
+}
+
+.ge-card-action {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255,255,255,0.15);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.ge-arrow {
+  font-size: 1.2rem;
+  transition: transform 0.2s;
+}
+
+.ge-game-card:hover .ge-arrow {
+  transform: translateX(-4px);
+}
+
+.ge-history-list {
+  background: var(--card, #fff);
+  border-radius: 16px;
+  border: 1px solid var(--border, #e2e8f0);
+  overflow: hidden;
+  margin-bottom: 2rem;
+}
+
+.ge-history-empty {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-muted, #64748b);
+  font-size: 0.9rem;
+}
+
+.ge-history-item {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.9rem 1.5rem;
+  border-bottom: 1px solid var(--border, #f1f5f9);
+  font-size: 0.9rem;
+  transition: background 0.15s;
+}
+
+.ge-history-item:last-child { border-bottom: none; }
+.ge-history-item:hover { background: var(--bg, #f8fafc); }
+
+.ge-history-game { font-weight: 700; }
+.ge-history-score { color: #3b82f6; font-weight: 700; }
+.ge-history-acc { color: #10b981; font-weight: 600; }
+.ge-history-date { color: var(--text-muted, #94a3b8); font-size: 0.8rem; }
+
+.ge-components-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 3rem;
+}
+
+.ge-component {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 1.25rem;
+  background: var(--card, #fff);
+  border-radius: 16px;
+  border: 1px solid var(--border, #e2e8f0);
+  font-size: 0.85rem;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.ge-component:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+}
+
+.ge-component > span:first-child { font-size: 1.5rem; }
+.ge-component strong { font-size: 0.95rem; font-weight: 800; color: var(--text, #1e293b); }
+.ge-component > span:last-child { color: var(--text-muted, #64748b); line-height: 1.4; }
+
+[data-theme="dark"] .ge-engine-badge { background: linear-gradient(135deg, #0d1b2a 0%, #1e3a5c 50%, #0d1b2a 100%); }
+[data-theme="dark"] .ge-badge-info span { color: rgba(255,255,255,0.5); }

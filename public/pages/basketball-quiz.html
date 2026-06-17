@@ -1,0 +1,121 @@
+<div class="sub-page-container">
+  <div class="page-top-bar">
+    <a class="page-back-btn" href="#/games">
+      <span class="icon">🎮</span>
+      <span>العودة للألعاب</span>
+    </a>
+  </div>
+  <main class="basketball-app">
+    <section id="start-screen" class="screen active">
+      <div class="intro-card">
+        <div class="intro-badge">🏀</div>
+        <h1>تحدي السلة والأسئلة</h1>
+        <p>أجب على الأسئلة من بنك الاختبارات ثم نفّذ تسديدتك لتضاعف النقاط</p>
+        <div class="intro-select">
+          <label for="quizSelect">اختر الاختبار</label>
+          <select id="quizSelect">
+            <option value="">جاري تحميل الاختبارات...</option>
+          </select>
+        </div>
+        <div class="intro-actions">
+          <button id="startGame" class="bb-btn primary" disabled>ابدأ التحدي</button>
+          <a href="#/quizzes" class="bb-btn ghost">إدارة الاختبارات</a>
+        </div>
+        <div class="intro-features">
+          <div>سحب للتسديد</div>
+          <div>زر تسديدة سريعة</div>
+          <div>مكافآت إضافية للسلة</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="question-screen" class="screen">
+      <div class="question-shell">
+        <div class="question-header">
+          <div class="scoreboard">
+            <div class="score-item">
+              <span>النقاط</span>
+              <strong id="scoreValue">0</strong>
+            </div>
+            <div class="score-item">
+              <span>التسديدات</span>
+              <strong id="shotsValue">0/0</strong>
+            </div>
+            <div class="score-item">
+              <span>الإجابات الصحيحة</span>
+              <strong id="correctValue">0</strong>
+            </div>
+          </div>
+          <div class="question-progress">
+            <div class="progress-count"><span id="questionIndex">1</span> / <span id="questionTotal">1</span></div>
+            <div class="progress-bar"><div id="progressBar"></div></div>
+          </div>
+        </div>
+        <div class="question-card">
+          <div id="questionImageWrap" class="question-image" style="display:none;">
+            <img id="questionImage" alt="صورة السؤال" />
+          </div>
+          <h2 id="questionText">...</h2>
+          <div id="optionsGrid" class="options-grid"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="shot-screen" class="screen">
+      <div class="shot-layout">
+        <div class="shot-panel">
+          <h2>وقت التسديد</h2>
+          <p>اسحب الكرة للأعلى نحو السلة أو استخدم زر التسديدة السريعة</p>
+          <div class="shot-stats">
+            <div>
+              <span>نقاط التسديد</span>
+              <strong id="shotPoints">0</strong>
+            </div>
+            <div>
+              <span>سجلت</span>
+              <strong id="shotMade">0</strong>
+            </div>
+          </div>
+          <div class="shot-actions">
+            <button id="quickShot" class="bb-btn primary">تسديدة سريعة</button>
+            <button id="skipShot" class="bb-btn ghost">تخطي التسديدة</button>
+          </div>
+          <div id="shotMessage" class="shot-message"></div>
+        </div>
+        <div class="court" id="court">
+          <div class="court-floor"></div>
+          <div class="backboard"></div>
+          <div class="rim" id="rim"></div>
+          <div class="net"></div>
+          <div class="ball" id="ball" style="touch-action: none;"></div>
+          <div class="aim-line" id="aimLine"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="result-screen" class="screen">
+      <div class="result-card">
+        <div class="result-icon">🏆</div>
+        <h2>انتهى التحدي</h2>
+        <div class="result-grid">
+          <div>
+            <span>النقاط النهائية</span>
+            <strong id="finalScore">0</strong>
+          </div>
+          <div>
+            <span>الإجابات الصحيحة</span>
+            <strong id="finalCorrect">0</strong>
+          </div>
+          <div>
+            <span>تسديدات ناجحة</span>
+            <strong id="finalShots">0</strong>
+          </div>
+        </div>
+        <div class="result-actions">
+          <button id="restartGame" class="bb-btn primary">جولة جديدة</button>
+          <a href="#/games" class="bb-btn ghost">قائمة الألعاب</a>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>

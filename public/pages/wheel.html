@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <title>عجلة الحظ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/pages/wheel.css" />
+<script nonce="ac">
+  (function(){
+    try{
+      var theme = localStorage.getItem('cm_theme');
+      if(!theme){
+        fetch('/api/settings')
+          .then(function(r){ return r.ok ? r.json() : {}; })
+          .then(function(s){
+            var t = (s && s.theme) ? s.theme : 'light';
+            document.documentElement.setAttribute('data-theme', t);
+          })
+          .catch(function(){
+            document.documentElement.setAttribute('data-theme','light');
+          });
+      } else {
+        document.documentElement.setAttribute('data-theme', theme);
+      }
+      window.addEventListener('storage', function(e){
+        if(e.key === 'cm_theme' && e.newValue){
+          document.documentElement.setAttribute('data-theme', e.newValue);
+        }
+      });
+    }catch(_){ }
+  })();
+</script>
+</head>
+<body>
+  <div class="page-top-bar">
+    <a class="page-back-btn" href="/">
+      <span class="icon">🏠</span>
+      <span>العودة للرئيسية</span>
+    </a>
+  </div>
+  <main class="container">
+    <div class="panel">
+      <h2>🎯 عجلة الحظ</h2>
+      
+      <!-- Controls Panel -->
+      <div class="controls-panel">
+        <div class="input-section">
+          <h3>إضافة المشاركين</h3>
+          
+          <!-- Manual Input -->
+          <div class="manual-input">
+            <div class="input-group">
+              <input type="text" id="nameInput" placeholder="أدخل اسم المشارك..." />
+              <button id="addNameBtn" class="btn btn-primary">إضافة</button>
+            </div>
+          </div>
+          
+          <!-- Group Selection -->
+          <div class="group-selection">
+            <label for="groupSelect">أو اختر من المجموعات:</label>
+            <select id="groupSelect">
+              <option value="">اختر مجموعة...</option>
+            </select>
+            <button id="loadGroupBtn" class="btn btn-secondary">تحميل المجموعة</button>
+          </div>
+        </div>
+        
+        <!-- Participants List -->
+        <div class="participants-section">
+          <h3>المشاركون (<span id="participantsCount">0</span>)</h3>
+          <div class="participants-list" id="participantsList">
+            <div class="empty-state">
+              <p>لا يوجد مشاركون بعد</p>
+              <p class="hint">أضف أسماء أو اختر مجموعة للبدء</p>
+            </div>
+          </div>
+          <div class="participants-actions">
+            <button id="clearAllBtn" class="btn btn-danger">مسح الكل</button>
+            <button id="shuffleBtn" class="btn btn-secondary">خلط الأسماء</button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Wheel Container -->
+      <div class="wheel-container">
+        <div class="wheel-wrapper">
+          <canvas id="wheelCanvas" width="400" height="400"></canvas>
+          <div class="wheel-pointer"></div>
+          <button id="spinBtn" class="spin-button" disabled>
+            <span class="spin-text">ابدأ الدوران</span>
+            <span class="spin-icon">🎯</span>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Actions -->
+      <div class="actions">
+        <button id="resetWheelBtn" class="btn btn-secondary">إعادة تعيين</button>
+        <button id="soundToggleBtn" class="btn btn-warning">🔊 إيقاف الصوت</button>
+        <button id="excludeWinnerBtn" class="btn btn-secondary">❌ استثناء الفائز</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Winner Modal -->
+  <div id="winnerModal" class="modal">
+    <div class="modal-content">
+      <div class="winner-animation">
+        <div class="confetti"></div>
+        <div class="winner-content">
+          <div class="winner-name" id="winnerName"></div>
+          <p>تم الاختيار</p>
+          <div class="winner-actions">
+            <button id="spinAgainBtn" class="btn btn-primary">دوران آخر</button>
+            <button id="closeModalBtn" class="btn btn-secondary">إغلاق</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/pages/wheel.js"></script>
+</body>
+</html>

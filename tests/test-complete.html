@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار نظام الإعدادات - Active Class</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        .test-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+        }
+        .test-section {
+            background: var(--card);
+            border: 2px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow);
+        }
+        .test-button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius);
+            cursor: pointer;
+            margin: 0.5rem;
+            font-weight: 600;
+            transition: all 0.3s var(--transition);
+        }
+        .test-button:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+        .status {
+            padding: 1rem;
+            border-radius: var(--radius);
+            margin: 1rem 0;
+            font-weight: 600;
+        }
+        .status.success {
+            background: var(--success-bg);
+            color: var(--success);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+        }
+        .status.error {
+            background: var(--error-bg);
+            color: var(--error);
+            border: 1px solid rgba(248, 113, 113, 0.2);
+        }
+        .current-settings {
+            background: var(--info-bg);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: var(--radius);
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 اختبار نظام الإعدادات</h1>
+        
+        <div class="test-section">
+            <h2>📊 الإعدادات الحالية</h2>
+            <div id="currentSettings" class="current-settings">
+                جاري التحميل...
+            </div>
+            <button class="test-button" onclick="loadSettings()">🔄 تحديث الإعدادات</button>
+        </div>
+
+        <div class="test-section">
+            <h2>🎨 اختبار الثيم</h2>
+            <button class="test-button" onclick="testTheme('light')">🌞 ثيم فاتح</button>
+            <button class="test-button" onclick="testTheme('dark')">🌙 ثيم داكن</button>
+            <div id="themeStatus" class="status" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>🌍 اختبار اللغة</h2>
+            <button class="test-button" onclick="testLanguage('ar')">🇪🇬 عربي</button>
+            <button class="test-button" onclick="testLanguage('en')">🇬🇧 إنجليزي</button>
+            <div id="languageStatus" class="status" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>💾 اختبار قاعدة البيانات</h2>
+            <button class="test-button" onclick="testDatabase()">🔍 اختبار الاتصال</button>
+            <button class="test-button" onclick="testBackup()">💾 اختبار النسخ الاحتياطي</button>
+            <div id="dbStatus" class="status" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>⚙️ فتح الإعدادات</h2>
+            <button class="test-button" onclick="openSettingsModal()">🔧 فتح نافذة الإعدادات</button>
+            <div id="modalStatus" class="status" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        // Load current settings
+        async function loadSettings() {
+            try {
+                const response = await fetch('/api/settings');
+                const settings = await response.json();
+                
+                const settingsDiv = document.getElementById('currentSettings');
+                settingsDiv.innerHTML = '<h3>الإعدادات المحفوظة:</h3>';
+                
+                settings.forEach(setting => {
+                    settingsDiv.innerHTML += `
+                        <div style="margin: 0.5rem 0; padding: 0.5rem; background: var(--card); border-radius: var(--radius-sm);">
+                            <strong>${setting.key}:</strong> ${setting.value}
+                        </div>
+                    `;
+                });
+                
+                showStatus('themeStatus', 'تم تحميل الإعدادات بنجاح', 'success');
+            } catch (error) {
+                showStatus('themeStatus', 'خطأ في تحميل الإعدادات: ' + error.message, 'error');
+            }
+        }
+
+        // Test theme switching
+        async function testTheme(theme) {
+            try {
+                const response = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key: 'theme', value: theme })
+                });
+                
+                if (response.ok) {
+                    document.documentElement.setAttribute('data-theme', theme);
+                    showStatus('themeStatus', `تم تطبيق الثيم ${theme === 'dark' ? 'الداكن' : 'الفاتح'} بنجاح`, 'success');
+                } else {
+                    throw new Error('فشل في حفظ الثيم');
+                }
+            } catch (error) {
+                showStatus('themeStatus', 'خطأ في تغيير الثيم: ' + error.message, 'error');
+            }
+        }
+
+        // Test language switching
+        async function testLanguage(language) {
+            try {
+                const response = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key: 'language', value: language })
+                });
+                
+                if (response.ok) {
+                    const isArabic = language === 'ar';
+                    document.documentElement.lang = language;
+                    document.documentElement.dir = isArabic ? 'rtl' : 'ltr';
+                    showStatus('languageStatus', `تم تطبيق اللغة ${isArabic ? 'العربية' : 'الإنجليزية'} بنجاح`, 'success');
+                } else {
+                    throw new Error('فشل في حفظ اللغة');
+                }
+            } catch (error) {
+                showStatus('languageStatus', 'خطأ في تغيير اللغة: ' + error.message, 'error');
+            }
+        }
+
+        // Test database connection
+        async function testDatabase() {
+            try {
+                const response = await fetch('/api/settings');
+                if (response.ok) {
+                    const settings = await response.json();
+                    showStatus('dbStatus', `قاعدة البيانات تعمل بنجاح - ${settings.length} إعدادات محفوظة`, 'success');
+                } else {
+                    throw new Error('فشل في الاتصال بقاعدة البيانات');
+                }
+            } catch (error) {
+                showStatus('dbStatus', 'خطأ في قاعدة البيانات: ' + error.message, 'error');
+            }
+        }
+
+        // Test backup functionality
+        async function testBackup() {
+            try {
+                const response = await fetch('/api/backup', { method: 'POST' });
+                if (response.ok) {
+                    const result = await response.json();
+                    showStatus('dbStatus', 'تم إنشاء النسخة الاحتياطية بنجاح', 'success');
+                } else {
+                    throw new Error('فشل في إنشاء النسخة الاحتياطية');
+                }
+            } catch (error) {
+                showStatus('dbStatus', 'خطأ في النسخ الاحتياطي: ' + error.message, 'error');
+            }
+        }
+
+        // Test settings modal
+        async function openSettingsModal() {
+            try {
+                // Load settings modal if not already loaded
+                if (!document.querySelector('#settingsModal')) {
+                    const response = await fetch('/pages/settings.html');
+                    const html = await response.text();
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = html;
+                    
+                    const modal = tempDiv.querySelector('#settingsModal');
+                    const loadingOverlay = tempDiv.querySelector('#loadingOverlay');
+                    const notification = tempDiv.querySelector('#notification');
+                    
+                    if (modal) document.body.appendChild(modal);
+                    if (loadingOverlay) document.body.appendChild(loadingOverlay);
+                    if (notification) document.body.appendChild(notification);
+                    
+                    // Load CSS
+                    if (!document.querySelector('link[href="/pages/settings.css"]')) {
+                        const link = document.createElement('link');
+                        link.rel = 'stylesheet';
+                        link.href = '/pages/settings.css';
+                        document.head.appendChild(link);
+                    }
+                    
+                    // Load JS
+                    if (!window.settingsManager) {
+                        const script = document.createElement('script');
+                        script.src = '/pages/settings.js';
+                        document.head.appendChild(script);
+                        
+                        await new Promise((resolve) => {
+                            script.onload = resolve;
+                        });
+                    }
+                }
+                
+                // Open modal
+                if (window.openSettings) {
+                    window.openSettings();
+                    showStatus('modalStatus', 'تم فتح نافذة الإعدادات بنجاح', 'success');
+                } else {
+                    throw new Error('لم يتم تحميل وظائف الإعدادات');
+                }
+            } catch (error) {
+                showStatus('modalStatus', 'خطأ في فتح الإعدادات: ' + error.message, 'error');
+            }
+        }
+
+        // Show status message
+        function showStatus(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `status ${type}`;
+            element.style.display = 'block';
+            
+            setTimeout(() => {
+                element.style.display = 'none';
+            }, 5000);
+        }
+
+        // Load settings on page load
+        window.addEventListener('DOMContentLoaded', loadSettings);
+    </script>
+</body>
+</html>

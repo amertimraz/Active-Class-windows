@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" role="img" aria-labelledby="mapTitle mapDesc" preserveAspectRatio="xMidYMid meet">
+  <title id="mapTitle">خريطة مصر التعليمية</title>
+  <desc id="mapDesc">خريطة عصرية مستوحاة من الألعاب التعليمية توضح دلتا النيل ووادي النيل وسيناء مع علامات تفاعلية.</desc>
+  <defs>
+    <linearGradient id="seaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#c1e7ff" />
+      <stop offset="60%" stop-color="#74b6f5" />
+      <stop offset="100%" stop-color="#4a89cf" />
+    </linearGradient>
+    <linearGradient id="landGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f8e7c0" />
+      <stop offset="55%" stop-color="#eac78f" />
+      <stop offset="100%" stop-color="#d2a463" />
+    </linearGradient>
+    <linearGradient id="ridgeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.4)" />
+      <stop offset="100%" stop-color="rgba(209,152,86,0.1)" />
+    </linearGradient>
+    <linearGradient id="deltaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#c7f3c1" />
+      <stop offset="100%" stop-color="#76c88d" />
+    </linearGradient>
+    <linearGradient id="sinaiGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f2d5a5" />
+      <stop offset="100%" stop-color="#d39f59" />
+    </linearGradient>
+    <linearGradient id="redSeaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#7fc4ff" />
+      <stop offset="100%" stop-color="#316aaf" />
+    </linearGradient>
+    <linearGradient id="markerGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffd86d" />
+      <stop offset="100%" stop-color="#ff7b42" />
+    </linearGradient>
+    <filter id="markerGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    <filter id="softShadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="rgba(0,0,0,0.25)" />
+    </filter>
+  </defs>
+  <style>
+    .background-sea {
+      fill: url(#seaGradient);
+    }
+    .sea-wave {
+      fill: rgba(255,255,255,0.22);
+    }
+    .grid-line {
+      fill: none;
+      stroke: rgba(255,255,255,0.2);
+      stroke-width: 0.8;
+    }
+    .land-main {
+      fill: url(#landGradient);
+      stroke: #c58d46;
+      stroke-width: 3;
+      stroke-linejoin: round;
+      filter: url(#softShadow);
+    }
+    .land-ridge {
+      fill: url(#ridgeGradient);
+    }
+    .delta-shape {
+      fill: url(#deltaGradient);
+      stroke: #59a86f;
+      stroke-width: 2;
+    }
+    .sinai-shape {
+      fill: url(#sinaiGradient);
+      stroke: #c89245;
+      stroke-width: 2;
+    }
+    .redsea-shape {
+      fill: url(#redSeaGradient);
+      opacity: 0.6;
+      stroke: #3f85c5;
+      stroke-width: 2;
+    }
+    .nile-shape {
+      fill: none;
+      stroke: #33b3ff;
+      stroke-width: 6;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .nile-branch {
+      fill: none;
+      stroke: #33b3ff;
+      stroke-width: 3.5;
+      stroke-linecap: round;
+      stroke-dasharray: 6 2;
+    }
+    .coast-line {
+      fill: none;
+      stroke: rgba(0,0,0,0.18);
+      stroke-width: 1.4;
+      stroke-dasharray: 10 6;
+    }
+    .lake {
+      fill: rgba(93,173,236,0.65);
+      stroke: rgba(45,114,170,0.6);
+      stroke-width: 1.5;
+    }
+    .marker {
+      cursor: pointer;
+      outline: none;
+      transition: transform 0.25s ease;
+    }
+    .marker-ring {
+      fill: url(#markerGradient);
+      stroke: #ffffff;
+      stroke-width: 3;
+      filter: url(#markerGlow);
+    }
+    .marker-core {
+      fill: #0f1525;
+    }
+    .marker-pulse {
+      fill: rgba(255,255,255,0.28);
+      stroke: rgba(255,155,66,0.35);
+      stroke-width: 1.5;
+      transform-origin: center;
+      animation: markerPulse 3s ease-in-out infinite;
+    }
+    .marker:hover .marker-ring,
+    .marker:focus .marker-ring {
+      transform: scale(1.15);
+    }
+    .marker:focus-visible .marker-ring {
+      stroke: #1a2a75;
+      stroke-width: 4;
+    }
+    @keyframes markerPulse {
+      0% {
+        transform: scale(0.5);
+        opacity: 0.9;
+      }
+      70% {
+        transform: scale(1.9);
+        opacity: 0;
+      }
+      100% {
+        transform: scale(1.9);
+        opacity: 0;
+      }
+    }
+    .label-text {
+      font-family: 'Cairo', 'Tahoma', sans-serif;
+      font-size: 17px;
+      fill: rgba(18,30,60,0.85);
+      font-weight: 600;
+      letter-spacing: 0.4px;
+    }
+    .label-secondary {
+      font-size: 15px;
+      fill: rgba(18,30,60,0.65);
+    }
+    .compass circle {
+      fill: rgba(255,255,255,0.7);
+      stroke: rgba(0,0,0,0.15);
+    }
+    .compass text {
+      font-family: 'Cairo', 'Tahoma', sans-serif;
+      font-weight: 700;
+      fill: #0d1b2a;
+    }
+    .badge {
+      fill: rgba(15,23,42,0.8);
+      stroke: rgba(255,255,255,0.2);
+      stroke-width: 1;
+      rx: 16;
+      ry: 16;
+    }
+    .badge text {
+      font-family: 'Cairo', 'Tahoma', sans-serif;
+      font-size: 15px;
+      fill: #fff;
+    }
+  </style>
+  <g class="background">
+    <rect class="background-sea" x="0" y="0" width="1000" height="600" />
+    <path class="sea-wave" d="M0 80 Q160 110 320 80 T640 80 T960 80 T1200 80 V120 L0 120 Z" opacity="0.35" />
+    <path class="sea-wave" d="M0 170 Q150 140 300 170 T600 170 T900 170 T1200 170 V210 L0 210 Z" opacity="0.2" />
+    <path class="sea-wave" d="M0 500 Q140 470 280 500 T560 500 T840 500 T1200 500 V540 L0 540 Z" opacity="0.18" />
+    <g class="grid-lines">
+      <path class="grid-line" d="M0 120 H1000" />
+      <path class="grid-line" d="M0 240 H1000" />
+      <path class="grid-line" d="M0 360 H1000" />
+      <path class="grid-line" d="M0 480 H1000" />
+      <path class="grid-line" d="M200 0 V600" />
+      <path class="grid-line" d="M400 0 V600" />
+      <path class="grid-line" d="M600 0 V600" />
+      <path class="grid-line" d="M800 0 V600" />
+    </g>
+  </g>
+  <g class="landforms">
+    <path class="land-main" d="M200 70 C280 20 430 20 530 70 L630 130 L690 200 L720 270 L728 340 L720 410 L700 470 L660 530 L600 570 L520 590 L430 570 L350 520 L300 460 L260 380 L230 300 L210 220 L190 150 Z" />
+    <path class="land-ridge" d="M220 180 C300 120 450 120 540 180 C620 240 660 360 630 470 C600 580 420 540 330 440 C250 350 200 240 220 180 Z" />
+    <path class="delta-shape" d="M360 80 C430 40 530 40 600 110 L550 200 L430 180 Z" />
+    <path class="sinai-shape" d="M610 200 L760 190 L920 270 L840 360 L700 300 Z" />
+    <path class="redsea-shape" d="M640 500 L700 420 L750 340 L790 270 L830 220 L880 210 L930 250 L900 320 L850 400 L790 480 L720 540 Z" />
+    <path class="redsea-shape" d="M720 560 L780 500 L830 450 L870 420 L900 430 L890 470 L860 520 L800 580 Z" opacity="0.5" />
+    <path class="lake" d="M310 250 C320 240 345 235 360 245 C375 255 380 280 368 292 C356 304 330 302 318 288 C306 274 300 260 310 250 Z" />
+    <path class="lake" d="M610 210 C620 200 640 204 650 215 C660 226 662 246 652 255 C642 264 620 262 612 250 C604 238 600 220 610 210 Z" />
+    <path class="nile-shape" d="M460 80 C450 150 455 210 445 270 C435 330 455 390 470 450 C485 510 510 560 540 590" />
+    <path class="nile-branch" d="M450 200 Q500 150 570 140" />
+    <path class="nile-branch" d="M470 220 Q520 220 570 250" />
+    <path class="nile-branch" d="M430 240 Q390 210 350 210" />
+    <path class="coast-line" d="M180 70 Q360 20 560 90" />
+    <path class="coast-line" d="M560 90 Q640 120 700 150" />
+  </g>
+  <g class="badges">
+    <rect class="badge" x="60" y="40" width="150" height="44" />
+    <text x="135" y="68" text-anchor="middle">البحر المتوسط</text>
+    <rect class="badge" x="760" y="420" width="160" height="44" />
+    <text x="840" y="448" text-anchor="middle">البحر الأحمر</text>
+  </g>
+  <g id="map-labels">
+    <text class="label-text" x="470" y="70">دلتا النيل</text>
+    <text class="label-text" x="520" y="220">وادي النيل</text>
+    <text class="label-text" x="760" y="220">شبه جزيرة سيناء</text>
+    <text class="label-secondary" x="360" y="320">الفيوم</text>
+    <text class="label-secondary" x="520" y="350">الأقصر</text>
+    <text class="label-secondary" x="540" y="410">أسوان</text>
+  </g>
+  <g class="compass" transform="translate(70 470)">
+    <circle cx="0" cy="0" r="40" />
+    <text x="0" y="-18" text-anchor="middle">N</text>
+    <text x="0" y="32" text-anchor="middle">S</text>
+    <text x="-28" y="8" text-anchor="middle">W</text>
+    <text x="28" y="8" text-anchor="middle">E</text>
+  </g>
+</svg>

@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <title>من سيربح المليون</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/pages/million/million-game.css" />
+<script nonce="ac">
+  (function(){
+    try{
+      var theme = localStorage.getItem('cm_theme');
+      if(!theme){
+        fetch('/api/settings')
+          .then(function(r){ return r.ok ? r.json() : {}; })
+          .then(function(s){
+            var t = (s && s.theme) ? s.theme : 'light';
+            document.documentElement.setAttribute('data-theme', t);
+          })
+          .catch(function(){
+            document.documentElement.setAttribute('data-theme','light');
+          });
+      } else {
+        document.documentElement.setAttribute('data-theme', theme);
+      }
+      window.addEventListener('storage', function(e){
+        if(e.key === 'cm_theme' && e.newValue){
+          document.documentElement.setAttribute('data-theme', e.newValue);
+        }
+      });
+    }catch(_){ }
+  })();
+</script>
+</head>
+<body>
+  <main class="game-container">
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="screen">
+      <div class="loading-content">
+        <div class="spinner"></div>
+        <p>جاري تحميل اللعبة...</p>
+      </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="gameScreen" class="screen" style="display: none;">
+      <!-- Sound Toggle Button -->
+      <button id="soundToggle" class="sound-toggle" title="تشغيل/إيقاف الصوت">
+        <span class="sound-icon">🔊</span>
+      </button>
+      <button id="paletteToggle" class="palette-toggle" title="تغيير الألوان">
+        <span class="palette-icon">🎨</span>
+      </button>
+
+      <!-- Game Title Header -->
+      <div class="game-header">
+        <h1 class="game-title">💰 من سيربح المليون 💰</h1>
+      </div>
+
+      <!-- Game Content Row -->
+      <div class="game-row">
+        <!-- Left Content Wrapper -->
+        <div class="left-content-wrapper">
+          <!-- Lifelines Container at Top -->
+          <div class="lifelines-container">
+            <div class="container-title">🎯 الوسائل المساعدة</div>
+            <div class="lifelines-section-top">
+              <button class="lifeline-btn" id="fiftyFiftyBtn" title="إلغاء خيارين">
+                <span class="lifeline-icon">5️⃣0️⃣</span>
+                <span>50:50</span>
+              </button>
+              <button class="lifeline-btn" id="changeQuestionBtn" title="الانتقال للسؤال التالي">
+                <span class="lifeline-icon">🔄</span>
+                <span>تغيير</span>
+              </button>
+              <button class="lifeline-btn" id="audienceBtn" title="استشارة الجمهور">
+                <span class="lifeline-icon">👥</span>
+                <span>الجمهور</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Game Content -->
+          <div class="game-content">
+            <!-- Question Section -->
+            <div class="question-section">
+              <div class="question-header">
+                <span class="question-number" id="questionNumber">السؤال 1 من 15</span>
+                <span class="question-difficulty" id="questionDifficulty">سهل</span>
+              </div>
+              <div class="question-text" id="questionText"></div>
+
+              <!-- Answers Section -->
+              <div class="answers-section">
+                <div class="answers-grid" id="answersGrid"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Money Ladder Container -->
+        <div class="money-ladder-container">
+          <div class="ladder-title">$ سلم المبالغ</div>
+          <div class="ladder-items" id="ladderItems"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Audience Help Modal -->
+    <div id="audienceModal" class="modal-overlay" style="display: none;">
+      <div class="modal-content audience-modal">
+        <div class="modal-header">
+          <span class="modal-title">👥 استشارة الجمهور</span>
+        </div>
+        <div class="modal-body audience-body">
+          <div class="audience-chart">
+            <div class="chart-container" id="chartContainer">
+              <div class="chart-bar">
+                <div class="bar-label">1</div>
+                <div class="bar-wrapper">
+                  <div class="bar" id="bar1" style="width: 0%"></div>
+                </div>
+                <div class="bar-percent" id="percent1">0%</div>
+              </div>
+              <div class="chart-bar">
+                <div class="bar-label">2</div>
+                <div class="bar-wrapper">
+                  <div class="bar" id="bar2" style="width: 0%"></div>
+                </div>
+                <div class="bar-percent" id="percent2">0%</div>
+              </div>
+              <div class="chart-bar">
+                <div class="bar-label">3</div>
+                <div class="bar-wrapper">
+                  <div class="bar" id="bar3" style="width: 0%"></div>
+                </div>
+                <div class="bar-percent" id="percent3">0%</div>
+              </div>
+              <div class="chart-bar">
+                <div class="bar-label">4</div>
+                <div class="bar-wrapper">
+                  <div class="bar" id="bar4" style="width: 0%"></div>
+                </div>
+                <div class="bar-percent" id="percent4">0%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary" onclick="closeAudienceModal()">فهمت</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Answer Confirmation Modal -->
+    <div id="answerModal" class="modal-overlay" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <span id="modalTitle" class="modal-title"></span>
+        </div>
+        <div class="modal-body">
+          <div class="modal-section">
+            <p class="modal-label">الإجابة الصحيحة:</p>
+            <p class="modal-answer" id="modalCorrectAnswer"></p>
+          </div>
+          <div class="modal-section" id="earnedSection" style="display: none;">
+            <p class="modal-label">المبلغ المكتسب:</p>
+            <p class="modal-earned" id="modalEarned"></p>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary" id="modalContinueBtn" onclick="closeAnswerModal()">متابعة</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Audio elements for sound effects -->
+    <audio id="correctSound" preload="auto">
+      <source src="data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEAQB8AAAB9AAACABAAZGF0YQIAAAAAAAA=" type="audio/wav">
+    </audio>
+    <audio id="wrongSound" preload="auto">
+      <source src="data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEAQB8AAAB9AAACABAAZGF0YQIAAAAAAAA=" type="audio/wav">
+    </audio>
+    <audio id="nextSound" preload="auto">
+      <source src="data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEAQB8AAAB9AAACABAAZGF0YQIAAAAAAAA=" type="audio/wav">
+    </audio>
+    <audio id="millionMusic" src="/assets/million.mp3" preload="auto" loop></audio>
+    </div>
+
+    <!-- End Game Screen - Win -->
+    <div id="winScreen" class="screen" style="display: none;">
+      <div class="end-screen-content">
+        <div class="end-icon">🎉</div>
+        <h2>تهانينا!</h2>
+        <p id="winMessage"></p>
+        <div class="end-stats">
+          <div class="stat">
+            <span class="stat-label">الأسئلة الصحيحة</span>
+            <span class="stat-value" id="correctCount">15</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">المبلغ النهائي</span>
+            <span class="stat-value" id="finalAmount">💰 1,000,000</span>
+          </div>
+        </div>
+        <div class="end-actions">
+          <button class="btn btn-primary" onclick="location.href='/pages/games.html'">العودة للألعاب</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- End Game Screen - Lose -->
+    <div id="loseScreen" class="screen" style="display: none;">
+      <div class="end-screen-content">
+        <div class="end-icon">😢</div>
+        <h2>للأسف خسرت!</h2>
+        <p id="loseMessage"></p>
+        <div class="end-stats">
+          <div class="stat">
+            <span class="stat-label">الأسئلة الصحيحة</span>
+            <span class="stat-value" id="loseCorrectCount">0</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">آخر مبلغ</span>
+            <span class="stat-value" id="lastAmount">0</span>
+          </div>
+        </div>
+        <div class="end-actions">
+          <button class="btn btn-primary" onclick="location.href='/pages/million/million-settings.html'">لعبة جديدة</button>
+          <button class="btn btn-secondary" onclick="location.href='/pages/games.html'">العودة للألعاب</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Back Button -->
+    <a href="/pages/games.html" class="back-btn" title="العودة">←</a>
+  </main>
+
+  <script src="/pages/million/million-game.js"></script>
+</body>
+</html>

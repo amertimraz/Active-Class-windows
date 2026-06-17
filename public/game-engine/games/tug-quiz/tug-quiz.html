@@ -1,0 +1,196 @@
+<!-- Tug Quiz — Smart Board Optimized · 1920×1080 target -->
+<div class="tq-wrapper">
+
+  <!-- ══════════════════════════════════════════
+       SETUP SCREEN
+       ══════════════════════════════════════════ -->
+  <div id="tq-setup-screen" class="tq-screen tq-active">
+    <div class="tq-setup-card">
+      <div class="tq-setup-icon">🪢</div>
+      <h1 class="tq-setup-title">Tug Quiz</h1>
+      <p class="tq-setup-subtitle">لعبة شد الحبل التعليمية — فريقان يتنافسان على حل الأسئلة</p>
+
+      <div class="tq-setup-teams">
+        <div class="tq-setup-team tq-setup-blue">
+          <label class="tq-setup-label">🔵 اسم الفريق الأزرق</label>
+          <input id="tq-blue-name" class="tq-setup-input tq-blue-input" type="text"
+                 value="الفريق الأزرق" maxlength="20" />
+        </div>
+        <div class="tq-setup-vs">VS</div>
+        <div class="tq-setup-team tq-setup-red">
+          <label class="tq-setup-label">🔴 اسم الفريق الأحمر</label>
+          <input id="tq-red-name" class="tq-setup-input tq-red-input" type="text"
+                 value="الفريق الأحمر" maxlength="20" />
+        </div>
+      </div>
+
+      <div class="tq-setup-options">
+        <div class="tq-setup-option-group">
+          <label class="tq-setup-label">📐 نوع الأسئلة</label>
+          <div class="tq-option-row">
+            <button class="tq-opt-btn tq-opt-active" data-mode="mixed">مختلطة ÷×-+</button>
+            <button class="tq-opt-btn" data-mode="add">جمع +</button>
+            <button class="tq-opt-btn" data-mode="sub">طرح -</button>
+            <button class="tq-opt-btn" data-mode="mul">ضرب ×</button>
+            <button class="tq-opt-btn" data-mode="div">قسمة ÷</button>
+          </div>
+        </div>
+        <div class="tq-setup-option-group">
+          <label class="tq-setup-label">⏱️ وقت كل سؤال</label>
+          <div class="tq-option-row">
+            <button class="tq-opt-btn" data-timer="10">10 ث</button>
+            <button class="tq-opt-btn tq-opt-active" data-timer="15">15 ث</button>
+            <button class="tq-opt-btn" data-timer="20">20 ث</button>
+            <button class="tq-opt-btn" data-timer="30">30 ث</button>
+          </div>
+        </div>
+      </div>
+
+      <button id="tq-start-btn" class="tq-start-btn">
+        🚀 ابدأ اللعبة
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       GAME SCREEN — 3-panel layout
+       ══════════════════════════════════════════ -->
+  <div id="tq-game-screen" class="tq-screen">
+    <div class="tq-game-layout">
+
+      <!-- ── LEFT: Blue Team Panel ─────────────── -->
+      <div class="tq-team-panel tq-blue-panel" id="tq-blue-panel">
+
+        <div class="tq-team-header tq-blue-header">
+          <div class="tq-team-name" id="tq-blue-team-name">Team 1</div>
+          <div class="tq-score-badge" id="tq-blue-score-badge">0</div>
+        </div>
+
+        <div class="tq-question-box tq-blue-question" id="tq-blue-question-box">
+          <div class="tq-question-text" id="tq-blue-question">؟</div>
+        </div>
+
+        <div class="tq-answer-display tq-blue-answer-display" id="tq-blue-answer-wrap">
+          <div class="tq-answer-value" id="tq-blue-answer-display">0</div>
+        </div>
+
+        <div class="tq-keypad" id="tq-blue-keypad">
+          <button class="tq-key tq-key-num" data-team="blue" data-key="1">1</button>
+          <button class="tq-key tq-key-num" data-team="blue" data-key="2">2</button>
+          <button class="tq-key tq-key-num" data-team="blue" data-key="3">3</button>
+          <button class="tq-key tq-key-num" data-team="blue" data-key="4">4</button>
+          <button class="tq-key tq-key-num" data-team="blue" data-key="5">5</button>
+          <button class="tq-key tq-key-num" data-team="blue" data-key="6">6</button>
+          <button class="tq-key tq-key-num" data-team="blue" data-key="7">7</button>
+          <button class="tq-key tq-key-num" data-team="blue" data-key="8">8</button>
+          <button class="tq-key tq-key-num" data-team="blue" data-key="9">9</button>
+          <button class="tq-key tq-key-clear" data-team="blue" data-key="clear">✕</button>
+          <button class="tq-key tq-key-num" data-team="blue" data-key="0">0</button>
+          <button class="tq-key tq-key-submit" data-team="blue" data-key="submit">✔</button>
+        </div>
+
+      </div>
+
+      <!-- ── CENTER: Arena ─────────────────────── -->
+      <div class="tq-arena" id="tq-arena">
+
+        <!-- Score + Timer bar at top -->
+        <div class="tq-arena-score-bar">
+          <div class="tq-arena-team-score tq-arena-blue-score">
+            <span class="tq-arena-team-label" id="tq-arena-blue-label">Team 1</span>
+            <span class="tq-arena-score-num" id="tq-arena-blue-score">0</span>
+          </div>
+          <div class="tq-arena-timer-block">
+            <span class="tq-timer-clock">🕐</span>
+            <span class="tq-timer-display" id="tq-timer-num">00:15</span>
+            <div class="tq-round-info" id="tq-round-info">السؤال 1</div>
+          </div>
+          <div class="tq-arena-team-score tq-arena-red-score">
+            <span class="tq-arena-team-label" id="tq-arena-red-label">Team 2</span>
+            <span class="tq-arena-score-num" id="tq-arena-red-score">0</span>
+          </div>
+        </div>
+
+        <!-- PixiJS canvas mount -->
+        <div id="tq-pixi-mount" class="tq-pixi-mount game-container"></div>
+
+        <!-- Rope progress bar -->
+        <div class="tq-rope-bar">
+          <div class="tq-rope-dots" id="tq-rope-dots-blue"></div>
+          <div class="tq-rope-center-flag">🏁</div>
+          <div class="tq-rope-dots tq-rope-dots-right" id="tq-rope-dots-red"></div>
+        </div>
+
+        <!-- Round result overlay -->
+        <div class="tq-round-overlay" id="tq-round-overlay">
+          <div class="tq-round-result-card" id="tq-round-result-card">
+            <div class="tq-round-result-icon" id="tq-round-result-icon">🎯</div>
+            <div class="tq-round-result-text" id="tq-round-result-text">صحيح!</div>
+            <div class="tq-round-result-detail" id="tq-round-result-detail"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── RIGHT: Red Team Panel ──────────────── -->
+      <div class="tq-team-panel tq-red-panel" id="tq-red-panel">
+
+        <div class="tq-team-header tq-red-header">
+          <div class="tq-team-name" id="tq-red-team-name">Team 2</div>
+          <div class="tq-score-badge" id="tq-red-score-badge">0</div>
+        </div>
+
+        <div class="tq-question-box tq-red-question" id="tq-red-question-box">
+          <div class="tq-question-text" id="tq-red-question">؟</div>
+        </div>
+
+        <div class="tq-answer-display tq-red-answer-display" id="tq-red-answer-wrap">
+          <div class="tq-answer-value" id="tq-red-answer-display">0</div>
+        </div>
+
+        <div class="tq-keypad" id="tq-red-keypad">
+          <button class="tq-key tq-key-num" data-team="red" data-key="1">1</button>
+          <button class="tq-key tq-key-num" data-team="red" data-key="2">2</button>
+          <button class="tq-key tq-key-num" data-team="red" data-key="3">3</button>
+          <button class="tq-key tq-key-num" data-team="red" data-key="4">4</button>
+          <button class="tq-key tq-key-num" data-team="red" data-key="5">5</button>
+          <button class="tq-key tq-key-num" data-team="red" data-key="6">6</button>
+          <button class="tq-key tq-key-num" data-team="red" data-key="7">7</button>
+          <button class="tq-key tq-key-num" data-team="red" data-key="8">8</button>
+          <button class="tq-key tq-key-num" data-team="red" data-key="9">9</button>
+          <button class="tq-key tq-key-clear" data-team="red" data-key="clear">✕</button>
+          <button class="tq-key tq-key-num" data-team="red" data-key="0">0</button>
+          <button class="tq-key tq-key-submit" data-team="red" data-key="submit">✔</button>
+        </div>
+
+      </div>
+
+    </div><!-- /.tq-game-layout -->
+  </div><!-- /#tq-game-screen -->
+
+  <!-- ══════════════════════════════════════════
+       GAME OVER SCREEN
+       ══════════════════════════════════════════ -->
+  <div id="tq-gameover-screen" class="tq-screen">
+    <div class="tq-gameover-card">
+      <div class="tq-gameover-icon" id="tq-gameover-icon">🏆</div>
+      <h2 class="tq-gameover-title" id="tq-gameover-title">الفائز!</h2>
+      <div class="tq-gameover-winner" id="tq-gameover-winner"></div>
+      <div class="tq-gameover-stats" id="tq-gameover-stats"></div>
+      <div class="tq-gameover-actions">
+        <button class="tq-action-btn tq-btn-primary" id="tq-play-again-btn">🔄 العب مرة أخرى</button>
+        <button class="tq-action-btn tq-btn-secondary" id="tq-back-btn">🏠 القائمة</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /.tq-wrapper -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/6.5.10/browser/pixi.min.js"></script>
+<script src="/game-engine/engine.js"></script>
+<script src="/game-engine/core/game-loop.js"></script>
+<script src="/game-engine/core/scene-manager.js"></script>
+<script src="/game-engine/core/asset-loader.js"></script>
+<script src="/game-engine/core/input-manager.js"></script>
+<script src="/game-engine/core/audio-engine.js"></script>
+<script src="/game-engine/core/ui-system.js"></script>
+<script src="/game-engine/core/educational-api.js"></script>

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>إنشاء أيقونة Active Class</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        canvas { border: 1px solid #ccc; margin: 10px; }
+        button { padding: 10px 20px; margin: 5px; background: #007cba; color: white; border: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h2>إنشاء أيقونة Active Class</h2>
+    <canvas id="canvas" width="256" height="256"></canvas>
+    <br>
+    <button onclick="createIcon()">إنشاء الأيقونة</button>
+    <button onclick="downloadIcon()">تحميل PNG</button>
+    
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        function createIcon() {
+            // خلفية متدرجة
+            const gradient = ctx.createLinearGradient(0, 0, 256, 256);
+            gradient.addColorStop(0, '#4f46e5');
+            gradient.addColorStop(1, '#7c3aed');
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 256, 256);
+            
+            // إطار دائري
+            ctx.beginPath();
+            ctx.arc(128, 128, 120, 0, 2 * Math.PI);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+            
+            // رمز الكتاب/الفصل
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 80px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('AC', 128, 128);
+            
+            // نص صغير
+            ctx.font = 'bold 20px Arial';
+            ctx.fillText('Active Class', 128, 200);
+        }
+        
+        function downloadIcon() {
+            const link = document.createElement('a');
+            link.download = 'icon.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+        
+        // إنشاء الأيقونة تلقائياً
+        createIcon();
+    </script>
+</body>
+</html>

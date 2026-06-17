@@ -1,0 +1,137 @@
+<!-- Spin & Compete — عجلة التنافس · PixiJS WebGL · ECS · 60 FPS -->
+<div class="sc-wrapper">
+
+  <!-- ══════════════════════════════════════
+       SETUP SCREEN
+       ══════════════════════════════════════ -->
+  <div id="sc-setup-screen" class="sc-screen sc-active">
+    <div class="sc-setup-card">
+      <div class="sc-setup-badge">⚡ WebGL • 60 FPS • ECS</div>
+      <div class="sc-setup-logo">🎡</div>
+      <h1 class="sc-setup-title">عجلة التنافس</h1>
+      <p class="sc-setup-subtitle">لعبة تنافسية احترافية مدعومة بـ PixiJS WebGL</p>
+
+      <div class="sc-setup-options">
+
+        <div class="sc-option-group">
+          <label class="sc-option-label">عدد الفرق</label>
+          <div class="sc-opt-row">
+            <button class="sc-opt-btn" data-count="2">٢</button>
+            <button class="sc-opt-btn" data-count="3">٣</button>
+            <button class="sc-opt-btn sc-opt-active" data-count="4">٤</button>
+            <button class="sc-opt-btn" data-count="5">٥</button>
+            <button class="sc-opt-btn" data-count="6">٦</button>
+          </div>
+        </div>
+
+        <div class="sc-option-group">
+          <label class="sc-option-label">مدة اللعبة (دقائق)</label>
+          <div class="sc-opt-row">
+            <button class="sc-opt-btn" data-time="5">٥</button>
+            <button class="sc-opt-btn" data-time="10">١٠</button>
+            <button class="sc-opt-btn sc-opt-active" data-time="15">١٥</button>
+            <button class="sc-opt-btn" data-time="20">٢٠</button>
+            <button class="sc-opt-btn" data-time="30">٣٠</button>
+          </div>
+        </div>
+
+        <div class="sc-option-group">
+          <label class="sc-option-label">محتوى العجلة</label>
+          <div class="sc-opt-row">
+            <button class="sc-opt-btn sc-opt-active" data-mode="points">نقاط ١-١٠</button>
+            <button class="sc-opt-btn" data-mode="multiply">ضرب ×</button>
+            <button class="sc-opt-btn" data-mode="add">جمع +</button>
+          </div>
+        </div>
+
+      </div>
+
+      <button class="sc-start-btn" id="sc-start-btn">
+        <span>🚀 ابدأ اللعبة</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       GAME SCREEN
+       ══════════════════════════════════════ -->
+  <div id="sc-game-screen" class="sc-screen">
+    <div class="sc-game-layout">
+
+      <!-- Left team column (teams 1, 3, 5) -->
+      <div class="sc-teams-col" id="sc-teams-left"></div>
+
+      <!-- Center: PixiJS stage + overlays -->
+      <div class="sc-center-col">
+
+        <!-- Top bar: timer + controls -->
+        <div class="sc-top-bar">
+          <button class="sc-ctrl-btn" id="sc-back-btn" title="إعدادات">⚙</button>
+          <div class="sc-timer-wrap">
+            <div class="sc-timer-box">
+              <span class="sc-timer-display" id="sc-timer-display">15:00</span>
+            </div>
+            <button class="sc-ctrl-btn" id="sc-pause-btn">⏸</button>
+          </div>
+          <button class="sc-ctrl-btn" id="sc-sound-btn" title="صوت">🔊</button>
+        </div>
+
+        <!-- PixiJS canvas mount -->
+        <div id="sc-pixi-mount" class="sc-pixi-mount game-container"></div>
+
+        <!-- Active team bar -->
+        <div class="sc-active-bar" id="sc-active-bar">
+          <span class="sc-active-lbl">دور</span>
+          <span class="sc-active-name" id="sc-active-name">الفريق ١</span>
+          <span class="sc-spin-hint" id="sc-spin-hint">اضغط العجلة للدوران</span>
+        </div>
+
+      </div>
+
+      <!-- Right team column (teams 2, 4, 6) -->
+      <div class="sc-teams-col" id="sc-teams-right"></div>
+
+    </div>
+
+    <!-- Result popup (centered over wheel) -->
+    <div class="sc-result-overlay" id="sc-result-overlay" style="display:none">
+      <div class="sc-result-card">
+        <div class="sc-result-icon" id="sc-result-icon">🎯</div>
+        <div class="sc-result-value" id="sc-result-value">٧</div>
+        <div class="sc-result-sub" id="sc-result-sub">نقطة للفريق</div>
+        <div class="sc-result-team-name" id="sc-result-team-name">الفريق ١</div>
+        <div class="sc-result-actions">
+          <button class="sc-res-btn sc-res-ok"   id="sc-res-ok">✔ أضف النقاط</button>
+          <button class="sc-res-btn sc-res-skip" id="sc-res-skip">✘ تخطي</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /#sc-game-screen -->
+
+  <!-- ══════════════════════════════════════
+       GAME OVER SCREEN
+       ══════════════════════════════════════ -->
+  <div id="sc-gameover-screen" class="sc-screen">
+    <div class="sc-gameover-card">
+      <div class="sc-gameover-icon">🏆</div>
+      <h2 class="sc-gameover-title">انتهت اللعبة!</h2>
+      <div class="sc-gameover-results" id="sc-gameover-results"></div>
+      <div class="sc-gameover-actions">
+        <button class="sc-start-btn" id="sc-play-again-btn">🔄 العب مرة أخرى</button>
+        <button class="sc-gameover-back-btn" id="sc-gameover-back-btn">🏠 القائمة</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /.sc-wrapper -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/6.5.10/browser/pixi.min.js"></script>
+<script src="/game-engine/engine.js"></script>
+<script src="/game-engine/core/game-loop.js"></script>
+<script src="/game-engine/core/scene-manager.js"></script>
+<script src="/game-engine/core/asset-loader.js"></script>
+<script src="/game-engine/core/input-manager.js"></script>
+<script src="/game-engine/core/audio-engine.js"></script>
+<script src="/game-engine/core/ui-system.js"></script>
+<script src="/game-engine/core/educational-api.js"></script>

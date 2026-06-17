@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار الإعدادات - Active Class</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--card);
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+            box-shadow: var(--shadow);
+        }
+        .test-section {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            border: 2px solid var(--border-light);
+            border-radius: var(--radius);
+        }
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius);
+            cursor: pointer;
+            margin: 0.5rem;
+            font-weight: 600;
+            transition: all 0.3s var(--transition);
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+        .btn.secondary {
+            background: var(--border);
+            color: var(--text);
+        }
+        .status {
+            padding: 1rem;
+            border-radius: var(--radius);
+            margin: 1rem 0;
+            font-weight: 600;
+        }
+        .status.success {
+            background: var(--success-bg);
+            color: var(--success);
+        }
+        .status.error {
+            background: var(--error-bg);
+            color: var(--error);
+        }
+        .current-theme {
+            padding: 1rem;
+            background: var(--primary-bg);
+            border-radius: var(--radius);
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 اختبار نظام الإعدادات - Active Class</h1>
+        
+        <div class="test-section">
+            <h2>📊 حالة النظام</h2>
+            <div class="current-theme">
+                <strong>الثيم الحالي:</strong> <span id="currentTheme">جاري التحميل...</span><br>
+                <strong>اللغة الحالية:</strong> <span id="currentLanguage">جاري التحميل...</span><br>
+                <strong>الاتجاه:</strong> <span id="currentDirection">جاري التحميل...</span>
+            </div>
+            <button class="btn" onclick="checkStatus()">🔄 تحديث الحالة</button>
+        </div>
+
+        <div class="test-section">
+            <h2>🎨 اختبار الثيم</h2>
+            <button class="btn" onclick="testTheme('light')">🌞 ثيم فاتح</button>
+            <button class="btn" onclick="testTheme('dark')">🌙 ثيم داكن</button>
+            <div id="themeStatus" class="status" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>🌍 اختبار اللغة</h2>
+            <button class="btn" onclick="testLanguage('ar')">🇪🇬 عربي</button>
+            <button class="btn" onclick="testLanguage('en')">🇬🇧 إنجليزي</button>
+            <div id="languageStatus" class="status" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>⚙️ فتح الإعدادات</h2>
+            <button class="btn" onclick="openSettingsTest()">🔧 فتح نافذة الإعدادات</button>
+            <div id="settingsStatus" class="status" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>🏠 العودة للرئيسية</h2>
+            <button class="btn secondary" onclick="goHome()">🏠 الصفحة الرئيسية</button>
+        </div>
+    </div>
+
+    <script>
+        // Check current status
+        function checkStatus() {
+            const theme = document.documentElement.getAttribute('data-theme') || 'light';
+            const language = document.documentElement.lang || 'ar';
+            const direction = document.documentElement.dir || 'rtl';
+            
+            document.getElementById('currentTheme').textContent = theme === 'dark' ? 'داكن' : 'فاتح';
+            document.getElementById('currentLanguage').textContent = language === 'ar' ? 'عربي' : 'إنجليزي';
+            document.getElementById('currentDirection').textContent = direction === 'rtl' ? 'من اليمين لليسار' : 'من اليسار لليمين';
+        }
+
+        // Test theme switching
+        async function testTheme(theme) {
+            try {
+                const response = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key: 'theme', value: theme })
+                });
+                
+                if (response.ok) {
+                    document.documentElement.setAttribute('data-theme', theme);
+                    showStatus('themeStatus', `تم تطبيق الثيم ${theme === 'dark' ? 'الداكن' : 'الفاتح'} بنجاح`, 'success');
+                    checkStatus();
+                } else {
+                    throw new Error('فشل في حفظ الثيم');
+                }
+            } catch (error) {
+                showStatus('themeStatus', 'خطأ في تغيير الثيم: ' + error.message, 'error');
+            }
+        }
+
+        // Test language switching
+        async function testLanguage(language) {
+            try {
+                const response = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key: 'language', value: language })
+                });
+                
+                if (response.ok) {
+                    const isArabic = language === 'ar';
+                    document.documentElement.lang = language;
+                    document.documentElement.dir = isArabic ? 'rtl' : 'ltr';
+                    showStatus('languageStatus', `تم تطبيق اللغة ${isArabic ? 'العربية' : 'الإنجليزية'} بنجاح`, 'success');
+                    checkStatus();
+                } else {
+                    throw new Error('فشل في حفظ اللغة');
+                }
+            } catch (error) {
+                showStatus('languageStatus', 'خطأ في تغيير اللغة: ' + error.message, 'error');
+            }
+        }
+
+        // Test settings modal
+        async function openSettingsTest() {
+            try {
+                // Load settings modal if not already loaded
+                if (!document.querySelector('#settingsModal')) {
+                    const response = await fetch('/pages/settings.html');
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const html = await response.text();
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = html;
+                    
+                    const modal = tempDiv.querySelector('#settingsModal');
+                    const loadingOverlay = tempDiv.querySelector('#loadingOverlay');
+                    const notification = tempDiv.querySelector('#notification');
+                    
+                    if (modal) document.body.appendChild(modal);
+                    if (loadingOverlay) document.body.appendChild(loadingOverlay);
+                    if (notification) document.body.appendChild(notification);
+                    
+                    // Load CSS
+                    if (!document.querySelector('link[href="/pages/settings.css"]')) {
+                        const link = document.createElement('link');
+                        link.rel = 'stylesheet';
+                        link.href = '/pages/settings.css';
+                        document.head.appendChild(link);
+                    }
+                    
+                    // Load JS
+                    if (!window.settingsManager) {
+                        const script = document.createElement('script');
+                        script.src = '/pages/settings.js';
+                        document.head.appendChild(script);
+                        
+                        await new Promise((resolve, reject) => {
+                            script.onload = resolve;
+                            script.onerror = reject;
+                            setTimeout(reject, 5000);
+                        });
+                    }
+                }
+                
+                // Open modal
+                if (window.openSettings) {
+                    window.openSettings();
+                    showStatus('settingsStatus', 'تم فتح نافذة الإعدادات بنجاح', 'success');
+                } else {
+                    setTimeout(() => {
+                        if (window.openSettings) {
+                            window.openSettings();
+                            showStatus('settingsStatus', 'تم فتح نافذة الإعدادات بنجاح', 'success');
+                        } else {
+                            showStatus('settingsStatus', 'لم يتم تحميل وظائف الإعدادات', 'error');
+                        }
+                    }, 1000);
+                }
+            } catch (error) {
+                showStatus('settingsStatus', 'خطأ في فتح الإعدادات: ' + error.message, 'error');
+            }
+        }
+
+        // Go to home page
+        function goHome() {
+            window.location.href = '/';
+        }
+
+        // Show status message
+        function showStatus(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `status ${type}`;
+            element.style.display = 'block';
+            
+            setTimeout(() => {
+                element.style.display = 'none';
+            }, 5000);
+        }
+
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            checkStatus();
+            
+            // Apply saved settings
+            fetch('/api/settings')
+                .then(response => response.json())
+                .then(settings => {
+                    if (settings.theme) {
+                        document.documentElement.setAttribute('data-theme', settings.theme);
+                    }
+                    if (settings.language) {
+                        const isArabic = settings.language === 'ar';
+                        document.documentElement.lang = settings.language;
+                        document.documentElement.dir = isArabic ? 'rtl' : 'ltr';
+                    }
+                    checkStatus();
+                })
+                .catch(error => {
+                    console.error('Error loading settings:', error);
+                });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' http://localhost:* https://cdnjs.cloudflare.com; media-src 'self' data: blob:;" />
+
+  <title>Active Class</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css?v=20260304" />
+  <link rel="stylesheet" href="/animations.css" />
+  <link rel="stylesheet" href="/accessibility.css" />
+  <link rel="stylesheet" href="/settings-modal.css" />
+</head>
+<body>
+  <div id="loginScreen" class="login-screen">
+    <div class="login-card">
+      <div class="login-brand">
+        <img src="/assets/icon.gif" alt="Active Class" class="brand-logo login-logo">
+        <div>
+          <h1>Active Class</h1>
+          <p>منصة إدارة الصف التفاعلي باحترافية</p>
+        </div>
+      </div>
+      <div class="login-form">
+        <label class="login-field">
+          <span>اسم المستخدم</span>
+          <input type="text" id="loginUsername" placeholder="اكتب اسم المستخدم" autocomplete="username">
+        </label>
+        <label class="login-field">
+          <span>كلمة المرور</span>
+          <div class="password-row">
+            <input type="password" id="loginPassword" placeholder="اكتب كلمة المرور" autocomplete="current-password">
+            <button type="button" class="toggle-password" id="togglePassword">إظهار</button>
+          </div>
+        </label>
+        <label class="login-remember">
+          <input type="checkbox" id="loginRemember" checked>
+          <span>تذكرني على هذا الجهاز</span>
+        </label>
+      </div>
+      <div class="login-error" id="loginError" role="alert"></div>
+      <div class="login-success" id="loginSuccess" role="status"></div>
+      <div class="login-actions">
+        <button class="btn" id="loginEnter">دخول</button>
+        <button class="btn secondary" id="loginGuest">دخول كضيف</button>
+      </div>
+      <div class="login-demo">
+        بيانات تجريبية: <span>teacher</span> / <span>1234</span>
+      </div>
+      <p class="login-note">تسجيل الدخول حاليا شكلي للاختبار. يمكنك البدء كضيف الآن.</p>
+    </div>
+  </div>
+
+  <div id="geFloatingControls" class="ge-floating-controls">
+    <button id="geBackBtn" class="ge-float-btn" title="رجوع">&#8592;</button>
+    <button id="geFullscreenBtn" class="ge-float-btn" title="ملء الشاشة">&#x26F6;</button>
+  </div>
+
+  <div id="appShell" class="app-shell">
+    <header class="app-header">
+      <div class="header-content">
+        <div class="header-left">
+          <img src="/assets/icon.gif" alt="Active Class" class="header-logo">
+          <h1 class="header-title">Active Class</h1>
+        </div>
+        
+        <nav class="header-nav">
+          <a href="#/" class="nav-item active">
+            <span class="nav-icon">🏠</span>
+            <span class="nav-label">الرئيسية</span>
+          </a>
+          <a href="#/ai-generator" class="nav-item">
+            <span class="nav-icon">✨</span>
+            <span class="nav-label">الذكاء الاصطناعي</span>
+          </a>
+          <a href="#/games" class="nav-item">
+            <span class="nav-icon">🎮</span>
+            <span class="nav-label">الألعاب</span>
+          </a>
+          <a href="#/content" class="nav-item">
+            <span class="nav-icon">📚</span>
+            <span class="nav-label">المحتوى التعليمي</span>
+          </a>
+          <a href="#/quizzes" class="nav-item">
+            <span class="nav-icon">📋</span>
+            <span class="nav-label">الاختبارات</span>
+          </a>
+          <a href="#/competitions" class="nav-item">
+            <span class="nav-icon">🏆</span>
+            <span class="nav-label">المسابقات</span>
+          </a>
+          <a href="#/groups" class="nav-item">
+            <span class="nav-icon">👥</span>
+            <span class="nav-label">المجموعات والطلاب</span>
+          </a>
+          <a href="#/settings" class="nav-item">
+            <span class="nav-icon">⚙️</span>
+            <span class="nav-label">الإعدادات</span>
+          </a>
+        </nav>
+
+        <div class="header-right">
+          <div class="header-quick-tools" id="quickTools">
+            <button class="hqt-btn" data-qt="timer" title="المؤقت الذكي">⏱️</button>
+            <button class="hqt-btn" data-qt="wheel" title="عجلة الحظ">🎡</button>
+            <button class="hqt-btn" data-qt="numbers" title="الأرقام العشوائية">🔢</button>
+            <button class="hqt-btn" data-qt="names" title="اختيار الأسماء">🎲</button>
+          </div>
+          <div class="user-profile">
+            <span class="user-name">المعلم</span>
+            <img src="/assets/icon.gif" alt="Teacher" class="user-avatar">
+          </div>
+          <button class="logout-btn" id="logoutBtn" title="تسجيل الخروج">⎋</button>
+        </div>
+      </div>
+    </header>
+
+    <main id="app" class="container" aria-live="polite"></main>
+
+    <footer class="footer">
+      <div class="footer-content">
+        © 2024 Active Class. جميع الحقوق محفوظة. الإصدار 2.1.0.
+      </div>
+    </footer>
+  </div>
+
+  <!-- Floating Toolbar -->
+  <div class="floating-toolbar" id="floatingToolbar">
+    <button class="toolbar-btn" data-tool="call" title="نداء آلي">📢</button>
+    <button class="toolbar-btn" data-tool="fullscreen" title="ملء الشاشة">🖥️</button>
+    <div class="toolbar-divider"></div>
+    <button class="toolbar-btn" data-tool="timer" title="مؤقت">⏱️</button>
+    <button class="toolbar-btn" data-tool="random" title="عشوائي">🎲</button>
+  </div>
+
+  <!-- Settings Modal (Global) -->
+  <div id="settingsModal" class="modal-overlay">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h3 class="modal-title">⚙️ إعدادات النظام</h3>
+        <button class="modal-close" id="closeSettings">×</button>
+      </div>
+      
+      <div class="modal-body">
+        <!-- Sidebar Navigation (Right side for Arabic) -->
+        <div class="settings-sidebar">
+          <button class="nav-item active" data-tab="appearance">
+            <span class="nav-icon">🎨</span>
+            <span class="nav-text">المظهر واللغة</span>
+          </button>
+          <button class="nav-item" data-tab="database">
+            <span class="nav-icon">💾</span>
+            <span class="nav-text">قاعدة البيانات</span>
+          </button>
+          <button class="nav-item" data-tab="interface">
+            <span class="nav-icon">🖥️</span>
+            <span class="nav-text">واجهة النظام</span>
+          </button>
+          <button class="nav-item" data-tab="about">
+            <span class="nav-icon">ℹ️</span>
+            <span class="nav-text">حول البرنامج</span>
+          </button>
+        </div>
+
+        <!-- Content Area (Left side) -->
+        <div class="settings-content">
+          <!-- Appearance Tab -->
+          <div class="tab-content active" id="appearance-tab">
+            <h3 style="margin-bottom: 1.5rem;">🎨 المظهر واللغة</h3>
+            <div class="settings-group">
+              <h4 style="margin-bottom: 1rem;">ثيم التطبيق</h4>
+              <div style="display: flex; gap: 1rem;">
+                <label class="theme-label">
+                  <input type="radio" name="theme" value="light" style="display:none"> 
+                  <div style="font-size: 1.5rem; margin-bottom: 5px;">☀️</div>
+                  <div style="font-weight: 700;">فاتح</div>
+                </label>
+                <label class="theme-label">
+                  <input type="radio" name="theme" value="dark" style="display:none"> 
+                  <div style="font-size: 1.5rem; margin-bottom: 5px;">🌙</div>
+                  <div style="font-weight: 700;">داكن</div>
+                </label>
+              </div>
+            </div>
+            <div class="settings-group">
+              <h4 style="margin-bottom: 1rem;">اللغة</h4>
+              <select id="languageSelect" class="form-select" style="max-width:100%; width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--card); color: var(--text);">
+                <option value="ar">العربية</option>
+                <option value="en">English</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Other tabs -->
+          <div class="tab-content" id="database-tab">
+            <h3>💾 قاعدة البيانات</h3>
+            <p style="color:var(--text-muted);">إعدادات الحفظ والنسخ الاحتياطي</p>
+          </div>
+          <div class="tab-content" id="interface-tab">
+            <h3>🖥️ واجهة النظام</h3>
+            <p style="color:var(--text-muted);">تخصيص أزرار الواجهة واختصاراتها</p>
+            
+            <div class="settings-group" style="margin-top: 1.5rem;">
+              <h4 style="margin-bottom: 1rem;">✨ مفتاح API الخاص بالذكاء الاصطناعي (Gemini)</h4>
+              <p style="font-size: 0.85rem; color:var(--text-muted); margin-bottom: 0.5rem;">
+                مطلوب لتشغيل ميزة تحويل الـ PDF لدروس تفاعلية. يمكنك الحصول عليه من <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: var(--primary);">Google AI Studio</a>.
+              </p>
+              <input type="password" id="geminiApiKey" class="form-select" placeholder="أدخل مفتاح الـ API هنا..." style="max-width:100%; width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--card); color: var(--text);">
+            </div>
+          </div>
+          <div class="tab-content" id="about-tab">
+            <h3>ℹ️ حول Active Class</h3>
+            <p style="color:var(--text-muted);">الإصدار 2.1.0</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="cancelSettings">إلغاء</button>
+        <button class="btn btn-primary" id="saveSettings">حفظ الإعدادات</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/i18n.js"></script>
+  <script src="/ux-improvements.js?v=20260304"></script>
+  <script src="/performance.js"></script>
+  <script src="/router.js?v=20260304b"></script>
+  <script src="/pages/settings.js"></script>
+  <script src="/scripts/app-init.js" nonce="ac"></script>
+</body>
+</html>

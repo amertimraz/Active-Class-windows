@@ -1,0 +1,69 @@
+<div class="sub-page-container fade-in">
+  <div class="sub-page-header">
+    <h1 class="sub-page-title">إعدادات النظام</h1>
+    <p class="sub-page-subtitle">تخصيص مظهر التطبيق وإدارة قواعد البيانات والنسخ الاحتياطي</p>
+  </div>
+
+  <div class="sub-page-content">
+    <div class="modern-section-card" style="display: flex; gap: 2rem; padding: 0; overflow: hidden; min-height: 600px;">
+      <!-- Sidebar Navigation -->
+      <div class="settings-sidebar" style="width: 260px; background: var(--card); border-left: 1px solid var(--border); padding: 1.5rem;">
+        <nav class="settings-nav" style="display: flex; flex-direction: column; gap: 0.5rem;">
+          <button class="nav-item active" data-tab="appearance" style="display:flex; align-items:center; gap:12px; padding:12px 16px; border-radius:12px; border:none; background:transparent; cursor:pointer; text-align:right; font-weight:600; width:100%; transition:all 0.2s;">
+            <span class="nav-icon">🎨</span>
+            <span class="nav-text">المظهر واللغة</span>
+          </button>
+          <button class="nav-item" data-tab="database" style="display:flex; align-items:center; gap:12px; padding:12px 16px; border-radius:12px; border:none; background:transparent; cursor:pointer; text-align:right; font-weight:600; width:100%; transition:all 0.2s;">
+            <span class="nav-icon">💾</span>
+            <span class="nav-text">قاعدة البيانات</span>
+          </button>
+          <button class="nav-item" data-tab="interface" style="display:flex; align-items:center; gap:12px; padding:12px 16px; border-radius:12px; border:none; background:transparent; cursor:pointer; text-align:right; font-weight:600; width:100%; transition:all 0.2s;">
+            <span class="nav-icon">🖥️</span>
+            <span class="nav-text">واجهة النظام</span>
+          </button>
+          <button class="nav-item" data-tab="about" style="display:flex; align-items:center; gap:12px; padding:12px 16px; border-radius:12px; border:none; background:transparent; cursor:pointer; text-align:right; font-weight:600; width:100%; transition:all 0.2s;">
+            <span class="nav-icon">ℹ️</span>
+            <span class="nav-text">حول البرنامج</span>
+          </button>
+        </nav>
+      </div>
+
+      <!-- Content Area -->
+      <div class="settings-content" style="flex: 1; padding: 2.5rem; overflow-y: auto;">
+        <!-- Appearance Tab (Default) -->
+        <div class="tab-content active" id="appearance-tab">
+          <div class="tab-header" style="margin-bottom: 2rem;">
+            <h3 style="font-size:1.5rem; font-weight:800; margin-bottom:0.5rem;">🎨 المظهر واللغة</h3>
+            <p style="color:var(--text-muted);">تخصيص شكل التطبيق واختيار اللغة المفضلة</p>
+          </div>
+
+          <div class="settings-grid" style="display:grid; gap:2rem;">
+            <div class="settings-group">
+              <h4 style="font-weight:700; margin-bottom:1rem;">سمة التطبيق</h4>
+              <div class="theme-options" style="display:flex; gap:1rem;">
+                 <!-- JS will handle theme selection -->
+                 <button class="theme-btn" data-theme="light" style="flex:1; padding:20px; border-radius:15px; border:2px solid var(--border); background:white; cursor:pointer;">☀️ فاتح</button>
+                 <button class="theme-btn" data-theme="dark" style="flex:1; padding:20px; border-radius:15px; border:2px solid var(--border); background:#1e293b; color:white; cursor:pointer;">🌙 داكن</button>
+              </div>
+            </div>
+
+            <div class="settings-group">
+              <h4 style="font-weight:700; margin-bottom:1rem;">لغة التطبيق</h4>
+              <select id="languageSelect" class="form-select" style="max-width:300px;">
+                <option value="ar">العربية (Arabic)</option>
+                <option value="en">English</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Other tabs will be handled by settings.js -->
+        <div class="tab-content" id="database-tab" style="display:none;">
+           <!-- Database settings -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/pages/settings.js"></script>
+</div>

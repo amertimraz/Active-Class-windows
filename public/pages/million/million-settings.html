@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <title>من سيربح المليون - الإعدادات</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/pages/million/million-settings.css" />
+<script nonce="ac">
+  (function(){
+    try{
+      var theme = localStorage.getItem('cm_theme');
+      if(!theme){
+        fetch('/api/settings')
+          .then(function(r){ return r.ok ? r.json() : {}; })
+          .then(function(s){
+            var t = (s && s.theme) ? s.theme : 'light';
+            document.documentElement.setAttribute('data-theme', t);
+          })
+          .catch(function(){
+            document.documentElement.setAttribute('data-theme','light');
+          });
+      } else {
+        document.documentElement.setAttribute('data-theme', theme);
+      }
+      window.addEventListener('storage', function(e){
+        if(e.key === 'cm_theme' && e.newValue){
+          document.documentElement.setAttribute('data-theme', e.newValue);
+        }
+      });
+    }catch(_){ }
+  })();
+</script>
+</head>
+<body>
+  <div class="page-top-bar">
+    <a class="page-back-btn" href="/">
+      <span class="icon">🏠</span>
+      <span>العودة للرئيسية</span>
+    </a>
+  </div>
+  <main class="container">
+    <div class="panel">
+      <h2>⚙️ إعدادات لعبة من سيربح المليون</h2>
+      <p class="subtitle">قم بتخصيص إعدادات اللعبة وتحديد الأسئلة</p>
+
+      <form id="millionSettingsForm">
+        <!-- Configuration Grid -->
+        <div class="settings-section config-grid">
+          <!-- Row 1 -->
+          <!-- Question Source -->
+          <div class="config-box">
+            <h3 class="config-title">📚 مصدر الأسئلة</h3>
+            <div class="form-group">
+              <label for="quizSelect">اختبار:</label>
+              <select id="quizSelect" class="form-select">
+                <option value="">جاري التحميل...</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Question Ordering -->
+          <div class="config-box">
+            <h3 class="config-title">🔀 ترتيب الأسئلة</h3>
+            <div class="form-group">
+              <label for="orderingType">طريقة الترتيب:</label>
+              <select id="orderingType" class="form-select">
+                <option value="ascending">تصاعدي حسب الصعوبة</option>
+                <option value="random">عشوائي</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Row 2 -->
+          <!-- Difficulty Distribution -->
+          <div class="config-box">
+            <div class="config-header">
+              <h3 class="config-title">📊 توزيع الصعوبة</h3>
+              <p class="config-total">الإجمالي: 15</p>
+            </div>
+            
+            <div class="difficulty-grid">
+              <div class="form-group">
+                <label for="easyCount">سهلة:</label>
+                <input type="number" id="easyCount" min="0" max="15" value="5" class="form-input difficulty-input" />
+              </div>
+              <div class="form-group">
+                <label for="mediumCount">متوسطة:</label>
+                <input type="number" id="mediumCount" min="0" max="15" value="5" class="form-input difficulty-input" />
+              </div>
+              <div class="form-group">
+                <label for="hardCount">صعبة:</label>
+                <input type="number" id="hardCount" min="0" max="15" value="5" class="form-input difficulty-input" />
+              </div>
+            </div>
+            <div id="difficultyWarning" class="warning" style="display: none;"></div>
+          </div>
+
+          <!-- Lifelines -->
+          <div class="config-box">
+            <h3 class="config-title">💡 وسائل المساعدة</h3>
+            <div class="lifelines-grid lifelines-horizontal">
+              <label class="checkbox-label">
+                <input type="checkbox" id="lifelineFiftyFifty" checked />
+                <div>
+                  <span>50:50</span>
+                  <p>إلغاء خيارين</p>
+                </div>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" id="lifelineChange" checked />
+                <div>
+                  <span>تغيير السؤال</span>
+                  <p>الانتقال للسؤال التالي</p>
+                </div>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" id="lifelineHint" checked />
+                <div>
+                  <span>👥 مساعدة الجمهور</span>
+                  <p>استطلاع رأي الجمهور</p>
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="actions">
+          <button type="button" class="btn btn-secondary" onclick="window.history.back()">العودة</button>
+          <button type="submit" class="btn btn-primary">🎮 ابدأ اللعبة</button>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <script src="/pages/million/million-settings.js"></script>
+</body>
+</html>

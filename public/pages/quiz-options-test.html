@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>اختبار خيارات الأسئلة</title>
+  <style>
+    body {
+      font-family: 'Cairo', Arial, sans-serif;
+      margin: 20px;
+      background: #f5f5f5;
+    }
+    .test-container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .test-section {
+      margin-bottom: 30px;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    .test-button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    .test-button:hover {
+      background: #0056b3;
+    }
+    .test-button.danger {
+      background: #dc3545;
+    }
+    .test-button.danger:hover {
+      background: #c82333;
+    }
+    .result {
+      margin-top: 10px;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 3px;
+      font-family: monospace;
+      white-space: pre-wrap;
+    }
+    .error {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    .success {
+      background: #d4edda;
+      color: #155724;
+    }
+  </style>
+<script nonce="ac">
+  (function(){
+    try{
+      var theme = localStorage.getItem('cm_theme');
+      if(!theme){
+        fetch('/api/settings')
+          .then(function(r){ return r.ok ? r.json() : {}; })
+          .then(function(s){
+            var t = (s && s.theme) ? s.theme : 'light';
+            document.documentElement.setAttribute('data-theme', t);
+          })
+          .catch(function(){
+            document.documentElement.setAttribute('data-theme','light');
+          });
+      } else {
+        document.documentElement.setAttribute('data-theme', theme);
+      }
+      window.addEventListener('storage', function(e){
+        if(e.key === 'cm_theme' && e.newValue){
+          document.documentElement.setAttribute('data-theme', e.newValue);
+        }
+      });
+    }catch(_){ }
+  })();
+</script>
+</head>
+<body>
+  <div class="test-container">
+    <h1>اختبار خيارات الأسئلة</h1>
+
+    <div class="test-section">
+      <h3>تشخيص حالة الاختبار</h3>
+      <button class="test-button" onclick="runDiagnostic()">تشغيل التشخيص</button>
+      <button class="test-button" onclick="reloadQuestion()">إعادة تحميل السؤال الحالي</button>
+      <div id="diagnostic-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>فحص بيانات الأسئلة</h3>
+      <button class="test-button" onclick="checkQuizData()">فحص بيانات الاختبار</button>
+      <button class="test-button" onclick="checkCurrentQuestion()">فحص السؤال الحالي</button>
+      <div id="data-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>اختبار العناصر المرئية</h3>
+      <button class="test-button" onclick="checkDOMElements()">فحص عناصر DOM</button>
+      <button class="test-button" onclick="forceShowOptions()">إظهار الخيارات بالقوة</button>
+      <div id="dom-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>اختبار تصحيحي</h3>
+      <button class="test-button" onclick="fixQuizData()">تصحيح بيانات الاختبار</button>
+      <button class="test-button danger" onclick="clearLocalStorage()">مسح البيانات المحلية</button>
+      <div id="fix-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>تعليمات الاستخدام</h3>
+      <ol>
+        <li>افتح صفحة الاختبار في نافذة منفصلة</li>
+        <li>اضغط على "تشغيل التشخيص" لرؤية حالة الاختبار</li>
+        <li>إذا لم تظهر الخيارات، جرب "إعادة تحميل السؤال الحالي"</li>
+        <li>استخدم "فحص بيانات الاختبار" لرؤية بنية البيانات</li>
+        <li>إذا كانت المشكلة في البيانات، استخدم "تصحيح بيانات الاختبار"</li>
+      </ol>
+    </div>
+  </div>
+
+  <script>
+    function runDiagnostic() {
+      const resultDiv = document.getElementById('diagnostic-result');
+      resultDiv.className = 'result';
+
+      try {
+        // افتح نافذة الاختبار إذا لم تكن مفتوحة
+        const quizWindow = window.open('/pages/quiz-view.html?id=test', 'quiz-window');
+
+        setTimeout(() => {
+          if (quizWindow && quizWindow.diagnoseQuizOptions) {
+            quizWindow.diagnoseQuizOptions();
+            resultDiv.textContent = 'تم تشغيل التشخيص - راجع وحدة التحكم في المتصفح';
+          } else {
+            resultDiv.textContent = 'لم يتم العثور على نافذة الاختبار أو دالة التشخيص';
+            resultDiv.className = 'result error';
+          }
+        }, 2000);
+      } catch (e) {
+        resultDiv.textContent = 'خطأ في تشغيل التشخيص: ' + e.message;
+        resultDiv.className = 'result error';
+      }
+    }
+
+    function reloadQuestion() {
+      const resultDiv = document.getElementById('diagnostic-result');
+      resultDiv.className = 'result';
+
+      const quizWindow = window.open('', 'quiz-window');
+      if (quizWindow && quizWindow.reloadCurrentQuestion) {
+        quizWindow.reloadCurrentQuestion();
+        resultDiv.textContent = 'تم إعادة تحميل السؤال - راجع النتيجة';
+      } else {
+        resultDiv.textContent = 'لم يتم العثور على نافذة الاختبار';
+        resultDiv.className = 'result error';
+      }
+    }
+
+    function checkQuizData() {
+      const resultDiv = document.getElementById('data-result');
+      resultDiv.className = 'result';
+
+      const quizData = localStorage.getItem('cm_quizzes_v1');
+      if (quizData) {
+        try {
+          const quizzes = JSON.parse(quizData);
+          resultDiv.textContent = `تم العثور على ${quizzes.length} اختبار\n` +
+            quizzes.map((q, i) => `الاختبار ${i + 1}: ${q.title} (${q.questions?.length || 0} أسئلة)`).join('\n');
+        } catch (e) {
+          resultDiv.textContent = 'خطأ في تحليل بيانات الاختبار: ' + e.message;
+          resultDiv.className = 'result error';
+        }
+      } else {
+        resultDiv.textContent = 'لم يتم العثور على بيانات الاختبار في localStorage';
+        resultDiv.className = 'result error';
+      }
+    }
+
+    function checkCurrentQuestion() {
+      const resultDiv = document.getElementById('data-result');
+      resultDiv.className = 'result';
+
+      const quizData = localStorage.getItem('cm_quizzes_v1');
+      if (quizData) {
+        try {
+          const quizzes = JSON.parse(quizData);
+          const testQuiz = quizzes.find(q => q.id === 'test') || quizzes[0];
+
+          if (testQuiz) {
+            const question = testQuiz.questions?.[0];
+            if (question) {
+              resultDiv.textContent = `السؤال الأول:\n` +
+                `النص: ${question.text || 'غير محدد'}\n` +
+                `النوع: ${question.type || 'غير محدد'}\n` +
+                `الخيارات: ${question.options ? question.options.length : 0} خيار\n` +
+                `الإجابة الصحيحة: ${question.correctAnswer !== undefined ? question.correctAnswer : 'غير محدد'}`;
+            } else {
+              resultDiv.textContent = 'لا توجد أسئلة في الاختبار';
+              resultDiv.className = 'result error';
+            }
+          } else {
+            resultDiv.textContent = 'لم يتم العثور على اختبار تجريبي';
+            resultDiv.className = 'result error';
+          }
+        } catch (e) {
+          resultDiv.textContent = 'خطأ في قراءة البيانات: ' + e.message;
+          resultDiv.className = 'result error';
+        }
+      }
+    }
+
+    function checkDOMElements() {
+      const resultDiv = document.getElementById('dom-result');
+      resultDiv.className = 'result';
+
+      const quizWindow = window.open('', 'quiz-window');
+      if (quizWindow) {
+        const opts = quizWindow.document.getElementById('opts');
+        const qText = quizWindow.document.getElementById('qText');
+
+        resultDiv.textContent = `عناصر DOM:\n` +
+          `حاوي الخيارات (opts): ${opts ? 'موجود' : 'غير موجود'}\n` +
+          `نص السؤال (qText): ${qText ? 'موجود' : 'غير موجود'}\n` +
+          `محتوى الخيارات: ${opts?.innerHTML?.substring(0, 100) || 'فارغ'}`;
+      } else {
+        resultDiv.textContent = 'لم يتم العثور على نافذة الاختبار';
+        resultDiv.className = 'result error';
+      }
+    }
+
+    function forceShowOptions() {
+      const resultDiv = document.getElementById('dom-result');
+      resultDiv.className = 'result';
+
+      const quizWindow = window.open('', 'quiz-window');
+      if (quizWindow) {
+        const opts = quizWindow.document.getElementById('opts');
+        if (opts) {
+          // إنشاء خيارات تجريبية
+          opts.innerHTML = `
+            <div class="opt" onclick="selectOption(0, 0)">الخيار أ</div>
+            <div class="opt" onclick="selectOption(0, 1)">الخيار ب</div>
+            <div class="opt" onclick="selectOption(0, 2)">الخيار ج</div>
+          `;
+          resultDiv.textContent = 'تم إنشاء خيارات تجريبية';
+        } else {
+          resultDiv.textContent = 'لم يتم العثور على حاوي الخيارات';
+          resultDiv.className = 'result error';
+        }
+      }
+    }
+
+    function fixQuizData() {
+      const resultDiv = document.getElementById('fix-result');
+      resultDiv.className = 'result';
+
+      const quizData = localStorage.getItem('cm_quizzes_v1');
+      if (quizData) {
+        try {
+          const quizzes = JSON.parse(quizData);
+
+          quizzes.forEach(quiz => {
+            if (quiz.questions) {
+              quiz.questions.forEach((question, qIndex) => {
+                // إصلاح أسئلة MCQ بدون خيارات
+                if ((question.type === 'mcq' || !question.type) && !question.options) {
+                  question.options = ['الخيار أ', 'الخيار ب', 'الخيار ج', 'الخيار د'];
+                  question.type = 'mcq';
+                  console.log(`تم إصلاح السؤال ${qIndex + 1} في الاختبار ${quiz.title}`);
+                }
+
+                // إصلاح أسئلة True/False بدون خيارات
+                if (question.type === 'tf' && !question.options) {
+                  question.options = ['صحيح', 'خطأ'];
+                  console.log(`تم إصلاح سؤال صح/خطأ ${qIndex + 1} في الاختبار ${quiz.title}`);
+                }
+              });
+            }
+          });
+
+          localStorage.setItem('cm_quizzes_v1', JSON.stringify(quizzes));
+          resultDiv.textContent = 'تم تصحيح بيانات الاختبار - أعد تحميل الصفحة';
+          resultDiv.className = 'result success';
+        } catch (e) {
+          resultDiv.textContent = 'خطأ في تصحيح البيانات: ' + e.message;
+          resultDiv.className = 'result error';
+        }
+      } else {
+        resultDiv.textContent = 'لم يتم العثور على بيانات الاختبار';
+        resultDiv.className = 'result error';
+      }
+    }
+
+    function clearLocalStorage() {
+      if (confirm('هل أنت متأكد من مسح جميع البيانات المحلية؟')) {
+        localStorage.clear();
+        const resultDiv = document.getElementById('fix-result');
+        resultDiv.textContent = 'تم مسح جميع البيانات المحلية';
+        resultDiv.className = 'result success';
+      }
+    }
+  </script>
+</body>
+</html>

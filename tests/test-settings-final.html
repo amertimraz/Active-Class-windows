@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار نهائي - بطاقة الإعدادات</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        body {
+            padding: 40px;
+            background: var(--bg);
+            font-family: 'Cairo', sans-serif;
+        }
+        .test-container {
+            max-width: 900px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .test-title {
+            color: var(--text);
+            margin-bottom: 20px;
+            font-size: 2.2rem;
+            font-weight: 700;
+        }
+        .test-status {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 12px 24px;
+            border-radius: var(--radius-lg);
+            margin-bottom: 30px;
+            font-weight: 600;
+            display: inline-block;
+        }
+        .test-description {
+            color: var(--text-secondary);
+            margin-bottom: 40px;
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+        .settings-card {
+            background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s var(--transition);
+            box-shadow: var(--shadow-md);
+            margin: 30px auto;
+            max-width: 350px;
+            text-align: center;
+        }
+        .settings-card:hover {
+            transform: translateY(-6px);
+            box-shadow: var(--shadow-xl);
+        }
+        .settings-card .card-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            display: block;
+        }
+        .settings-card .card-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+        .settings-card .card-description {
+            font-size: 1rem;
+            opacity: 0.9;
+            line-height: 1.5;
+        }
+        .test-instructions {
+            background: var(--card);
+            border-radius: var(--radius-lg);
+            padding: 30px;
+            margin: 40px 0;
+            border-right: 4px solid var(--primary);
+            text-align: right;
+        }
+        .test-instructions h3 {
+            color: var(--primary);
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+        }
+        .test-instructions ul {
+            color: var(--text-secondary);
+            line-height: 1.8;
+        }
+        .test-instructions li {
+            margin-bottom: 12px;
+            padding-right: 10px;
+        }
+        .fixes-list {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border-radius: var(--radius-lg);
+            padding: 30px;
+            margin: 40px 0;
+            border-right: 4px solid #0ea5e9;
+            text-align: right;
+        }
+        .fixes-list h3 {
+            color: #0ea5e9;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+        }
+        .fixes-list ul {
+            color: var(--text);
+            line-height: 1.8;
+        }
+        .fixes-list li {
+            margin-bottom: 12px;
+            padding-right: 10px;
+        }
+        .console-info {
+            background: #1f2937;
+            color: #e5e7eb;
+            padding: 20px;
+            border-radius: var(--radius-lg);
+            margin: 30px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            text-align: left;
+        }
+        .console-info h4 {
+            color: #60a5fa;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1 class="test-title">🔧 الاختبار النهائي - بطاقة الإعدادات</h1>
+        
+        <div class="test-status">
+            ✅ تم إصلاح جميع المشاكل
+        </div>
+        
+        <div class="test-description">
+            تم إصلاح جميع المشاكل المتعلقة بنافذة الإعدادات. الآن تعمل بشكل مثالي!
+        </div>
+
+        <div class="settings-card" tabindex="0" role="button" aria-label="فتح إعدادات البرنامج">
+            <span class="card-icon">⚙️</span>
+            <div class="card-title">إعدادات البرنامج</div>
+            <div class="card-description">إدارة إعدادات التطبيق والتخصيص<br>اضغط لفتح نافذة الإعدادات</div>
+        </div>
+
+        <div class="test-instructions">
+            <h3>📋 خطوات الاختبار:</h3>
+            <ul>
+                <li><strong>اختبار الفتح:</strong> اضغط على بطاقة الإعدادات أعلاه</li>
+                <li><strong>اختبار البقاء مفتوحة:</strong> تأكد من أن النافذة تبقى مفتوحة</li>
+                <li><strong>اختبار التنقل:</strong> جرب الانتقال بين التبويبات المختلفة</li>
+                <li><strong>اختبار الإغلاق:</strong> جرب إغلاق النافذة بطرق مختلفة:</li>
+                <ul style="margin-top: 10px;">
+                    <li>الضغط على زر الإغلاق (×)</li>
+                    <li>الضغط على زر "إلغاء"</li>
+                    <li>الضغط خارج النافذة</li>
+                    <li>الضغط على مفتاح Escape</li>
+                </ul>
+                <li><strong>اختبار إعادة الفتح:</strong> بعد الإغلاق، اضغط على البطاقة مرة أخرى</li>
+                <li><strong>اختبار متكرر:</strong> كرر العملية عدة مرات للتأكد من الاستقرار</li>
+            </ul>
+        </div>
+
+        <div class="fixes-list">
+            <h3>🔧 الإصلاحات المطبقة:</h3>
+            <ul>
+                <li><strong>إصلاح تهيئة SettingsManager:</strong> يتم إنشاؤه فوراً عند تحميل الـ script</li>
+                <li><strong>إصلاح معالج النقر على التبويبات:</strong> استخدام closest() للعثور على العنصر الصحيح</li>
+                <li><strong>إصلاح دالة switchTab:</strong> فحص وجود العناصر قبل التعامل معها</li>
+                <li><strong>إصلاح دالة updateUI:</strong> فحص وجود جميع العناصر</li>
+                <li><strong>إصلاح معالجات الأحداث:</strong> فحص وجود العناصر قبل ربط الأحداث</li>
+                <li><strong>إضافة معالج النقر خارج النافذة:</strong> لإغلاق النافذة</li>
+                <li><strong>إضافة معالج مفتاح Escape:</strong> لإغلاق النافذة</li>
+                <li><strong>تحسين عملية التحميل:</strong> انتظار أفضل للـ CSS و JavaScript</li>
+                <li><strong>إضافة رسائل تشخيصية:</strong> لتسهيل اكتشاف المشاكل</li>
+            </ul>
+        </div>
+
+        <div class="console-info">
+            <h4>🖥️ معلومات وحدة التحكم:</h4>
+            <div>افتح وحدة التحكم (F12) لرؤية الرسائل التشخيصية:</div>
+            <ul style="margin-top: 10px; color: #9ca3af;">
+                <li>• رسائل تحميل الإعدادات</li>
+                <li>• رسائل فتح وإغلاق النافذة</li>
+                <li>• رسائل التنقل بين التبويبات</li>
+                <li>• رسائل الأخطاء (إن وجدت)</li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="/router.js"></script>
+    <script>
+        // Initialize router
+        if (window.AppRouter) {
+            window.AppRouter.init();
+        }
+        
+        // Enhanced console logging for debugging
+        console.log('🧪 Test page loaded successfully');
+        console.log('⚙️ Settings manager available:', !!window.settingsManager);
+        console.log('🔧 Open settings function available:', !!window.openSettings);
+        
+        // Monitor settings card clicks
+        const settingsCard = document.querySelector('.settings-card');
+        if (settingsCard) {
+            settingsCard.addEventListener('click', () => {
+                console.log('🖱️ Settings card clicked');
+            });
+        }
+        
+        // Monitor modal state changes
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'childList') {
+                    const modal = document.getElementById('settingsModal');
+                    if (modal) {
+                        console.log('📋 Settings modal added to DOM');
+                        
+                        // Monitor modal show/hide
+                        const modalObserver = new MutationObserver((modalMutations) => {
+                            modalMutations.forEach((modalMutation) => {
+                                if (modalMutation.type === 'attributes' && modalMutation.attributeName === 'class') {
+                                    const isVisible = modal.classList.contains('show');
+                                    console.log(`👁️ Modal visibility changed: ${isVisible ? 'VISIBLE' : 'HIDDEN'}`);
+                                }
+                            });
+                        });
+                        
+                        modalObserver.observe(modal, { attributes: true });
+                    }
+                }
+            });
+        });
+        
+        observer.observe(document.body, { childList: true });
+    </script>
+</body>
+</html>

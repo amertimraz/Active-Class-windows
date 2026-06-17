@@ -1,0 +1,318 @@
+/* --- Lesson Viewer: Themed and cleaned up using global variables --- */
+
+/* Use global body/font from styles.css; avoid overriding here */
+
+.lesson-viewer-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+/* Header */
+.lesson-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2rem;
+    background: var(--card);
+    border-bottom: 1px solid #eef2f7;
+    flex-shrink: 0;
+}
+
+.lesson-header h1 {
+    color: var(--text);
+    font-size: 1.8rem;
+    margin: 0;
+}
+
+/* Layout */
+.lesson-body {
+    display: flex;
+    flex-grow: 1;
+    overflow: hidden; /* Prevents scrolling at the body level */
+    background: var(--bg);
+}
+
+/* --- Content Menu (Sidebar) --- */
+.content-menu {
+    width: 300px;
+    background: var(--card);
+    border-left: 1px solid #eef2f7;
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex-shrink: 0;
+}
+
+.content-menu h2 {
+    font-size: 1.4rem;
+    color: var(--text);
+    margin: 0 0 1rem 0;
+    border-bottom: 3px solid var(--primary);
+    padding-bottom: 0.5rem;
+}
+
+#content-items-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+#content-items-list li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 15px;
+    margin-bottom: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color .2s ease, color .2s ease, border-color .2s ease;
+    border: 1px solid #ecf0f1;
+    color: var(--text);
+    background: var(--card);
+}
+
+#content-items-list li:hover {
+    background: #f1f5f9;
+}
+
+#content-items-list li.active {
+    background: var(--primary);
+    color: #ffffff;
+    border-color: color-mix(in srgb, var(--primary) 75%, #0000);
+    font-weight: 600;
+}
+
+#content-items-list .item-icon {
+    font-size: 1.25rem;
+}
+
+/* --- Content Display Area --- */
+.content-display {
+    flex-grow: 1;
+    padding: 1.25rem;
+    background: var(--bg);
+    overflow-y: auto; /* Allows scrolling within the display area */
+}
+
+.display-area {
+    background: var(--card);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    height: 100%;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden; /* To contain iframe/video */
+}
+
+.display-area .placeholder {
+    font-size: 1.1rem;
+    color: var(--muted);
+}
+
+/* --- Viewer Header & Controls --- */
+.viewer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 18px;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 75%, #0000) 0%, var(--primary) 100%);
+    color: white;
+    border-radius: 12px 12px 0 0;
+    margin-bottom: 0;
+}
+
+.viewer-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    max-width: 70%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.viewer-controls {
+    display: flex;
+    gap: 10px;
+}
+
+.viewer-control-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    text-decoration: none;
+    transition: background-color .15s ease;
+}
+
+.viewer-control-btn:hover {
+    background: rgba(255, 255, 255, 0.28);
+}
+
+/* --- Common content frame --- */
+.viewer-content {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+}
+
+.content-frame {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: none;
+}
+
+.content-frame.active-viewer {
+    display: block;
+}
+
+/* --- Unify viewer viewport heights --- */
+.enhanced-pdf-viewer,
+.enhanced-powerpoint-viewer,
+.enhanced-document-viewer,
+.enhanced-spreadsheet-viewer,
+.enhanced-image-viewer,
+.enhanced-video-viewer,
+.enhanced-link-viewer {
+    height: calc(100% - 60px);
+}
+
+/* --- PDF Viewer --- */
+.enhanced-pdf-viewer { background: #f8f9fa; }
+
+/* --- PowerPoint Viewer --- */
+.enhanced-powerpoint-viewer { display: flex; flex-direction: column; }
+.powerpoint-viewer-local {
+    height: calc(100% - 60px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+}
+
+.local-message {
+    text-align: center;
+    max-width: 520px;
+    padding: 32px;
+}
+
+.local-message .file-icon { font-size: 56px; margin-bottom: 14px; }
+.local-message h4 { color: var(--text); margin-bottom: 10px; font-size: 22px; }
+.local-message p { color: var(--muted); margin-bottom: 14px; line-height: 1.6; }
+
+.local-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.local-actions .btn {
+    padding: 10px 16px;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 700;
+    transition: all .15s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.local-actions .btn-primary { background: var(--primary); color: #fff; }
+.local-actions .btn-primary:hover { background: color-mix(in srgb, var(--primary) 85%, #0000); }
+.local-actions .btn-secondary { background: #e2e8f0; color: var(--text); }
+.local-actions .btn-secondary:hover { background: #cbd5e1; }
+
+/* --- Viewer Tabs --- */
+.viewer-tabs {
+    display: flex;
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.viewer-tab {
+    flex: 1;
+    padding: 12px 20px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--muted);
+    transition: all .15s ease;
+    border-bottom: 3px solid transparent;
+}
+
+.viewer-tab:hover { background: #e9ecef; color: var(--text); }
+.viewer-tab.active { color: var(--primary); border-bottom-color: var(--primary); background: white; }
+
+/* --- Image Viewer --- */
+.enhanced-image-viewer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+    padding: 20px;
+}
+
+.content-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    cursor: zoom-in;
+    transition: transform .2s ease;
+}
+
+.content-image.zoomed { transform: scale(1.5); cursor: zoom-out; }
+
+/* --- Video Viewer --- */
+.enhanced-video-viewer {
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.content-video {
+    width: 100%;
+    height: auto;
+    max-height: calc(100% - 50px);
+    object-fit: contain;
+    border-radius: 8px;
+}
+
+.video-info { padding: 10px; color: white; text-align: center; font-size: 14px; }
+
+/* --- Link Viewer --- */
+.enhanced-link-viewer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+}
+
+.link-info { text-align: center; max-width: 520px; padding: 32px; }
+.link-icon { font-size: 56px; margin-bottom: 14px; }
+.link-info h3 { color: var(--text); margin-bottom: 10px; font-size: 22px; }
+.link-info p { color: var(--muted); margin-bottom: 18px; line-height: 1.6; }
+
+/* --- Generic embeds --- */
+.display-area iframe,
+.display-area img,
+.display-area video {
+    width: 100%;
+    height: 100%;
+    border: none;
+    object-fit: contain; /* Ensures images/videos fit without distortion */
+}
+
+/* Keep quiz iframe consistent */
+.display-area .embedded-quiz-iframe { width: 100%; height: 100%; border: none; }

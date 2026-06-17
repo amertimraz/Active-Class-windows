@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار إصلاح بطاقة الإعدادات</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        body {
+            padding: 40px;
+            background: var(--bg);
+            font-family: 'Cairo', sans-serif;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .test-title {
+            color: var(--text);
+            margin-bottom: 30px;
+            font-size: 2rem;
+            font-weight: 700;
+        }
+        .test-description {
+            color: var(--text-secondary);
+            margin-bottom: 40px;
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+        .settings-card {
+            background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s var(--transition);
+            box-shadow: var(--shadow-md);
+            margin: 20px auto;
+            max-width: 300px;
+            text-align: center;
+        }
+        .settings-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+        .settings-card .card-icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+            display: block;
+        }
+        .settings-card .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .settings-card .card-description {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        .test-instructions {
+            background: var(--card);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            margin: 30px 0;
+            border-right: 4px solid var(--primary);
+        }
+        .test-instructions h3 {
+            color: var(--primary);
+            margin-bottom: 16px;
+        }
+        .test-instructions ul {
+            text-align: right;
+            color: var(--text-secondary);
+        }
+        .test-instructions li {
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1 class="test-title">🔧 اختبار إصلاح بطاقة الإعدادات</h1>
+        
+        <div class="test-description">
+            تم إصلاح المشكلة التي كانت تسبب إغلاق نافذة الإعدادات فوراً وعدم فتحها مرة أخرى.
+        </div>
+
+        <div class="test-instructions">
+            <h3>📋 تعليمات الاختبار:</h3>
+            <ul>
+                <li>اضغط على بطاقة "إعدادات البرنامج" أدناه</li>
+                <li>يجب أن تفتح نافذة الإعدادات وتبقى مفتوحة</li>
+                <li>أغلق النافذة بالضغط على زر الإغلاق أو خارج النافذة</li>
+                <li>اضغط على البطاقة مرة أخرى للتأكد من أنها تعمل</li>
+                <li>جرب الضغط على مفتاح Escape لإغلاق النافذة</li>
+            </ul>
+        </div>
+
+        <div class="settings-card" tabindex="0" role="button" aria-label="فتح إعدادات البرنامج">
+            <span class="card-icon">⚙️</span>
+            <div class="card-title">إعدادات البرنامج</div>
+            <div class="card-description">إدارة إعدادات التطبيق والتخصيص</div>
+        </div>
+
+        <div class="test-instructions">
+            <h3>🔍 الإصلاحات المطبقة:</h3>
+            <ul>
+                <li>إصلاح مشكلة تهيئة SettingsManager عند التحميل الديناميكي</li>
+                <li>إضافة معالج للنقر خارج النافذة لإغلاقها</li>
+                <li>إضافة معالج لمفتاح Escape لإغلاق النافذة</li>
+                <li>تحسين عملية تحميل CSS و JavaScript</li>
+                <li>إضافة رسائل تشخيصية في وحدة التحكم</li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="/router.js"></script>
+    <script>
+        // Initialize router
+        if (window.AppRouter) {
+            window.AppRouter.init();
+        }
+        
+        // Add console logging for debugging
+        console.log('Test page loaded');
+        console.log('Settings manager available:', !!window.settingsManager);
+        console.log('Open settings function available:', !!window.openSettings);
+    </script>
+</body>
+</html>

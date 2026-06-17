@@ -1,0 +1,426 @@
+:root {
+  --bb-bg: radial-gradient(1200px circle at 15% 10%, rgba(255, 167, 38, 0.35), transparent 50%), radial-gradient(900px circle at 85% 20%, rgba(255, 87, 34, 0.25), transparent 55%), linear-gradient(160deg, #101521 0%, #1a2236 45%, #0c111c 100%);
+  --bb-card: rgba(255, 255, 255, 0.94);
+  --bb-dark: #0e111b;
+  --bb-primary: #ff7b2f;
+  --bb-secondary: #ffe08a;
+  --bb-accent: #34d399;
+  --bb-danger: #fb7185;
+  --bb-glow: rgba(255, 123, 47, 0.35);
+}
+
+.basketball-body {
+  min-height: 100vh;
+  background: linear-gradient(180deg, rgba(10, 15, 25, 0.6) 0%, rgba(10, 15, 25, 0.78) 100%), url('/assets/51446.jpg');
+  background-size: cover;
+  background-position: center;
+  color: #f8fafc;
+}
+
+.basketball-app {
+  min-height: calc(100vh - 70px);
+  padding: 20px clamp(16px, 3vw, 32px) 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.screen {
+  width: 100%;
+  max-width: 1200px;
+  display: none;
+}
+
+.screen.active {
+  display: block;
+}
+
+#question-screen {
+  max-width: 100%;
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+  padding: 24px clamp(20px, 6vw, 80px);
+}
+
+.intro-card {
+  background: var(--bb-card);
+  color: #111827;
+  border-radius: 28px;
+  padding: clamp(24px, 4vw, 40px);
+  box-shadow: 0 30px 60px rgba(15, 23, 42, 0.35);
+  text-align: center;
+  display: grid;
+  gap: 18px;
+}
+
+.intro-badge {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #ff9f45, #ff7b2f);
+  color: #fff;
+  font-size: 2.2rem;
+  box-shadow: 0 18px 35px var(--bb-glow);
+}
+
+.intro-card h1 {
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  margin: 0;
+}
+
+.intro-card p {
+  color: #4b5563;
+  font-weight: 600;
+}
+
+.intro-select {
+  display: grid;
+  gap: 8px;
+  text-align: right;
+}
+
+.intro-select select {
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  font-family: 'Cairo', sans-serif;
+  font-size: 1rem;
+}
+
+.intro-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+.intro-features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  color: #111827;
+  font-weight: 600;
+}
+
+.intro-features div {
+  background: rgba(255, 123, 47, 0.1);
+  padding: 10px 14px;
+  border-radius: 12px;
+}
+
+.bb-btn {
+  border: none;
+  border-radius: 14px;
+  padding: 12px 20px;
+  font-family: 'Cairo', sans-serif;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.bb-btn.primary {
+  background: linear-gradient(135deg, #ff9f45, #ff7b2f);
+  color: #fff;
+  box-shadow: 0 16px 28px var(--bb-glow);
+}
+
+.bb-btn.ghost {
+  background: rgba(15, 23, 42, 0.08);
+  color: #111827;
+}
+
+.bb-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.bb-btn:not(:disabled):hover {
+  transform: translateY(-2px);
+}
+
+.question-shell {
+  display: grid;
+  gap: 18px;
+  width: min(520px, 92vw);
+  margin-right: 0;
+}
+
+.question-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 24px;
+  color: #f8fafc;
+}
+
+.scoreboard {
+  display: flex;
+  gap: 16px;
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.score-item {
+  background: transparent;
+  border: none;
+  padding: 0;
+  min-width: auto;
+  display: grid;
+  gap: 2px;
+  color: #f8fafc;
+  text-align: right;
+}
+
+#question-screen .score-item:nth-child(2),
+#question-screen .score-item:nth-child(3) {
+  display: none;
+}
+
+.score-item strong {
+  font-size: 1.3rem;
+}
+
+.question-progress {
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  min-width: auto;
+  display: grid;
+  gap: 2px;
+  color: #f8fafc;
+  font-weight: 700;
+}
+
+.question-progress .progress-count::before {
+  content: 'Q ';
+}
+
+.progress-bar {
+  display: none;
+}
+
+#progressBar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #34d399, #22d3ee);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.question-card {
+  background: rgba(255, 255, 255, 0.98);
+  color: #111827;
+  border-radius: 20px;
+  padding: clamp(20px, 4vw, 30px);
+  display: grid;
+  gap: 16px;
+  box-shadow: 0 24px 45px rgba(0, 0, 0, 0.35);
+}
+
+.question-card h2 {
+  font-size: clamp(1.4rem, 3vw, 2.2rem);
+  margin: 0;
+}
+
+.question-image img {
+  max-width: 100%;
+  border-radius: 18px;
+}
+
+.options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.option-btn {
+  border-radius: 16px;
+  border: 2px solid rgba(15, 23, 42, 0.08);
+  padding: 14px 16px;
+  font-size: 1rem;
+  font-family: 'Cairo', sans-serif;
+  cursor: pointer;
+  background: #fff;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.option-btn:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 123, 47, 0.6);
+  box-shadow: 0 12px 20px rgba(255, 123, 47, 0.2);
+}
+
+.option-btn.correct {
+  background: rgba(34, 197, 94, 0.12);
+  border-color: #22c55e;
+}
+
+.option-btn.wrong {
+  background: rgba(248, 113, 113, 0.12);
+  border-color: #fb7185;
+}
+
+.shot-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(320px, 1.4fr);
+  gap: 24px;
+  align-items: stretch;
+}
+
+.shot-panel {
+  background: rgba(255, 255, 255, 0.94);
+  color: #111827;
+  border-radius: 24px;
+  padding: 24px;
+  display: grid;
+  gap: 16px;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.35);
+}
+
+.shot-panel h2 {
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+.shot-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.shot-stats div {
+  background: rgba(255, 123, 47, 0.12);
+  padding: 12px 14px;
+  border-radius: 14px;
+  display: grid;
+  gap: 4px;
+}
+
+.shot-stats strong {
+  font-size: 1.4rem;
+}
+
+.shot-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.shot-message {
+  min-height: 36px;
+  font-weight: 700;
+  color: #0f766e;
+}
+
+.court {
+  position: relative;
+  border-radius: 26px;
+  background: url('/assets/51446.jpg') no-repeat;
+  background-size: cover;
+  background-position: 85% 5%;
+  min-height: 420px;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 25px 50px rgba(0, 0, 0, 0.35);
+  touch-action: none;
+}
+
+.court::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(10, 15, 25, 0.2) 0%, rgba(10, 15, 25, 0.5) 100%);
+  z-index: 0;
+}
+
+.court-floor {
+  display: none;
+}
+
+.backboard,
+.rim,
+.net {
+  display: none;
+}
+
+.ball {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: url('/assets/ball.jpg') center/cover no-repeat;
+  box-shadow: inset 0 -6px 12px rgba(0, 0, 0, 0.3), 0 14px 25px rgba(0, 0, 0, 0.35);
+  left: 0;
+  top: 0;
+  z-index: 2;
+}
+
+.aim-line {
+  position: absolute;
+  height: 4px;
+  background: rgba(255, 224, 138, 0.9);
+  transform-origin: left center;
+  border-radius: 999px;
+  pointer-events: none;
+  display: none;
+  z-index: 2;
+}
+
+.result-card {
+  background: rgba(255, 255, 255, 0.95);
+  color: #111827;
+  border-radius: 26px;
+  padding: clamp(24px, 4vw, 40px);
+  text-align: center;
+  display: grid;
+  gap: 18px;
+  box-shadow: 0 24px 50px rgba(15, 23, 42, 0.35);
+}
+
+.result-icon {
+  font-size: 2.8rem;
+}
+
+.result-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.result-grid div {
+  background: rgba(255, 123, 47, 0.1);
+  border-radius: 16px;
+  padding: 12px;
+  display: grid;
+  gap: 4px;
+}
+
+.result-grid strong {
+  font-size: 1.5rem;
+}
+
+.result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+}
+
+@media (max-width: 900px) {
+  .shot-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .court {
+    min-height: 360px;
+  }
+}

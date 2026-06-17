@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>عجلة الحظ - موديل عائم</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/pages/wheel-modal.css">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+<script nonce="ac">
+  (function(){
+    try{
+      var theme = localStorage.getItem('cm_theme');
+      if(!theme){
+        fetch('/api/settings')
+          .then(function(r){ return r.ok ? r.json() : {}; })
+          .then(function(s){
+            var t = (s && s.theme) ? s.theme : 'light';
+            document.documentElement.setAttribute('data-theme', t);
+          })
+          .catch(function(){
+            document.documentElement.setAttribute('data-theme','light');
+          });
+      } else {
+        document.documentElement.setAttribute('data-theme', theme);
+      }
+      window.addEventListener('storage', function(e){
+        if(e.key === 'cm_theme' && e.newValue){
+          document.documentElement.setAttribute('data-theme', e.newValue);
+        }
+      });
+    }catch(_){ }
+  })();
+</script>
+</head>
+<body>
+  <!-- Floating Modal Trigger -->
+  <div class="floating-trigger">
+    <button id="openWheelBtn" class="floating-btn">
+      <span class="icon">🎯</span>
+      <span class="text">عجلة الحظ</span>
+    </button>
+  </div>
+
+  <!-- Wheel Modal -->
+  <div id="wheelModal" class="wheel-modal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-container">
+      <!-- Modal Header -->
+      <div class="modal-header">
+        <h2>🎯 عجلة الحظ</h2>
+        <button id="closeWheelModal" class="close-btn">×</button>
+      </div>
+
+      <!-- Modal Content -->
+      <div class="modal-body">
+        <!-- Controls Panel -->
+        <div class="controls-panel">
+          <!-- Manual Input -->
+          <div class="input-section">
+            <h3>إضافة مشارك</h3>
+            <div class="input-group">
+              <input type="text" id="nameInput" placeholder="اكتب اسم المشارك..." maxlength="50">
+              <button id="addNameBtn" class="btn btn-primary">إضافة</button>
+            </div>
+          </div>
+
+          <!-- Group Selection -->
+          <div class="group-section">
+            <h3>تحميل من مجموعة</h3>
+            <div class="group-controls">
+              <select id="groupSelect">
+                <option value="">اختر مجموعة...</option>
+              </select>
+              <button id="loadGroupBtn" class="btn btn-secondary">تحميل المجموعة</button>
+            </div>
+          </div>
+
+          <!-- Participants List -->
+          <div class="participants-section">
+            <h3>المشاركون (<span id="participantsCount">0</span>)</h3>
+            <div class="participants-list" id="participantsList">
+              <div class="empty-state">
+                <p>لا يوجد مشاركون بعد</p>
+                <p class="hint">أضف أسماء أو اختر مجموعة للبدء</p>
+              </div>
+            </div>
+            <div class="participants-actions">
+              <button id="clearAllBtn" class="btn btn-danger">مسح الكل</button>
+              <button id="shuffleBtn" class="btn btn-secondary">خلط الأسماء</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Wheel Container -->
+        <div class="wheel-container">
+          <div class="wheel-wrapper">
+            <canvas id="wheelCanvas" width="350" height="350"></canvas>
+            <div class="wheel-pointer"></div>
+            <button id="spinBtn" class="spin-button" disabled>
+              <span class="spin-text">ابدأ الدوران</span>
+              <span class="spin-icon">🎯</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer">
+        <button id="resetWheelBtn" class="btn btn-secondary">إعادة تعيين</button>
+        <button id="soundToggleBtn" class="btn btn-warning">🔊 إيقاف الصوت</button>
+        <button id="excludeWinnerBtn" class="btn btn-secondary">❌ استثناء الفائز</button>
+        <button id="closeModalFooter" class="btn btn-outline">إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Winner Modal -->
+  <div id="winnerModal" class="winner-modal">
+    <div class="modal-backdrop"></div>
+    <div class="winner-content">
+      <div class="winner-animation">
+        <div class="confetti"></div>
+        <div class="winner-info">
+          <h2>🎉 تهانينا! 🎉</h2>
+          <div class="winner-name" id="winnerName"></div>
+          <p>هو الفائز المحظوظ!</p>
+          <div class="winner-actions">
+            <button id="spinAgainBtn" class="btn btn-primary">دوران آخر</button>
+            <button id="closeWinnerModal" class="btn btn-secondary">إغلاق</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/pages/wheel-modal.js"></script>
+</body>
+</html>

@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>تشخيص مشاكل الاختبار</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .btn {
+            background: #3498db;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 16px;
+        }
+        .btn:hover {
+            background: #2980b9;
+        }
+        .btn.secondary {
+            background: #95a5a6;
+        }
+        .btn.secondary:hover {
+            background: #7f8c8d;
+        }
+        .results {
+            background: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 4px solid #3498db;
+        }
+        .error {
+            background: #ffeaea;
+            border-left-color: #e74c3c;
+        }
+        .success {
+            background: #e8f5e8;
+            border-left-color: #27ae60;
+        }
+        pre {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+<script nonce="ac">
+  (function(){
+    try{
+      var theme = localStorage.getItem('cm_theme');
+      if(!theme){
+        fetch('/api/settings')
+          .then(function(r){ return r.ok ? r.json() : {}; })
+          .then(function(s){
+            var t = (s && s.theme) ? s.theme : 'light';
+            document.documentElement.setAttribute('data-theme', t);
+          })
+          .catch(function(){
+            document.documentElement.setAttribute('data-theme','light');
+          });
+      } else {
+        document.documentElement.setAttribute('data-theme', theme);
+      }
+      window.addEventListener('storage', function(e){
+        if(e.key === 'cm_theme' && e.newValue){
+          document.documentElement.setAttribute('data-theme', e.newValue);
+        }
+      });
+    }catch(_){ }
+  })();
+</script>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 تشخيص مشاكل الاختبار والخيارات</h1>
+
+        <p>هذه الأداة تساعد في تشخيص مشاكل عدم ظهور الخيارات في الاختبارات.</p>
+
+        <div class="results" id="results">
+            <p>اضغط على "تشغيل التشخيص" لبدء الفحص...</p>
+        </div>
+
+        <button class="btn" onclick="runDiagnostic()">تشغيل التشخيص</button>
+        <button class="btn secondary" onclick="createSample()">إنشاء اختبار تجريبي</button>
+        <button class="btn secondary" onclick="clearResults()">مسح النتائج</button>
+
+        <h2>📋 تعليمات الاستخدام:</h2>
+        <ol>
+            <li>اضغط على "تشغيل التشخيص" لرؤية حالة الاختبارات الموجودة</li>
+            <li>إذا لم توجد اختبارات، سيتم إنشاء اختبار تجريبي تلقائياً</li>
+            <li>استخدم "إنشاء اختبار تجريبي" لإضافة اختبار جديد</li>
+            <li>افتح وحدة التحكم (F12) لرؤية التفاصيل الكاملة</li>
+        </ol>
+
+        <h2>🔧 المشاكل الشائعة:</h2>
+        <ul>
+            <li><strong>لا توجد خيارات:</strong> السؤال لا يحتوي على حقل <code>options</code></li>
+            <li><strong>لا توجد إجابة صحيحة:</strong> السؤال لا يحتوي على <code>correctAnswer</code> أو <code>correct</code></li>
+            <li><strong>نوع السؤال غير صحيح:</strong> يجب أن يكون <code>mcq</code> أو <code>tf</code> أو <code>fill</code></li>
+        </ul>
+    </div>
+
+    <script src="quiz-diagnostic.js"></script>
+    <script>
+        function runDiagnostic() {
+            console.clear();
+            showResult('جاري تشغيل التشخيص...', 'info');
+            setTimeout(() => {
+                window.checkLocalStorage();
+                showResult('تم الانتهاء من التشخيص - راجع وحدة التحكم للتفاصيل', 'success');
+            }, 100);
+        }
+
+        function createSample() {
+            showResult('جاري إنشاء الاختبار التجريبي...', 'info');
+            setTimeout(() => {
+                const result = window.createSampleQuiz();
+                if (result) {
+                    showResult('تم إنشاء الاختبار التجريبي بنجاح! يمكنك الآن فتح الاختبار من قائمة الاختبارات.', 'success');
+                } else {
+                    showResult('فشل في إنشاء الاختبار التجريبي', 'error');
+                }
+            }, 100);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '<p>اضغط على "تشغيل التشخيص" لبدء الفحص...</p>';
+            document.getElementById('results').className = 'results';
+        }
+
+        function showResult(message, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `<p>${message}</p>`;
+            resultsDiv.className = `results ${type}`;
+        }
+
+        // تشغيل تلقائي عند التحميل
+        window.addEventListener('load', () => {
+            setTimeout(runDiagnostic, 500);
+        });
+    </script>
+</body>
+</html>

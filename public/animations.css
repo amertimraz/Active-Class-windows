@@ -1,0 +1,396 @@
+/* Advanced Animations & Illustrations */
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-15px); }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes zoomIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes rotateIn {
+  from {
+    opacity: 0;
+    transform: rotate(-10deg) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+  }
+}
+
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 5px var(--primary-border);
+  }
+  50% {
+    box-shadow: 0 0 20px var(--primary-border);
+  }
+}
+
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  25% { transform: scale(1.1); }
+  50% { transform: scale(1); }
+}
+
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-2deg); }
+  75% { transform: rotate(2deg); }
+}
+
+/* Card Animation on Hover */
+.card {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.card:hover {
+  animation: heartbeat 0.6s ease-in-out;
+}
+
+.card .icon {
+  animation: none;
+}
+
+.card:hover .icon {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Tool Grid Cards Stagger Animation */
+.tools-grid .card:nth-child(1) { animation-delay: 0.1s; }
+.tools-grid .card:nth-child(2) { animation-delay: 0.2s; }
+.tools-grid .card:nth-child(3) { animation-delay: 0.3s; }
+.tools-grid .card:nth-child(4) { animation-delay: 0.4s; }
+.tools-grid .card:nth-child(5) { animation-delay: 0.5s; }
+.tools-grid .card:nth-child(6) { animation-delay: 0.6s; }
+
+/* Button Animation */
+.btn {
+  animation: slideUp 0.4s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Tab Button Animation */
+.tab-btn {
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tab-btn::before {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--primary) 0%, var(--primary-light) 100%);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tab-btn.active::before {
+  width: 100%;
+}
+
+/* Modal Entrance Animation */
+@keyframes modalFadeIn {
+  0% {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+  100% {
+    opacity: 1;
+    backdrop-filter: blur(4px);
+  }
+}
+
+.modal-overlay {
+  animation: modalFadeIn 0.3s ease-out;
+}
+
+/* Notification Slide Animation */
+@keyframes notificationSlide {
+  from {
+    opacity: 0;
+    transform: translateX(400px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.notification.show {
+  animation: notificationSlide 0.3s ease-out;
+}
+
+/* Loading Spinner with Pulse */
+.spinner {
+  position: relative;
+}
+
+.spinner::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: var(--primary);
+  animation: spin 1.5s linear infinite;
+  opacity: 0.5;
+}
+
+/* Icon Scale on Hover */
+.icon-btn:hover .icon {
+  animation: wiggle 0.3s ease-in-out;
+}
+
+/* Tooltip Appear Animation */
+.tooltip::after {
+  animation: tooltipAppear 0.2s ease-out backwards;
+}
+
+@keyframes tooltipAppear {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Badge Pulse */
+.badge {
+  transition: all 0.2s ease;
+}
+
+.badge:hover {
+  animation: pulse 1s cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+/* List Item Animation */
+.list-item {
+  animation: slideInLeft 0.4s ease-out;
+  transition: all 0.3s ease;
+}
+
+.list-item:hover {
+  animation: none;
+  transform: translateX(4px);
+}
+
+/* Form Input Focus Animation */
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="number"]:focus,
+textarea:focus,
+select:focus {
+  animation: inputFocus 0.3s ease-out;
+}
+
+@keyframes inputFocus {
+  0% {
+    box-shadow: 0 0 0 0 var(--primary-bg);
+  }
+  100% {
+    box-shadow: 0 0 0 3px var(--primary-bg);
+  }
+}
+
+/* Success Animation */
+@keyframes successPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) rotate(-10deg);
+  }
+  50% {
+    transform: scale(1.05) rotate(5deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+.success-msg {
+  animation: successPop 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* Error Animation */
+@keyframes errorShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.error-msg {
+  animation: errorShake 0.4s ease-in-out;
+}
+
+/* Page Transition */
+[data-page] {
+  animation: pageEnter 0.4s ease-out;
+}
+
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Ripple Effect on Click */
+@keyframes ripple {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+.ripple-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple-effect::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  animation: ripple 0.6s ease-out;
+  pointer-events: none;
+}
+
+/* Gradient Animation */
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animated-gradient {
+  background: linear-gradient(-45deg, var(--primary), var(--primary-light), var(--primary), var(--primary-dark));
+  background-size: 300% 300%;
+  animation: gradientShift 15s ease infinite;
+}
+
+/* Skeleton Loading Animation */
+@keyframes skeleton {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--border-light) 25%, var(--border) 50%, var(--border-light) 75%);
+  background-size: 1000px 100%;
+  animation: skeleton 1.5s infinite;
+  border-radius: var(--radius);
+}
+
+/* Enhanced Hover Scale */
+.scale-on-hover {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.scale-on-hover:hover {
+  transform: scale(1.05);
+}
+
+/* Fade In Animation for Lists */
+.fade-in-list > * {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+.fade-in-list > *:nth-child(1) { animation-delay: 0.1s; }
+.fade-in-list > *:nth-child(2) { animation-delay: 0.2s; }
+.fade-in-list > *:nth-child(3) { animation-delay: 0.3s; }
+.fade-in-list > *:nth-child(4) { animation-delay: 0.4s; }
+.fade-in-list > *:nth-child(5) { animation-delay: 0.5s; }
+
+/* Attention Seeker - Bounce */
+.attention-bounce {
+  animation: bounce 0.8s ease-in-out;
+}
+
+/* Smooth Transitions for All Elements */
+* {
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Disable animations on reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
