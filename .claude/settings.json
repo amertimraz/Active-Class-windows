@@ -45,7 +45,20 @@
       "Bash(xargs wc -l)",
       "Bash(git init *)",
       "Bash(git config *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git -c 'user.name=Active Class Dev' -c user.email=amertimraz@gmail.com commit -q -m ' *)",
+      "Bash(git checkout *)",
+      "Bash(ls node_modules/.bin/eslint)",
+      "Bash(npm install *)",
+      "Bash(npx eslint *)",
+      "Bash(tee /tmp/eslint.log)",
+      "Bash(grep -oE \"\\(no-[a-z-]+|eqeqeq|prefer-const\\)$\" /tmp/eslint.log)",
+      "Bash(grep -nE \"Parsing error|\\\\.js$\" /tmp/eslint.log)",
+      "Bash(awk '/Parsing error/{print prev\" => \"$0} {prev=$0}' /tmp/eslint.log)",
+      "Bash(grep -nE \"^[A-Z]:.*\\\\.js$\" /tmp/eslint.log)",
+      "Bash(npm test *)",
+      "Bash(rm -f .git/index)",
+      "Bash(git reset *)"
     ]
   }
 }

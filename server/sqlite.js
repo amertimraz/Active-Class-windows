@@ -2,6 +2,7 @@
 const path = require('path');
 const fs = require('fs');
 const Database = require('better-sqlite3');
+const log = require('./logger').create('db');
 
 const dataDir = process.env.APP_DATA_DIR || path.join(__dirname, '..', 'data');
 const dbFile = path.join(dataDir, 'activeclass.db');
@@ -117,12 +118,12 @@ function migrateFromJSON() {
 
     const quizCount = db.prepare('SELECT COUNT(*) as count FROM quizzes').get().count;
     if (quizCount > 0) {
-        console.log('[DB] SQLite already has data, skipping JSON migration.');
+        log.info('[DB] SQLite already has data, skipping JSON migration.');
         return;
     }
 
     try {
-        console.log('[DB] Migrating data from activeclass.db.json...');
+        log.info('[DB] Migrating data from activeclass.db.json...');
         const jsonContent = fs.readFileSync(jsonDbFile, 'utf8');
         const dbData = JSON.parse(jsonContent);
 
@@ -184,11 +185,11 @@ function migrateFromJSON() {
             }
         })();
 
-        console.log('[DB] Migration complete.');
+        log.info('[DB] Migration complete.');
         // Rename the old JSON file to prevent repeated migration
         fs.renameSync(jsonDbFile, jsonDbFile + '.migrated');
     } catch (e) {
-        console.error('[DB] Migration error:', e.message);
+        log.error('[DB] Migration error:', e.message);
     }
 }
 

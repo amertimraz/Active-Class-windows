@@ -7,6 +7,7 @@ const crypto = require('crypto');
 const os = require('os');
 const { db, dbData, saveDB, openDB, closeDB } = require('./sqlite');
 const { generateQuizFromPDF } = require('./ai-service');
+const log = require('./logger').create('server');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -21,9 +22,26 @@ const uploadsDir = path.join(publicDir, 'uploads');
 fs.mkdir(uploadsDir, { recursive: true });
 
 // Middleware
+
+// Baseline security headers for every response, including the LAN-served
+// student pages that the Electron CSP never covered. We mirror the renderer
+// CSP (still permissive on inline/eval for now — tightening that needs
+// per-page testing) but add it for browser clients too.
+const CSP_POLICY =
+  "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; " +
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; " +
+  "img-src 'self' data: blob: https:; connect-src 'self' http://localhost:* https://cdnjs.cloudflare.com; media-src 'self' data: blob:;";
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Content-Security-Policy', CSP_POLICY);
+  next();
+});
+
 app.use(express.static(publicDir));
 app.use('/assets', express.static(assetsDir));
-app.use(express.json());
+app.use(express.json({ limit: '5mb' }));
 
 // Security Middleware
 const SERVER_API_KEY = process.env.SERVER_API_KEY;
@@ -51,17 +69,75 @@ function isSensitiveSettingKey(key) {
   return /api[_-]?key|secret|token|password/i.test(String(key || ''));
 }
 
-// Multer setup for file uploads
+// Defense-in-depth for untrusted, student-supplied text (e.g. names submitted
+// over the LAN). Strips angle brackets and control chars and caps length, so a
+// stored value can't smuggle markup even into a view that forgets to escape.
+function sanitizeText(value, maxLen = 120) {
+  if (value == null) return null;
+  let out = '';
+  for (const ch of String(value)) {
+    if (ch === '<' || ch === '>') continue; // no markup
+    const code = ch.codePointAt(0);
+    if (code < 0x20 || code === 0x7f) continue; // no control chars
+    out += ch;
+  }
+  return out.trim().slice(0, maxLen);
+}
+
+// Multer setup for file uploads.
+// Security: cap size, allow only a known-safe extension set, and never trust
+// the client-supplied filename for the stored name. SVG is intentionally
+// excluded because it can carry inline scripts when served from /uploads.
+const MAX_UPLOAD_BYTES = 25 * 1024 * 1024; // 25 MB
+const ALLOWED_CONTENT_EXT = new Set([
+  '.png', '.jpg', '.jpeg', '.gif', '.webp',
+  '.pdf', '.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx',
+  '.txt', '.mp4', '.mp3', '.wav', '.webm',
+]);
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadsDir);
   },
   filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    cb(null, uniqueSuffix + ext);
+  },
 });
-const upload = multer({ storage });
+
+function extensionFilter(allowed) {
+  return (req, file, cb) => {
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    if (allowed.has(ext)) return cb(null, true);
+    cb(new Error(`نوع الملف غير مسموح به: ${ext || 'غير معروف'}`));
+  };
+}
+
+const upload = multer({
+  storage,
+  limits: { fileSize: MAX_UPLOAD_BYTES, files: 1 },
+  fileFilter: extensionFilter(ALLOWED_CONTENT_EXT),
+});
+
+const pdfUpload = multer({
+  storage,
+  limits: { fileSize: MAX_UPLOAD_BYTES, files: 1 },
+  fileFilter: extensionFilter(new Set(['.pdf'])),
+});
+
+// Translate multer/file-filter rejections into clean 400s instead of 500s.
+function handleUpload(mw) {
+  return (req, res, next) => {
+    mw(req, res, (err) => {
+      if (err) {
+        log.warn('Upload rejected:', err.message);
+        return res.status(400).json({ message: err.message || 'Upload failed' });
+      }
+      next();
+    });
+  };
+}
 
 // --- API Endpoints ---
 
@@ -71,7 +147,7 @@ async function readDB() {
     const data = await fs.readFile(dbPath, 'utf8');
     return JSON.parse(data);
   } catch (error) {
-    console.error('Error reading database:', error);
+    log.error('Error reading database:', error);
     throw new Error('Could not read from database.');
   }
 }
@@ -81,7 +157,7 @@ async function writeDB(data) {
   try {
     await fs.writeFile(dbPath, JSON.stringify(data, null, 2), 'utf8');
   } catch (error) {
-    console.error('Error writing to database:', error);
+    log.error('Error writing to database:', error);
     throw new Error('Could not write to database.');
   }
 }
@@ -152,7 +228,7 @@ app.get('/api/lesson/:id', async (req, res) => {
 });
 
 // Upload a file
-app.post('/api/content/upload', authenticateTeacher, upload.single('file'), async (req, res) => {
+app.post('/api/content/upload', authenticateTeacher, handleUpload(upload.single('file')), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ message: 'No file uploaded.' });
   }
@@ -401,7 +477,7 @@ app.post('/api/units', authenticateTeacher, async (req, res) => {
 // ===== AI Interactive Lessons Endpoints =====
 
 // Generate new AI Lesson from PDF
-app.post('/api/generate-ai-quiz', authenticateTeacher, upload.single('pdf'), async (req, res) => {
+app.post('/api/generate-ai-quiz', authenticateTeacher, handleUpload(pdfUpload.single('pdf')), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ message: 'الرجاء رفع ملف PDF.' });
   }
@@ -431,14 +507,14 @@ app.post('/api/generate-ai-quiz', authenticateTeacher, upload.single('pdf'), asy
     `).run(id, title, JSON.stringify(quizJson));
 
     // Optional: remove uploaded PDF file after processing to save space
-    fs.unlink(req.file.path).catch(console.error);
+    fs.unlink(req.file.path).catch((e) => log.error('Failed to remove uploaded PDF:', e));
 
     res.status(201).json({ id, title, message: 'تم إنشاء الدرس التفاعلي بنجاح!' });
   } catch (error) {
-    console.error('=== AI Generation Error ===');
-    console.error('Message:', error.message);
-    console.error('Stack:', error.stack);
-    console.error('===========================');
+    log.error('=== AI Generation Error ===');
+    log.error('Message:', error.message);
+    log.error('Stack:', error.stack);
+    log.error('===========================');
     res.status(500).json({ message: error.message || 'حدث خطأ أثناء معالجة الملف.' });
   }
 });
@@ -570,6 +646,8 @@ app.post('/api/submit-answers', async (req, res) => {
     if (!testId || !Array.isArray(answers)) {
       return res.status(400).json({ message: 'Invalid payload' });
     }
+    const cleanName = sanitizeText(studentName);
+    const cleanStudentId = sanitizeText(studentId, 64);
 
     // Compute score from DB
     const qs = db.prepare(`SELECT id, correct_answer FROM questions WHERE quiz_id = ?`).all(testId);
@@ -586,7 +664,7 @@ app.post('/api/submit-answers', async (req, res) => {
     db.prepare(`
       INSERT INTO results (id, test_id, student_id, student_name, answers_json, score_correct, score_total, score_percent, ts)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, testId, studentId || null, studentName || null, JSON.stringify(answers), correct, total, percent, new Date().toISOString());
+    `).run(id, testId, cleanStudentId || null, cleanName || null, JSON.stringify(answers), correct, total, percent, new Date().toISOString());
 
     return res.status(201).json({ ok: true, message: 'تم تسجيل الإجابة بنجاح', recordId: id, score: { correct, total, percent } });
   } catch (e) {
@@ -1176,9 +1254,16 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(publicDir, 'index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`Active Class server running at http://localhost:${PORT}`);
+// Bind host is configurable. Default is all interfaces (0.0.0.0) because LAN
+// access is a core feature (students join quizzes from their own devices via
+// the teacher's IP). Set HOST=127.0.0.1 to lock the server to this machine.
+const HOST = process.env.HOST || '0.0.0.0';
+app.listen(PORT, HOST, () => {
+  log.info(`Active Class server running at http://localhost:${PORT} (bound to ${HOST})`);
+  if (HOST === '0.0.0.0') {
+    log.info('LAN access enabled. Set HOST=127.0.0.1 to restrict to this machine.');
+  }
   if (!SERVER_API_KEY) {
-    console.warn('[SECURITY] SERVER_API_KEY is not set — teacher API endpoints are UNAUTHENTICATED (dev mode). Do not expose this server on an untrusted network.');
+    log.warn('[SECURITY] SERVER_API_KEY is not set — teacher API endpoints are UNAUTHENTICATED (dev mode). Do not expose this server on an untrusted network.');
   }
 });

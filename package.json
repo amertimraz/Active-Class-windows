@@ -6,7 +6,12 @@
   "scripts": {
     "start": "electron .",
     "server": "node server/server.js",
-    "migrate:sqlite": "node server/migrate-sqlite.js"
+    "migrate:sqlite": "node server/migrate-sqlite.js",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "node --test \"tests/unit/**/*.test.js\""
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -20,8 +25,12 @@
   "devDependencies": {
     "autoprefixer": "^10.5.0",
     "electron": "^22.3.27",
+    "eslint": "^9.39.4",
+    "eslint-config-prettier": "^9.1.2",
+    "globals": "^15.15.0",
     "playwright": "^1.58.2",
     "postcss": "^8.5.14",
+    "prettier": "^3.8.4",
     "tailwindcss": "^4.3.0"
   }
 }

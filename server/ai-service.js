@@ -1,6 +1,7 @@
 const fs = require('fs');
 const { PDFParse } = require('pdf-parse');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const log = require('./logger').create('ai');
 
 /**
  * Parses a PDF file and generates a JSON quiz structure using Google Gemini.
@@ -63,7 +64,7 @@ async function generateQuizFromPDF(pdfPath, apiKey) {
         const quizJson = JSON.parse(responseText);
         return quizJson;
     } catch (parseError) {
-        console.error("Failed to parse Gemini response:", responseText);
+        log.error("Failed to parse Gemini response:", responseText);
         throw new Error('فشل في تحليل استجابة الذكاء الاصطناعي إلى JSON.');
     }
 }

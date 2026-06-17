@@ -5,6 +5,7 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 const XLSX = require('xlsx');
 const crypto = require('crypto');
+const log = require('./server/logger').create('main');
 
 let mainWindow;
 let numbersWindow;
@@ -181,18 +182,18 @@ function startServer() {
     });
 
     serverProcess.stdout.on('data', (data) => {
-      console.log(`Server: ${data}`);
+      log.info(`Server: ${data}`);
       if (data.toString().includes('Active Class server running at http://localhost:5000')) {
         resolve();
       }
     });
 
     serverProcess.stderr.on('data', (data) => {
-      console.error(`Server Error: ${data}`);
+      log.error(`Server Error: ${data}`);
     });
 
     serverProcess.on('close', (code) => {
-      console.log(`Server process exited with code ${code}`);
+      log.info(`Server process exited with code ${code}`);
     });
 
     // Fallback timeout (give server a bit more time to bind)
@@ -365,7 +366,7 @@ app.whenReady().then(async () => {
       }
       return [];
     } catch (error) {
-      console.error('Error loading groups:', error);
+      log.error('Error loading groups:', error);
       return [];
     }
   });
@@ -376,7 +377,7 @@ app.whenReady().then(async () => {
       fs.writeFileSync(groupsFile, JSON.stringify(groups, null, 2), 'utf8');
       return { ok: true };
     } catch (error) {
-      console.error('Error saving groups:', error);
+      log.error('Error saving groups:', error);
       return { ok: false, error: error.message };
     }
   });
@@ -390,7 +391,7 @@ app.whenReady().then(async () => {
       }
       return [];
     } catch (error) {
-      console.error('Error loading students:', error);
+      log.error('Error loading students:', error);
       return [];
     }
   });
@@ -401,7 +402,7 @@ app.whenReady().then(async () => {
       fs.writeFileSync(studentsFile, JSON.stringify(students, null, 2), 'utf8');
       return { ok: true };
     } catch (error) {
-      console.error('Error saving students:', error);
+      log.error('Error saving students:', error);
       return { ok: false, error: error.message };
     }
   });
@@ -416,7 +417,7 @@ app.whenReady().then(async () => {
       }
       return [];
     } catch (error) {
-      console.error('Error loading quizzes:', error);
+      log.error('Error loading quizzes:', error);
       return [];
     }
   });
@@ -427,7 +428,7 @@ app.whenReady().then(async () => {
       fs.writeFileSync(quizzesFile, JSON.stringify(quizzes, null, 2), 'utf8');
       return { ok: true };
     } catch (error) {
-      console.error('Error saving quizzes:', error);
+      log.error('Error saving quizzes:', error);
       return { ok: false, error: error.message };
     }
   });
@@ -440,7 +441,7 @@ app.whenReady().then(async () => {
       fs.writeFileSync(quizzesFile, JSON.stringify(filtered, null, 2), 'utf8');
       return { ok: true };
     } catch (error) {
-      console.error('Error deleting quiz:', error);
+      log.error('Error deleting quiz:', error);
       return { ok: false, error: error.message };
     }
   });
@@ -454,7 +455,7 @@ app.whenReady().then(async () => {
       }
       return [];
     } catch (error) {
-      console.error('Error loading quiz submissions:', error);
+      log.error('Error loading quiz submissions:', error);
       return [];
     }
   });
@@ -465,7 +466,7 @@ app.whenReady().then(async () => {
       fs.writeFileSync(quizSubmissionsFile, JSON.stringify(submissions, null, 2), 'utf8');
       return { ok: true };
     } catch (error) {
-      console.error('Error saving quiz submissions:', error);
+      log.error('Error saving quiz submissions:', error);
       return { ok: false, error: error.message };
     }
   });
@@ -490,7 +491,7 @@ app.whenReady().then(async () => {
         filePath: result.filePaths[0] 
       };
     } catch (error) {
-      console.error('Error selecting Excel file:', error);
+      log.error('Error selecting Excel file:', error);
       return { canceled: true, error: error.message };
     }
   });
@@ -514,7 +515,7 @@ app.whenReady().then(async () => {
       }
       return { ok: true, columns: headers };
     } catch (error) {
-      console.error('Error getting Excel columns:', error);
+      log.error('Error getting Excel columns:', error);
       return { ok: false, error: error.message };
     }
   });
@@ -574,7 +575,7 @@ app.whenReady().then(async () => {
         stats: { total: rows.length - 1, valid, invalid }
       };
     } catch (error) {
-      console.error('Error previewing Excel data:', error);
+      log.error('Error previewing Excel data:', error);
       return { ok: false, error: error.message };
     }
   });
@@ -622,7 +623,7 @@ app.whenReady().then(async () => {
       XLSX.writeFile(workbook, filePath);
       return { ok: true, filePath };
     } catch (error) {
-      console.error('Error exporting students:', error);
+      log.error('Error exporting students:', error);
       return { ok: false, error: error.message };
     }
   });
@@ -641,7 +642,7 @@ app.whenReady().then(async () => {
       }
       return {};
     } catch (error) {
-      console.error('Error loading million sessions:', error);
+      log.error('Error loading million sessions:', error);
       return {};
     }
   }
@@ -651,7 +652,7 @@ app.whenReady().then(async () => {
       ensureDataDir();
       fs.writeFileSync(millionSessionsFile, JSON.stringify(sessions, null, 2), 'utf8');
     } catch (error) {
-      console.error('Error saving million sessions:', error);
+      log.error('Error saving million sessions:', error);
     }
   }
 
@@ -823,7 +824,7 @@ app.whenReady().then(async () => {
 
       return { ok: true, sessionId };
     } catch (error) {
-      console.error('Error creating million session:', error);
+      log.error('Error creating million session:', error);
       return { ok: false, error: error.message };
     }
   });
@@ -839,7 +840,7 @@ app.whenReady().then(async () => {
 
       return { ok: true, session };
     } catch (error) {
-      console.error('Error getting million session:', error);
+      log.error('Error getting million session:', error);
       return { ok: false, error: error.message };
     }
   });
