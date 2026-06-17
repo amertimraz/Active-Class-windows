@@ -1,12 +1,14 @@
 :root {
-  --v3-bg: #050810;
-  --v3-sidebar: #0f172a;
+  /* Re-themed to light to match the rest of the app (was a dark presentation
+     surface that made this page feel like a different product). */
+  --v3-bg: #f1f5f9;
+  --v3-sidebar: #ffffff;
   --v3-accent: #3b82f6;
   --v3-orange: #f97316;
-  --v3-border: rgba(255, 255, 255, 0.08);
-  --v3-glass: rgba(15, 23, 42, 0.8);
-  --v3-text: #f8fafc;
-  --v3-text-muted: #94a3b8;
+  --v3-border: rgba(15, 23, 42, 0.1);
+  --v3-glass: rgba(255, 255, 255, 0.9);
+  --v3-text: #1e293b;
+  --v3-text-muted: #64748b;
 }
 
 .content-hub-container {
@@ -23,7 +25,7 @@
 /* Header V3 */
 .hub-header-v3 {
   height: 60px;
-  background: #0f172a;
+  background: #ffffff;
   border-bottom: 1px solid var(--v3-border);
   display: flex;
   align-items: center;
@@ -33,7 +35,7 @@
 
 .hub-timer {
   font-family: monospace;
-  background: rgba(255,255,255,0.05);
+  background: rgba(15,23,42,0.05);
   padding: 4px 12px;
   border-radius: 6px;
   color: var(--v3-orange);
@@ -84,7 +86,7 @@
 .presentation-stage {
   flex: 1;
   position: relative;
-  background: #000;
+  background: #f1f5f9;
   overflow: hidden;
 }
 
@@ -119,7 +121,7 @@
   position: absolute;
   top: 30px;
   right: 30px;
-  background: rgba(15, 23, 42, 0.95);
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(15px);
   border: 1px solid var(--v3-border);
   padding: 8px;
@@ -128,7 +130,7 @@
   flex-direction: column;
   gap: 12px;
   z-index: 1000;
-  box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+  box-shadow: 0 12px 30px rgba(15,23,42,0.12);
 }
 
 .tool-section {
@@ -160,8 +162,8 @@
 }
 
 .smart-tool:hover {
-  background: rgba(255,255,255,0.05);
-  color: white;
+  background: rgba(15,23,42,0.05);
+  color: var(--v3-text);
 }
 
 .smart-tool.active {
@@ -174,7 +176,7 @@
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  border: 2px solid white;
+  border: 2px solid var(--v3-border);
   cursor: pointer;
   transition: 0.2s;
 }
@@ -187,7 +189,7 @@
   bottom: 30px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(15, 23, 42, 0.9);
+  background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(10px);
   padding: 10px 24px;
   border-radius: 999px;
@@ -196,7 +198,7 @@
   gap: 20px;
   border: 1px solid var(--v3-border);
   z-index: 1000;
-  box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+  box-shadow: 0 10px 25px rgba(15,23,42,0.1);
 }
 
 .dash-group {
@@ -214,7 +216,7 @@
 .dash-btn {
   background: transparent;
   border: none;
-  color: white;
+  color: var(--v3-text);
   font-size: 18px;
   cursor: pointer;
   width: 32px;
@@ -225,7 +227,7 @@
   justify-content: center;
 }
 
-.dash-btn:hover { background: rgba(255,255,255,0.1); }
+.dash-btn:hover { background: rgba(15,23,42,0.06); }
 
 .theatre-toggle-btn {
   background: var(--v3-orange);
@@ -252,7 +254,7 @@
 }
 
 .search-box-v3 {
-  background: #1e293b;
+  background: #ffffff;
   border-radius: 12px;
   padding: 10px 16px;
   display: flex;
@@ -263,7 +265,7 @@
 .search-box-v3 input {
   background: transparent;
   border: none;
-  color: white;
+  color: var(--v3-text);
   flex: 1;
   font-family: inherit;
   outline: none;
@@ -285,7 +287,7 @@
 
 .grade-pill {
   padding: 6px 14px;
-  background: rgba(255,255,255,0.05);
+  background: rgba(15,23,42,0.05);
   border: 1px solid var(--v3-border);
   border-radius: 8px;
   font-size: 13px;
@@ -308,7 +310,7 @@
 }
 
 .unit-item-v3 {
-  background: #1e293b;
+  background: #ffffff;
   border-radius: 12px;
   padding: 14px;
   font-weight: 800;
@@ -317,7 +319,7 @@
   transition: 0.2s;
 }
 
-.unit-item-v3:hover { transform: translateX(-5px); background: #334155; }
+.unit-item-v3:hover { transform: translateX(-5px); background: #e2e8f0; }
 
 /* Media Grid V3 */
 .media-grid-v3 {
@@ -354,5 +356,5 @@
 /* Scrollbar Modern */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+::-webkit-scrollbar-thumb { background: rgba(15,23,42,0.06); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(15,23,42,0.2); }

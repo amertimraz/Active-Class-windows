@@ -80,7 +80,8 @@
       "Read(//c/Users/ADAM-LAP/AppData/Local/Temp/uishots/**)",
       "Read(//f/tmp/uishots/**)",
       "Read(//c/tmp/**)",
-      "Bash(node --check public/router.js)"
+      "Bash(node --check public/router.js)",
+      "Bash(grep -nE \"background|#0|#1|#2[0-9a-fA-F]{5}|rgba?\\\\\\(.*1[0-9],|var\\\\\\(--\" public/pages/content.css)"
     ]
   }
 }
