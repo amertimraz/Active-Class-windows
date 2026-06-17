@@ -71,7 +71,8 @@
       "Bash(tee /tmp/app39.log)",
       "Bash(powershell -NoProfile -Command \"\\(Get-Process electron -ErrorAction SilentlyContinue | Measure-Object\\).Count\")",
       "Bash(curl -s -D - -o /dev/null http://localhost:5000/)",
-      "Bash(curl -s -o /dev/null -w \"%{http_code} \\(expect 401\\)\\\\n\" http://localhost:5000/api/quizzes)"
+      "Bash(curl -s -o /dev/null -w \"%{http_code} \\(expect 401\\)\\\\n\" http://localhost:5000/api/quizzes)",
+      "Bash(npm run *)"
     ]
   }
 }

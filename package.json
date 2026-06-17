@@ -11,7 +11,9 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "node --test \"tests/unit/**/*.test.js\""
+    "test": "node --test \"tests/unit/**/*.test.js\"",
+    "test:e2e": "node --test \"tests/integration/**/*.test.js\"",
+    "test:all": "node --test \"tests/unit/**/*.test.js\" \"tests/integration/**/*.test.js\""
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
