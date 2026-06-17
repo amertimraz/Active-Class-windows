@@ -407,6 +407,72 @@ app.whenReady().then(async () => {
     }
   });
 
+  // Granular student CRUD. preload.js advertised add/update/delete-student but
+  // these handlers were missing, so those calls rejected silently (e.g. an
+  // Excel re-import would fail to delete the old record and create duplicates).
+  function readStudentsFile() {
+    try {
+      ensureDataDir();
+      if (fs.existsSync(studentsFile)) {
+        return JSON.parse(fs.readFileSync(studentsFile, 'utf8')) || [];
+      }
+    } catch (error) {
+      log.error('Error reading students file:', error);
+    }
+    return [];
+  }
+  function writeStudentsFile(students) {
+    ensureDataDir();
+    fs.writeFileSync(studentsFile, JSON.stringify(students, null, 2), 'utf8');
+  }
+
+  ipcMain.handle('add-student', async (_e, student) => {
+    try {
+      if (!student || typeof student !== 'object') {
+        return { ok: false, error: 'Invalid student' };
+      }
+      const students = readStudentsFile();
+      const newStudent = { id: student.id || crypto.randomUUID(), ...student };
+      students.push(newStudent);
+      writeStudentsFile(students);
+      return { ok: true, student: newStudent };
+    } catch (error) {
+      log.error('Error adding student:', error);
+      return { ok: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('update-student', async (_e, student) => {
+    try {
+      if (!student || !student.id) return { ok: false, error: 'Missing student id' };
+      const students = readStudentsFile();
+      const idx = students.findIndex((s) => s.id === student.id);
+      if (idx === -1) return { ok: false, error: 'Student not found' };
+      students[idx] = { ...students[idx], ...student };
+      writeStudentsFile(students);
+      return { ok: true, student: students[idx] };
+    } catch (error) {
+      log.error('Error updating student:', error);
+      return { ok: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('delete-student', async (_e, studentId) => {
+    try {
+      if (!studentId) return { ok: false, error: 'Missing student id' };
+      const students = readStudentsFile();
+      const filtered = students.filter((s) => s.id !== studentId);
+      if (filtered.length === students.length) {
+        return { ok: false, error: 'Student not found' };
+      }
+      writeStudentsFile(filtered);
+      return { ok: true };
+    } catch (error) {
+      log.error('Error deleting student:', error);
+      return { ok: false, error: error.message };
+    }
+  });
+
   // ===== Quizzes IPC Handlers =====
   ipcMain.handle('load-quizzes', async () => {
     try {

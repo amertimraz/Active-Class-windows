@@ -58,7 +58,8 @@
       "Bash(grep -nE \"^[A-Z]:.*\\\\.js$\" /tmp/eslint.log)",
       "Bash(npm test *)",
       "Bash(rm -f .git/index)",
-      "Bash(git reset *)"
+      "Bash(git reset *)",
+      "Bash(node --check main.js)"
     ]
   }
 }
