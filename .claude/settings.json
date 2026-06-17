@@ -72,7 +72,14 @@
       "Bash(powershell -NoProfile -Command \"\\(Get-Process electron -ErrorAction SilentlyContinue | Measure-Object\\).Count\")",
       "Bash(curl -s -D - -o /dev/null http://localhost:5000/)",
       "Bash(curl -s -o /dev/null -w \"%{http_code} \\(expect 401\\)\\\\n\" http://localhost:5000/api/quizzes)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Read(//c/Users/ADAM-LAP/AppData/Local/ms-playwright/**)",
+      "Bash(node -e \"const {chromium}=require\\('playwright'\\); console.log\\('exec:', chromium.executablePath\\(\\)\\)\")",
+      "Bash(SHOT_DIR=\"/tmp/uishots\" mkdir -p /tmp/uishots)",
+      "Bash(SHOT_DIR=\"/tmp/uishots\" node tests/__ui_shots.cjs)",
+      "Read(//c/Users/ADAM-LAP/AppData/Local/Temp/uishots/**)",
+      "Read(//f/tmp/uishots/**)",
+      "Read(//c/tmp/**)"
     ]
   }
 }

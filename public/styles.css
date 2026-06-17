@@ -1711,27 +1711,30 @@ body.loading-state::after {
 }
 
 /* Floating Toolbar */
+/* Anchored to the bottom-left corner (the least-used corner in an RTL layout)
+   so it no longer floats over the centred content column. */
 .floating-toolbar {
   position: fixed;
-  left: 24px;
-  top: 50%;
-  transform: translateY(-50%);
+  left: 16px;
+  bottom: 16px;
+  top: auto;
+  transform: none;
   background: var(--glass-bg);
   backdrop-filter: var(--blur);
   border: 1px solid var(--glass-border);
-  border-radius: 20px;
-  padding: 12px;
+  border-radius: 16px;
+  padding: 8px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   box-shadow: var(--shadow-md);
-  z-index: 2000;
+  z-index: 900;
   transition: all 0.3s var(--transition);
 }
 
 .toolbar-btn {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   border-radius: 12px;
   border: none;
   background: transparent;
