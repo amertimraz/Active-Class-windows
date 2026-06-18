@@ -177,6 +177,7 @@ class SettingsManager {
             this.showNotification(this.t('settings_saved'), 'success');
             this.applyTheme();
             this.applyLanguage();
+            setTimeout(() => this.closeModal(), 600);
             
         } catch (error) {
             console.error('Error saving settings:', error);
@@ -197,10 +198,10 @@ class SettingsManager {
         const saveBtn = document.getElementById('saveSettings');
         if (saveBtn) saveBtn.addEventListener('click', () => this.saveSettings());
         
-        // Tab navigation - scoped to settings sidebar
-        document.querySelectorAll('.settings-sidebar .nav-item').forEach(item => {
+        // Tab navigation
+        document.querySelectorAll('.sm-nav-item').forEach(item => {
             item.addEventListener('click', (e) => {
-                const button = e.target.closest('.nav-item');
+                const button = e.target.closest('.sm-nav-item');
                 if (button && button.dataset.tab) {
                     this.switchTab(button.dataset.tab);
                 }
@@ -248,21 +249,32 @@ class SettingsManager {
     switchTab(tabName) {
         if (!tabName) return;
         
-        // Update navigation - scoped to settings sidebar
-        document.querySelectorAll('.settings-sidebar .nav-item').forEach(item => {
-            item.classList.remove('active');
-        });
-        
-        const navButton = document.querySelector(`.settings-sidebar [data-tab="${tabName}"]`);
+        // Update navigation
+        document.querySelectorAll('.sm-nav-item').forEach(item => item.classList.remove('active'));
+        const navButton = document.querySelector(`.sm-nav-item[data-tab="${tabName}"]`);
         if (navButton) navButton.classList.add('active');
-        
-        // Update content - scoped to settings modal
-        document.querySelectorAll('#settingsModal .tab-content').forEach(content => {
-            content.style.display = 'none';
+
+        // Update header title/subtitle
+        const titles = {
+            appearance: ['المظهر واللغة', 'تخصيص مظهر التطبيق ولغة الواجهة'],
+            database:   ['قاعدة البيانات', 'النسخ الاحتياطي وإحصائيات البيانات'],
+            interface:  ['الذكاء الاصطناعي', 'إعداد مفتاح Gemini API'],
+            about:      ['حول البرنامج', 'معلومات عن Active Class'],
+        };
+        const t = titles[tabName];
+        if (t) {
+            const titleEl = document.getElementById('sm-current-title');
+            const subEl   = document.getElementById('sm-current-sub');
+            if (titleEl) titleEl.textContent = t[0];
+            if (subEl)   subEl.textContent   = t[1];
+        }
+
+        // Update content
+        document.querySelectorAll('#settingsModal .sm-tab').forEach(content => {
+            content.classList.remove('active');
         });
-        
         const tabContent = document.getElementById(`${tabName}-tab`);
-        if (tabContent) tabContent.style.display = 'block';
+        if (tabContent) tabContent.classList.add('active');
     }
     
     updateUI() {
@@ -477,13 +489,27 @@ class SettingsManager {
         return this.translations[this.settings.language]?.[key] || key;
     }
     
-    showModal() {
+    async showModal() {
         const modal = document.getElementById('settingsModal');
         if (modal) {
             modal.classList.add('active');
             modal.style.display = 'flex';
             document.body.style.overflow = 'hidden';
             this.updateUI();
+            // Load DB stats
+            try {
+                const [students, groups, quizzes] = await Promise.all([
+                    window.api?.loadStudents?.() ?? [],
+                    window.api?.loadGroups?.()   ?? [],
+                    window.api?.loadQuizzes?.()  ?? [],
+                ]);
+                const s = document.getElementById('sm-stat-students');
+                const g = document.getElementById('sm-stat-groups');
+                const q = document.getElementById('sm-stat-quizzes');
+                if (s) s.textContent = `${Array.isArray(students) ? students.length : 0} طالب`;
+                if (g) g.textContent = `${Array.isArray(groups)   ? groups.length   : 0} مجموعة`;
+                if (q) q.textContent = `${Array.isArray(quizzes)  ? quizzes.length  : 0} اختبار`;
+            } catch {}
         }
     }
     

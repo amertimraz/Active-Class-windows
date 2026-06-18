@@ -465,7 +465,11 @@
   // ===== Event Handlers =====
 
   // Delegated actions for quiz buttons (CSP-friendly, no inline handlers)
-  document.addEventListener('click', (e) => {
+  // Remove old handler from previous page load to prevent accumulation
+  if (window.__quizzesClickHandler) {
+    document.removeEventListener('click', window.__quizzesClickHandler);
+  }
+  window.__quizzesClickHandler = (e) => {
     const btn = e.target && e.target.closest('button[data-action][data-quiz-id]');
     if (!btn) return;
     // Scope to quizzes page only
@@ -483,7 +487,8 @@
       else if (action === 'shareQR') { window.openQRShare && window.openQRShare(quizId); }
       else if (action === 'deleteQuiz') { window.deleteQuiz && window.deleteQuiz(quizId); }
     } catch {}
-  });
+  };
+  document.addEventListener('click', window.__quizzesClickHandler);
 
   // Add Quiz Form
   if (addQuizForm) {
@@ -508,18 +513,12 @@
           // تعديل بيانات الاختبار القائم
           const idx = quizzes.findIndex(q => q.id === editingId);
           if (idx !== -1) {
-            quizzes[idx] = {
-              ...quizzes[idx],
-              name,
-              groupId,
-              updatedAt: new Date().toISOString()
-            };
+            quizzes[idx] = { ...quizzes[idx], name, groupId, updatedAt: new Date().toISOString() };
           }
 
-          // حفظ
-          if (hasAPI) {
-            const saved = await apiSaveQuizzes(quizzes);
-            if (!saved) {
+          if (hasAPI && window.api.updateQuiz) {
+            const result = await window.api.updateQuiz(editingId, { name, groupId });
+            if (!result || result.message) {
               showToast(window.I18n ? I18n.t('quizzes.toast.save_failed') : 'فشل في حفظ التعديلات', 'error');
               return;
             }
@@ -528,11 +527,9 @@
           }
 
           showToast(window.I18n ? I18n.t('quizzes.toast.save_success') : 'تم حفظ التعديلات بنجاح', 'success');
-          // إعادة ضبط زر الحفظ والمودال للوضع الافتراضي
           if (saveQuiz) {
             delete saveQuiz.dataset.mode;
             delete saveQuiz.dataset.quizId;
-            // Localize save button text
             saveQuiz.textContent = window.I18n ? I18n.t('quizzes.modal.save') : 'حفظ الاختبار';
           }
           if (quizModal) quizModal.style.display = 'none';
@@ -540,19 +537,20 @@
         } else {
           // إضافة جديدة
           const newQuiz = createQuiz({ name, groupId });
-          quizzes.push(newQuiz);
 
-          if (hasAPI) {
-            const saved = await apiSaveQuizzes(quizzes);
-            if (!saved) {
-              quizzes.pop();
+          if (hasAPI && window.api.createQuiz) {
+            const result = await window.api.createQuiz({ id: newQuiz.id, name, groupId, status: 'active' });
+            if (!result || result.message) {
               showToast(window.I18n ? I18n.t('quizzes.toast.create_failed') : 'فشل في حفظ الاختبار', 'error');
               return;
             }
+            // Use server-assigned data (id may differ if server regenerated)
+            newQuiz.id = result.id || newQuiz.id;
           } else {
-            saveLocal(LS_QUIZZES, quizzes);
+            saveLocal(LS_QUIZZES, [...quizzes, newQuiz]);
           }
 
+          quizzes.push(newQuiz);
           showToast(window.I18n ? I18n.t('quizzes.toast.create_success') : 'تم إضافة الاختبار بنجاح', 'success');
           addQuizForm.reset();
         }
@@ -699,18 +697,18 @@
       try {
         const index = quizzes.findIndex(q => q.id === currentQuizId);
         if (index !== -1) {
-          quizzes.splice(index, 1);
-          
-          if (hasAPI) {
-            const saved = await apiSaveQuizzes(quizzes);
-            if (!saved) {
+          if (hasAPI && window.api.deleteQuiz) {
+            const result = await window.api.deleteQuiz(currentQuizId);
+            if (!result || result.ok === false) {
               showToast(window.I18n ? I18n.t('quizzes.toast.delete_failed') : 'فشل في حذف الاختبار', 'error');
               return;
             }
           } else {
-            saveLocal(LS_QUIZZES, quizzes);
+            const local = loadLocal(LS_QUIZZES).filter(q => q.id !== currentQuizId);
+            saveLocal(LS_QUIZZES, local);
           }
-          
+
+          quizzes.splice(index, 1);
           showToast(window.I18n ? I18n.t('quizzes.toast.delete_success') : 'تم حذف الاختبار بنجاح', 'success');
           updateStats();
           render();
@@ -1179,17 +1177,12 @@
     try {
       const idx = quizzes.findIndex(q => q.id === editingId);
       if (idx !== -1) {
-        quizzes[idx] = {
-          ...quizzes[idx],
-          name,
-          groupId,
-          updatedAt: new Date().toISOString()
-        };
+        quizzes[idx] = { ...quizzes[idx], name, groupId, updatedAt: new Date().toISOString() };
       }
 
-      if (hasAPI) {
-        const saved = await apiSaveQuizzes(quizzes);
-        if (!saved) {
+      if (hasAPI && window.api.updateQuiz) {
+        const result = await window.api.updateQuiz(editingId, { name, groupId });
+        if (!result || result.message) {
           showToast('فشل في حفظ التعديلات', 'error');
           return;
         }
@@ -1199,7 +1192,6 @@
 
       showToast('تم حفظ التعديلات بنجاح', 'success');
       if (quizModal) quizModal.style.display = 'none';
-      // إعادة ضبط حالة المودال
       resetQuizModalState();
       updateStats();
       render();
@@ -1318,14 +1310,26 @@
       updatedAt: new Date().toISOString()
     };
     
-    quizzes.push(duplicate);
-    
-    if (hasAPI) {
-      apiSaveQuizzes(quizzes);
+    if (hasAPI && window.api.createQuiz) {
+      window.api.createQuiz({
+        id: duplicate.id,
+        name: duplicate.name,
+        groupId: duplicate.groupId,
+        status: duplicate.status || 'active'
+      }).then(result => {
+        if (result && result.id) {
+          duplicate.id = result.id;
+          quizzes.push(duplicate);
+          updateStats(); render();
+        } else {
+          showToast('فشل في نسخ الاختبار', 'error');
+        }
+      });
     } else {
+      quizzes.push(duplicate);
       saveLocal(LS_QUIZZES, quizzes);
     }
-    
+
     showToast('تم نسخ الاختبار بنجاح', 'success');
     updateStats();
     render();
@@ -1354,14 +1358,15 @@
   }
 
   // ===== Keyboard Shortcuts =====
-  document.addEventListener('keydown', (e) => {
+  if (window.__quizzesKeyHandler) {
+    document.removeEventListener('keydown', window.__quizzesKeyHandler);
+  }
+  window.__quizzesKeyHandler = (e) => {
     if (e.ctrlKey && e.key === 'f') {
       e.preventDefault();
       searchInput?.focus();
     }
-    
     if (e.key === 'Escape') {
-      // إغلاق المودالات
       if (quizModal && quizModal.style.display !== 'none') {
         quizModal.style.display = 'none';
       }
@@ -1372,7 +1377,8 @@
         editorModal.style.display = 'none';
       }
     }
-  });
+  };
+  document.addEventListener('keydown', window.__quizzesKeyHandler);
 
   // ===== Initialization =====
   let __quizzesInitDone = false;

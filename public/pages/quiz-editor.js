@@ -188,7 +188,7 @@
     
     if (!quizId) {
       showToast(window.I18n ? I18n.t('quizzes.editor.toast.quiz_id_missing') : 'معرف الاختبار غير موجود', 'error');
-      window.location.href = '/pages/quizzes.html';
+      window.location.href = '/#/quizzes';
       return;
     }
 
@@ -197,30 +197,29 @@
       let quizzes = [];
       let groups = [];
       
-      if (hasAPI) {
-        const quizzesData = await apiGetQuizzes();
-        if (quizzesData) quizzes = quizzesData;
-        else quizzes = loadLocal(LS_QUIZZES);
-
-        const groupsData = await apiGetGroups();
-        if (groupsData) groups = groupsData;
-        else groups = loadLocal(LS_GROUPS);
+      if (hasAPI && window.api.loadQuiz) {
+        // Load single quiz with full questions via dedicated IPC handler
+        const quizData = await window.api.loadQuiz(quizId);
+        if (quizData && quizData.id) {
+          currentQuiz = quizData;
+          // Resolve group name from groups list for header
+          const groupsData = await apiGetGroups();
+          const grpList = Array.isArray(groupsData) ? groupsData : loadLocal(LS_GROUPS);
+          const grp = grpList.find(g => g.id === currentQuiz.groupId);
+          if (grp) currentQuiz.groupName = grp.name;
+        } else {
+          // Fallback to localStorage
+          const localQuizzes = loadLocal(LS_QUIZZES);
+          currentQuiz = localQuizzes.find(q => q.id === quizId);
+        }
       } else {
-        quizzes = loadLocal(LS_QUIZZES);
-        groups = loadLocal(LS_GROUPS);
+        const localQuizzes = loadLocal(LS_QUIZZES);
+        currentQuiz = localQuizzes.find(q => q.id === quizId);
       }
 
-      currentQuiz = quizzes.find(q => q.id === quizId);
-      
-      // Resolve group name for header usage
-      if (currentQuiz) {
-        const grp = groups.find(g => g.id === currentQuiz.groupId);
-        currentQuiz.groupName = grp ? grp.name : '';
-      }
-      
       if (!currentQuiz) {
         showToast(window.I18n ? I18n.t('quizzes.toast.quiz_not_found') : 'الاختبار غير موجود', 'error');
-        window.location.href = '/pages/quizzes.html';
+        window.location.href = '/#/quizzes';
         return;
       }
 
@@ -865,7 +864,7 @@
   // Navigate back to quizzes list (CSP-safe)
   if (goToQuizzesBtn) {
     goToQuizzesBtn.addEventListener('click', () => {
-      window.location.href = '/pages/quizzes.html';
+      window.location.href = '/#/quizzes';
     });
   }
 
@@ -1214,35 +1213,53 @@
 
     showLoading();
     try {
-      currentQuiz.questions = questions;
       currentQuiz.updatedAt = new Date().toISOString();
 
-      let quizzes = [];
-      
-      if (hasAPI) {
-        const quizzesData = await apiGetQuizzes();
-        if (quizzesData) quizzes = quizzesData;
-        else quizzes = loadLocal(LS_QUIZZES);
-      } else {
-        quizzes = loadLocal(LS_QUIZZES);
-      }
+      if (hasAPI && window.api.loadQuiz && window.api.saveQuestion && window.api.deleteQuestion) {
+        // Load current DB state to know which questions already exist
+        const dbQuiz = await window.api.loadQuiz(currentQuiz.id);
+        const dbQuestionIds = new Set((dbQuiz?.questions || []).map(q => q.id));
+        const localQuestionIds = new Set(questions.map(q => q.id));
 
-      const index = quizzes.findIndex(q => q.id === currentQuiz.id);
-      if (index !== -1) {
-        quizzes[index] = currentQuiz;
-      }
+        // Delete questions that were removed from the editor
+        for (const dbId of dbQuestionIds) {
+          if (!localQuestionIds.has(dbId)) {
+            await window.api.deleteQuestion(dbId).catch(() => {});
+          }
+        }
 
-      if (hasAPI) {
-        const saved = await apiSaveQuizzes(quizzes);
-        if (!saved) {
-          showToast('فشل في حفظ الاختبار', 'error');
-          return;
+        // Create or update each question
+        for (let i = 0; i < questions.length; i++) {
+          const q = questions[i];
+          const payload = {
+            id: q.id,
+            type: q.type,
+            text: q.text,
+            image: q.image || null,
+            options: q.options || [],
+            correctAnswer: q.correctAnswer,
+            difficulty: q.difficulty || 'medium',
+            points: q.points || 1,
+            explanation: q.explanation || '',
+            position: i
+          };
+          const result = await window.api.saveQuestion(currentQuiz.id, payload);
+          // If this was a new question, update its local id to the DB-assigned UUID
+          if (result && result.id && !dbQuestionIds.has(q.id)) {
+            questions[i] = { ...q, id: result.id };
+          }
         }
       } else {
-        saveLocal(LS_QUIZZES, quizzes);
+        // Fallback: localStorage only
+        const localQuizzes = loadLocal(LS_QUIZZES);
+        const index = localQuizzes.findIndex(q => q.id === currentQuiz.id);
+        if (index !== -1) localQuizzes[index] = currentQuiz;
+        else localQuizzes.push(currentQuiz);
+        saveLocal(LS_QUIZZES, localQuizzes);
       }
 
       hasUnsavedChanges = false;
+      renderQuestions(); // refresh UI with DB-assigned IDs
       showToast('تم حفظ الاختبار بنجاح', 'success');
     } finally {
       hideLoading();

@@ -109,7 +109,7 @@
     
     if (!quizId) {
       showToast('معرف الاختبار غير موجود', 'error');
-      setTimeout(() => window.location.href = '/pages/quizzes.html', 2000);
+      setTimeout(() => window.location.href = '/#/quizzes', 2000);
       return;
     }
 
@@ -126,7 +126,7 @@
       currentQuiz = quizzes.find(q => q.id === quizId);
       if (!currentQuiz) {
         showToast('الاختبار غير موجود', 'error');
-        setTimeout(() => window.location.href = '/pages/quizzes.html', 2000);
+        setTimeout(() => window.location.href = '/#/quizzes', 2000);
         return;
       }
 
@@ -663,7 +663,7 @@
 
     if (backToQuizzesBtn) {
       backToQuizzesBtn.addEventListener('click', () => {
-        window.location.href = '/pages/quizzes.html';
+        window.location.href = '/#/quizzes';
       });
     }
 

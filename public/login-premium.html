@@ -1,0 +1,568 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Active Class — تسجيل الدخول</title>
+
+  <!-- Cairo font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CDN (play CDN for development; swap for build-time in production) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { cairo: ['Cairo', 'sans-serif'] },
+          colors: {
+            brand: {
+              50:  '#f0fdfa',
+              100: '#ccfbf1',
+              200: '#99f6e4',
+              400: '#2dd4bf',
+              500: '#14b8a6',
+              600: '#0d9488',
+              700: '#0f766e',
+              800: '#115e59',
+              900: '#134e4a',
+            },
+          },
+          boxShadow: {
+            'glow':    '0 0 0 3px rgba(15,118,110,0.18), 0 8px 28px rgba(15,118,110,0.28)',
+            'glow-lg': '0 0 0 4px rgba(15,118,110,0.22), 0 12px 40px rgba(15,118,110,0.32)',
+            'card':    '0 24px 60px rgba(15,23,42,0.14), 0 4px 16px rgba(15,23,42,0.06)',
+            'card-lg': '0 32px 80px rgba(15,23,42,0.18), 0 8px 24px rgba(15,23,42,0.08)',
+          },
+          backdropBlur: { xs: '6px' },
+          animation: {
+            'float-slow':   'floatSlow 10s ease-in-out infinite',
+            'float-medium': 'floatMedium 8s ease-in-out infinite reverse',
+            'float-fast':   'floatFast 6s ease-in-out infinite',
+            'pop-in':       'popIn 0.55s cubic-bezier(0.34,1.56,0.64,1) both',
+            'fade-up':      'fadeUp 0.4s ease both',
+            'shimmer':      'shimmer 2.4s linear infinite',
+          },
+          keyframes: {
+            floatSlow:   { '0%,100%': {transform:'translateY(0) scale(1)'}, '50%': {transform:'translateY(-28px) scale(1.04)'} },
+            floatMedium: { '0%,100%': {transform:'translateY(0) scale(1)'}, '50%': {transform:'translateY(-20px) scale(1.03)'} },
+            floatFast:   { '0%,100%': {transform:'translateY(0) scale(1)'}, '50%': {transform:'translateY(-14px) scale(1.02)'} },
+            popIn:       { '0%': {opacity:'0', transform:'scale(0.88) translateY(16px)'}, '100%': {opacity:'1', transform:'scale(1) translateY(0)'} },
+            fadeUp:      { '0%': {opacity:'0', transform:'translateY(8px)'}, '100%': {opacity:'1', transform:'translateY(0)'} },
+            shimmer:     { '0%': {backgroundPosition:'200% center'}, '100%': {backgroundPosition:'-200% center'} },
+          },
+        }
+      }
+    }
+  </script>
+
+  <style>
+    * { font-family: 'Cairo', sans-serif; }
+
+    /* ─── Frameless drag region ─── */
+    #titlebar { -webkit-app-region: drag; }
+    #titlebar button,
+    #titlebar .no-drag { -webkit-app-region: no-drag; }
+
+    /* ─── Animated mesh background ─── */
+    body {
+      background:
+        radial-gradient(ellipse 70% 55% at 8% 10%,  rgba(20,184,166,.18) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 92% 12%,  rgba(99,102,241,.14) 0%, transparent 55%),
+        radial-gradient(ellipse 55% 50% at 50% 95%,  rgba(14,165,233,.12) 0%, transparent 55%),
+        linear-gradient(155deg, #f4f7fb 0%, #edf2f8 55%, #f0faf9 100%);
+      min-height: 100vh;
+    }
+
+    /* ─── Input icon wrapper ─── */
+    .input-wrap { position: relative; }
+    .input-wrap .icon {
+      position: absolute;
+      top: 50%; right: 16px;
+      transform: translateY(-50%);
+      color: #94a3b8;
+      pointer-events: none;
+      transition: color .2s;
+    }
+    .input-wrap input:focus ~ .icon { color: #0f766e; }
+    .input-wrap input { padding-right: 44px; }
+
+    /* ─── Password eye toggle (ltr-safe) ─── */
+    .input-wrap .eye-btn {
+      position: absolute;
+      top: 50%; left: 14px;
+      transform: translateY(-50%);
+      color: #94a3b8;
+      cursor: pointer;
+      transition: color .2s;
+      -webkit-app-region: no-drag;
+    }
+    .input-wrap .eye-btn:hover { color: #0f766e; }
+
+    /* ─── Custom checkbox ─── */
+    .custom-check { accent-color: #0f766e; width: 17px; height: 17px; cursor: pointer; }
+
+    /* ─── Glow button shimmer overlay ─── */
+    .btn-glow::after {
+      content: '';
+      position: absolute; inset: 0;
+      border-radius: inherit;
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,.22) 45%, transparent 100%);
+      background-size: 200% 100%;
+      animation: shimmer 2.4s linear infinite;
+      pointer-events: none;
+    }
+
+    /* ─── Divider text ─── */
+    .divider-line {
+      flex: 1; height: 1px;
+      background: linear-gradient(to left, transparent, rgba(15,23,42,.1), transparent);
+    }
+
+    /* ─── Skip badge pulse ─── */
+    .badge-pulse {
+      animation: badgePulse 2.2s cubic-bezier(.4,0,.6,1) infinite;
+    }
+    @keyframes badgePulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(15,118,110,.3); }
+      50%      { box-shadow: 0 0 0 6px rgba(15,118,110,.0); }
+    }
+
+    /* ─── Scrollbar hide ─── */
+    ::-webkit-scrollbar { display: none; }
+
+    /* ─── Error / success states ─── */
+    .field-error input { border-color: #ef4444 !important; box-shadow: 0 0 0 3px rgba(239,68,68,.12) !important; }
+    .field-success input { border-color: #16a34a !important; }
+  </style>
+</head>
+<body class="overflow-hidden select-none">
+
+  <!-- ════════════════════════════════════════════
+       FRAMELESS CUSTOM TITLE BAR
+  ═════════════════════════════════════════════ -->
+  <div id="titlebar"
+       class="fixed top-0 inset-x-0 z-50 h-10 flex items-center justify-between px-4"
+       style="background: rgba(244,247,251,0.72); backdrop-filter: blur(14px); border-bottom: 1px solid rgba(15,23,42,.06);">
+
+    <!-- Window control buttons (macOS-style — RTL right side = left visually) -->
+    <div class="flex items-center gap-2 no-drag" id="winControls">
+      <!-- Close -->
+      <button
+        onclick="/* TODO: window.api.close() */"
+        class="w-3.5 h-3.5 rounded-full bg-red-400 hover:bg-red-500 flex items-center justify-center group transition-colors duration-150"
+        title="إغلاق">
+        <svg class="opacity-0 group-hover:opacity-100 transition-opacity" width="6" height="6" viewBox="0 0 8 8" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round">
+          <line x1="1.5" y1="1.5" x2="6.5" y2="6.5"/><line x1="6.5" y1="1.5" x2="1.5" y2="6.5"/>
+        </svg>
+      </button>
+      <!-- Minimize -->
+      <button
+        onclick="/* TODO: window.api.minimize() */"
+        class="w-3.5 h-3.5 rounded-full bg-yellow-400 hover:bg-yellow-500 flex items-center justify-center group transition-colors duration-150"
+        title="تصغير">
+        <svg class="opacity-0 group-hover:opacity-100 transition-opacity" width="7" height="2" viewBox="0 0 8 2" fill="white">
+          <rect width="8" height="2" rx="1"/>
+        </svg>
+      </button>
+      <!-- Maximize -->
+      <button
+        onclick="/* TODO: window.api.maximize() */"
+        class="w-3.5 h-3.5 rounded-full bg-green-400 hover:bg-green-500 flex items-center justify-center group transition-colors duration-150"
+        title="تكبير">
+        <svg class="opacity-0 group-hover:opacity-100 transition-opacity" width="6" height="6" viewBox="0 0 8 8" fill="none" stroke="white" stroke-width="1.5">
+          <rect x="1" y="1" width="6" height="6" rx="0.8"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Center: app name in titlebar -->
+    <span class="text-xs font-700 text-slate-400 tracking-wide pointer-events-none">Active Class</span>
+
+    <!-- Spacer to balance layout -->
+    <div class="w-20"></div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════
+       ANIMATED BACKGROUND BLOBS
+  ═════════════════════════════════════════════ -->
+  <div class="fixed inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+    <!-- Teal blob top-right -->
+    <div class="animate-float-slow absolute -top-32 -right-32 w-[520px] h-[520px] rounded-full opacity-60"
+         style="background: radial-gradient(circle, rgba(20,184,166,.22) 0%, transparent 68%); filter: blur(2px);"></div>
+    <!-- Purple blob top-left -->
+    <div class="animate-float-medium absolute -top-20 -left-20 w-[400px] h-[400px] rounded-full opacity-50"
+         style="background: radial-gradient(circle, rgba(99,102,241,.18) 0%, transparent 65%); filter: blur(2px);"></div>
+    <!-- Blue blob bottom-left -->
+    <div class="animate-float-fast absolute -bottom-28 -left-28 w-[460px] h-[460px] rounded-full opacity-50"
+         style="background: radial-gradient(circle, rgba(14,165,233,.16) 0%, transparent 65%); filter: blur(2px);"></div>
+    <!-- Soft mint blob bottom-right -->
+    <div class="animate-float-slow absolute bottom-10 right-10 w-[280px] h-[280px] rounded-full opacity-40"
+         style="background: radial-gradient(circle, rgba(52,211,153,.18) 0%, transparent 65%); filter: blur(2px); animation-delay: -3s;"></div>
+  </div>
+
+
+  <!-- ════════════════════════════════════════════
+       MAIN LAYOUT
+  ═════════════════════════════════════════════ -->
+  <main class="relative z-10 min-h-screen flex items-center justify-center px-6 pt-10 pb-6">
+
+    <!-- ── LOGIN CARD ── -->
+    <div id="loginCard"
+         class="animate-pop-in w-full max-w-[480px] rounded-3xl border border-white/70 shadow-card-lg overflow-hidden"
+         style="background: rgba(255,255,255,0.82); backdrop-filter: blur(20px) saturate(1.6);">
+
+      <!-- Card top accent bar -->
+      <div class="h-1 w-full" style="background: linear-gradient(90deg, #0f766e, #14b8a6, #6366f1, #0ea5e9); background-size: 300% 100%; animation: shimmer 4s linear infinite;"></div>
+
+      <div class="px-8 pt-8 pb-9">
+
+        <!-- ── BRAND HEADER ── -->
+        <div class="flex items-center gap-4 mb-7">
+          <!-- Logo badge -->
+          <div class="relative flex-shrink-0">
+            <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-900 text-xl shadow-glow"
+                 style="background: linear-gradient(135deg, #0f766e 0%, #14b8a6 60%, #0ea5e9 100%);">
+              AC
+            </div>
+            <!-- Online indicator -->
+            <span class="absolute -bottom-1 -left-1 w-4 h-4 rounded-full bg-emerald-400 border-2 border-white shadow-sm"></span>
+          </div>
+
+          <!-- Title block -->
+          <div>
+            <h1 class="text-2xl font-900 text-slate-800 leading-tight tracking-tight">
+              Active Class
+            </h1>
+            <p class="text-[13px] font-600 mt-0.5"
+               style="background: linear-gradient(90deg, #0f766e, #0ea5e9); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+              منصة إدارة الصف التفاعلي
+            </p>
+          </div>
+        </div>
+
+        <!-- ── WELCOME HEADLINE ── -->
+        <div class="mb-7 animate-fade-up" style="animation-delay: .08s;">
+          <h2 class="text-[22px] font-800 text-slate-800 leading-snug">
+            مرحباً بك من جديد 👋
+          </h2>
+          <p class="text-sm font-500 text-slate-500 mt-1">
+            مرحباً بك في مستقبل التعليم التفاعلي — سجّل دخولك للمتابعة
+          </p>
+        </div>
+
+        <!-- ── FORM ── -->
+        <form id="loginForm" novalidate class="space-y-4 animate-fade-up" style="animation-delay: .14s;">
+
+          <!-- Email / Username -->
+          <div id="fieldUser">
+            <label class="block text-sm font-700 text-slate-700 mb-1.5" for="loginUsername">
+              البريد الإلكتروني أو اسم المستخدم
+            </label>
+            <div class="input-wrap">
+              <input
+                type="text"
+                id="loginUsername"
+                name="username"
+                placeholder="أدخل اسم المستخدم أو البريد"
+                autocomplete="username"
+                class="w-full px-4 py-3 text-sm font-600 text-slate-800 bg-slate-50/80 border border-slate-200 rounded-xl outline-none transition-all duration-200
+                       placeholder:text-slate-400 placeholder:font-500
+                       hover:border-slate-300
+                       focus:border-brand-700 focus:bg-white focus:shadow-glow"
+              />
+              <!-- User icon -->
+              <span class="icon">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                  <circle cx="12" cy="7" r="4"/>
+                </svg>
+              </span>
+            </div>
+            <p class="field-msg hidden text-xs font-600 text-red-500 mt-1.5 pr-1" id="userMsg"></p>
+          </div>
+
+          <!-- Password -->
+          <div id="fieldPass">
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="text-sm font-700 text-slate-700" for="loginPassword">كلمة المرور</label>
+              <button
+                type="button"
+                id="forgotPasswordBtn"
+                class="text-xs font-700 text-brand-700 hover:text-brand-600 hover:underline transition-colors"
+                onclick="/* TODO: handleForgotPassword() */">
+                نسيت كلمة المرور؟
+              </button>
+            </div>
+            <div class="input-wrap">
+              <input
+                type="password"
+                id="loginPassword"
+                name="password"
+                placeholder="أدخل كلمة المرور"
+                autocomplete="current-password"
+                class="w-full px-4 py-3 pl-10 text-sm font-600 text-slate-800 bg-slate-50/80 border border-slate-200 rounded-xl outline-none transition-all duration-200
+                       placeholder:text-slate-400 placeholder:font-500
+                       hover:border-slate-300
+                       focus:border-brand-700 focus:bg-white focus:shadow-glow"
+              />
+              <!-- Lock icon -->
+              <span class="icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+              </span>
+              <!-- Eye toggle -->
+              <button type="button" class="eye-btn" id="togglePassword" title="إظهار / إخفاء كلمة المرور"
+                      onclick="togglePasswordVisibility()">
+                <svg id="eyeIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
+            </div>
+            <p class="field-msg hidden text-xs font-600 text-red-500 mt-1.5 pr-1" id="passMsg"></p>
+          </div>
+
+          <!-- Remember me -->
+          <div class="flex items-center gap-2.5 pt-0.5 animate-fade-up" style="animation-delay: .18s;">
+            <input
+              type="checkbox"
+              id="loginRemember"
+              name="remember"
+              checked
+              class="custom-check rounded border-slate-300"
+            />
+            <label for="loginRemember" class="text-sm font-600 text-slate-600 cursor-pointer select-none">
+              تذكرني على هذا الجهاز
+            </label>
+          </div>
+
+          <!-- Error / Success banners -->
+          <div id="loginError"
+               class="hidden items-center gap-2.5 px-4 py-3 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm font-700"
+               role="alert">
+            <svg class="flex-shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span id="loginErrorText">بيانات الدخول غير صحيحة. حاول مرة أخرى.</span>
+          </div>
+
+          <div id="loginSuccess"
+               class="hidden items-center gap-2.5 px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 text-sm font-700"
+               role="status">
+            <svg class="flex-shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+            <span id="loginSuccessText">تم التحقق... جارٍ تحميل لوحة التحكم!</span>
+          </div>
+
+          <!-- ── PRIMARY LOGIN BUTTON ── -->
+          <button
+            type="submit"
+            id="loginBtn"
+            class="btn-glow relative w-full py-3.5 rounded-xl text-white text-base font-800 tracking-wide
+                   shadow-glow hover:shadow-glow-lg
+                   transition-all duration-200 overflow-hidden
+                   active:scale-[.98] disabled:opacity-60 disabled:cursor-not-allowed"
+            style="background: linear-gradient(135deg, #0f766e 0%, #14b8a6 55%, #0ea5e9 100%); background-size: 200% 100%;"
+            onclick="/* TODO: handleLogin(event) */">
+            <span id="loginBtnText" class="relative z-10 flex items-center justify-center gap-2">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                <polyline points="10 17 15 12 10 7"/>
+                <line x1="15" y1="12" x2="3" y2="12"/>
+              </svg>
+              تسجيل الدخول
+            </span>
+            <!-- Loading spinner (hidden by default) -->
+            <span id="loginBtnSpinner" class="hidden relative z-10 flex items-center justify-center gap-2">
+              <svg class="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+              </svg>
+              جارٍ التحقق...
+            </span>
+          </button>
+
+        </form>
+
+        <!-- ── DIVIDER ── -->
+        <div class="flex items-center gap-3 my-5 animate-fade-up" style="animation-delay: .22s;">
+          <div class="divider-line"></div>
+          <span class="text-xs font-600 text-slate-400 whitespace-nowrap">أو</span>
+          <div class="divider-line"></div>
+        </div>
+
+        <!-- ── SKIP / TEST MODE BUTTON ── -->
+        <div class="animate-fade-up" style="animation-delay: .26s;">
+          <button
+            id="loginSkipBtn"
+            type="button"
+            class="badge-pulse group relative w-full py-3 rounded-xl border-2 border-brand-700/30 text-brand-700
+                   bg-brand-50/60 hover:bg-brand-50 hover:border-brand-700/60
+                   text-sm font-800 tracking-wide
+                   transition-all duration-200 active:scale-[.98]
+                   flex items-center justify-center gap-2.5"
+            onclick="/* TODO: handleSkipLogin() */">
+            <!-- Beaker / flask icon -->
+            <svg class="flex-shrink-0 transition-transform group-hover:rotate-12 duration-300"
+                 width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 3h6v11l3.5 6H5.5L9 14V3z"/>
+              <line x1="6" y1="3" x2="18" y2="3"/>
+              <circle cx="10" cy="17" r="1" fill="currentColor" stroke="none" opacity=".6"/>
+              <circle cx="14" cy="19" r="0.8" fill="currentColor" stroke="none" opacity=".5"/>
+            </svg>
+            <span>تخطي وتسجيل الدخول كـ تجربة</span>
+            <!-- Badge label -->
+            <span class="absolute top-1.5 left-2 text-[10px] font-800 px-1.5 py-0.5 rounded-full bg-brand-700/10 text-brand-800 leading-none">
+              وضع التجربة
+            </span>
+          </button>
+
+          <p class="text-center text-xs font-500 text-slate-400 mt-2.5">
+            لا تحتاج إلى حساب • بيانات تجريبية:
+            <span class="inline-block px-2 py-0.5 rounded-full bg-brand-50 text-brand-800 font-700 text-[11px] mx-0.5">teacher</span>
+            <span class="text-slate-300">/</span>
+            <span class="inline-block px-2 py-0.5 rounded-full bg-brand-50 text-brand-800 font-700 text-[11px] mx-0.5">1234</span>
+          </p>
+        </div>
+
+      </div><!-- /px-8 -->
+
+      <!-- Card bottom footer strip -->
+      <div class="px-8 py-3.5 border-t border-slate-100/80 flex items-center justify-between"
+           style="background: rgba(248,250,252,0.7);">
+        <span class="text-[11px] font-500 text-slate-400">© 2026 Active Class</span>
+        <span class="text-[11px] font-500 text-slate-400">منصة إدارة الصف التفاعلي</span>
+      </div>
+
+    </div><!-- /loginCard -->
+  </main>
+
+
+  <!-- ════════════════════════════════════════════
+       JAVASCRIPT PLACEHOLDERS
+  ═════════════════════════════════════════════ -->
+  <script>
+    // ── Password visibility toggle ────────────────────────────
+    function togglePasswordVisibility() {
+      const input = document.getElementById('loginPassword');
+      const icon  = document.getElementById('eyeIcon');
+      const show  = input.type === 'password';
+      input.type  = show ? 'text' : 'password';
+      // Swap to eye-off SVG when password is visible
+      icon.innerHTML = show
+        ? `<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+           <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+           <line x1="1" y1="1" x2="23" y2="23"/>`
+        : `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+           <circle cx="12" cy="12" r="3"/>`;
+    }
+
+    // ── Show / hide error banner ──────────────────────────────
+    function showError(msg) {
+      const el = document.getElementById('loginError');
+      document.getElementById('loginErrorText').textContent = msg;
+      el.classList.remove('hidden');
+      el.classList.add('flex');
+      document.getElementById('loginSuccess').classList.add('hidden');
+      document.getElementById('loginSuccess').classList.remove('flex');
+    }
+
+    function showSuccess(msg) {
+      const el = document.getElementById('loginSuccess');
+      document.getElementById('loginSuccessText').textContent = msg;
+      el.classList.remove('hidden');
+      el.classList.add('flex');
+      document.getElementById('loginError').classList.add('hidden');
+      document.getElementById('loginError').classList.remove('flex');
+    }
+
+    function clearMessages() {
+      ['loginError','loginSuccess'].forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+        document.getElementById(id).classList.remove('flex');
+      });
+    }
+
+    // ── Set loading state on login button ─────────────────────
+    function setLoginLoading(loading) {
+      const btn     = document.getElementById('loginBtn');
+      const btnText = document.getElementById('loginBtnText');
+      const spinner = document.getElementById('loginBtnSpinner');
+      btn.disabled  = loading;
+      btnText.classList.toggle('hidden', loading);
+      spinner.classList.toggle('hidden', !loading);
+    }
+
+    // ── Main login handler (wire to your auth logic) ──────────
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearMessages();
+
+      const username = document.getElementById('loginUsername').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const remember = document.getElementById('loginRemember').checked;
+
+      // Basic client-side validation
+      if (!username) { showError('الرجاء إدخال اسم المستخدم أو البريد الإلكتروني.'); return; }
+      if (!password) { showError('الرجاء إدخال كلمة المرور.'); return; }
+
+      setLoginLoading(true);
+
+      try {
+        // TODO: Replace with your actual auth call, e.g.:
+        // const result = await window.api.login({ username, password, remember });
+        // if (result.success) { showSuccess('تم التحقق... جارٍ تحميل لوحة التحكم!'); }
+        // else { showError(result.message || 'بيانات الدخول غير صحيحة.'); }
+
+        // Demo stub — remove when wiring real auth:
+        await new Promise(r => setTimeout(r, 1200));
+        if (username === 'teacher' && password === '1234') {
+          showSuccess('تم التحقق... جارٍ تحميل لوحة التحكم!');
+          // TODO: navigate to dashboard, e.g.: window.location.hash = '#/';
+        } else {
+          showError('اسم المستخدم أو كلمة المرور غير صحيحة.');
+        }
+      } catch (err) {
+        showError('حدث خطأ في الاتصال. حاول مرة أخرى.');
+      } finally {
+        setLoginLoading(false);
+      }
+    });
+
+    // ── Skip / Test mode handler ───────────────────────────────
+    document.getElementById('loginSkipBtn').addEventListener('click', () => {
+      // TODO: Replace with your skip/guest logic, e.g.:
+      // window.api.loginAsGuest();
+      // window.location.hash = '#/';
+
+      // Demo stub:
+      showSuccess('تم الدخول كمستخدم تجريبي!');
+      setTimeout(() => {
+        // TODO: navigate to app
+      }, 800);
+    });
+
+    // ── Forgot password handler ────────────────────────────────
+    document.getElementById('forgotPasswordBtn').addEventListener('click', () => {
+      // TODO: open forgot-password modal / screen
+      // e.g.: document.getElementById('forgotModal').classList.remove('hidden');
+      alert('سيتم إضافة شاشة إعادة تعيين كلمة المرور قريباً.');
+    });
+
+    // ── Live input validation feedback ────────────────────────
+    document.getElementById('loginUsername').addEventListener('input', () => clearMessages());
+    document.getElementById('loginPassword').addEventListener('input', () => clearMessages());
+
+    // ── Keyboard: Enter submits form ──────────────────────────
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') document.getElementById('loginForm').requestSubmit();
+    });
+  </script>
+</body>
+</html>

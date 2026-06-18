@@ -352,7 +352,7 @@ console.log('Quiz view script loading...');
     if (!quizId) {
       showToast('معرف الاختبار غير موجود', 'error');
       setTimeout(() => {
-        window.location.href = '/quizzes';
+        window.location.href = '/#/quizzes';
       }, 2000);
       return;
     }
@@ -2945,7 +2945,7 @@ console.log('Quiz view script loading...');
       window.close();
     } else {
       // العودة لصفحة الاختبارات
-      window.location.href = '/pages/quizzes.html';
+      window.location.href = '/#/quizzes';
     }
   }
 

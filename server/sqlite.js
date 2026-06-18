@@ -1,6 +1,7 @@
 'use strict';
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 const Database = require('better-sqlite3');
 const log = require('./logger').create('db');
 
@@ -117,7 +118,103 @@ db.exec(`
     session_json TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
+
+  CREATE TABLE IF NOT EXISTS groups (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    color TEXT DEFAULT '#6366f1',
+    icon TEXT,
+    extra_json TEXT DEFAULT '{}',
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS students (
+    id TEXT PRIMARY KEY,
+    group_id TEXT REFERENCES groups(id) ON DELETE SET NULL,
+    name TEXT NOT NULL,
+    code TEXT,
+    gender TEXT,
+    photo TEXT,
+    attendance_date TEXT,
+    notes TEXT,
+    extra_json TEXT DEFAULT '{}',
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
 `);
+
+// --- Migration: groups.json + students.json → SQLite ---
+function migrateGroupsAndStudents() {
+    const groupsFile  = path.join(dataDir, 'groups.json');
+    const studentsFile = path.join(dataDir, 'students.json');
+
+    const hasGroups   = fs.existsSync(groupsFile);
+    const hasStudents = fs.existsSync(studentsFile);
+    if (!hasGroups && !hasStudents) return;
+
+    const existingCount = db.prepare('SELECT COUNT(*) as c FROM groups').get().c;
+    if (existingCount > 0) return; // already migrated
+
+    try {
+        log.info('[DB] Migrating groups and students from JSON files...');
+
+        const groups   = hasGroups   ? JSON.parse(fs.readFileSync(groupsFile,   'utf8')) : [];
+        const students = hasStudents ? JSON.parse(fs.readFileSync(studentsFile,  'utf8')) : [];
+
+        const insertGroup = db.prepare(`
+            INSERT OR IGNORE INTO groups (id, name, color, icon, extra_json, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        `);
+        const insertStudent = db.prepare(`
+            INSERT OR IGNORE INTO students (id, group_id, name, code, gender, photo, attendance_date, notes, extra_json, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+
+        const now = new Date().toISOString();
+
+        db.transaction(() => {
+            for (const g of (Array.isArray(groups) ? groups : [])) {
+                const { id, name, color, icon, created_at, updated_at, ...rest } = g;
+                // strip students array from extra if embedded
+                delete rest.students;
+                insertGroup.run(
+                    id || crypto.randomUUID(),
+                    name || 'مجموعة',
+                    color || '#6366f1',
+                    icon  || null,
+                    JSON.stringify(rest),
+                    created_at  || now,
+                    updated_at  || now
+                );
+            }
+            for (const s of (Array.isArray(students) ? students : [])) {
+                const { id, group_id, groupId, name, code, gender, photo, attendance_date, attendanceDate, notes, created_at, updated_at, ...rest } = s;
+                insertStudent.run(
+                    id   || crypto.randomUUID(),
+                    group_id || groupId || null,
+                    name || '',
+                    code || null,
+                    gender || null,
+                    photo  || null,
+                    attendance_date || attendanceDate || null,
+                    notes || null,
+                    JSON.stringify(rest),
+                    created_at || now,
+                    updated_at || now
+                );
+            }
+        })();
+
+        // Rename originals so migration doesn't repeat
+        if (hasGroups)   fs.renameSync(groupsFile,   groupsFile   + '.migrated');
+        if (hasStudents) fs.renameSync(studentsFile,  studentsFile + '.migrated');
+
+        log.info('[DB] groups/students migration complete.');
+    } catch (e) {
+        log.error('[DB] groups/students migration error:', e.message);
+    }
+}
 
 // --- One-time Migration from JSON ---
 function migrateFromJSON() {
@@ -201,6 +298,7 @@ function migrateFromJSON() {
 }
 
 migrateFromJSON();
+migrateGroupsAndStudents();
 
 // Default settings
 const defaults = {

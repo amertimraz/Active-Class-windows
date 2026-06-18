@@ -33,6 +33,8 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    frame: false,
+    titleBarStyle: 'hidden',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -182,6 +184,22 @@ function createWheelWindow() {
 }
 
 const SERVER_API_KEY = crypto.randomBytes(16).toString('hex');
+const SERVER_PORT = 5000;
+
+// Thin wrapper: call the internal Express API on behalf of IPC handlers.
+// The server is always running before any renderer IPC fires (startServer →
+// createWindow order), so the fetch is safe.
+async function serverFetch(endpoint, options = {}) {
+  const res = await fetch(`http://localhost:${SERVER_PORT}${endpoint}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': SERVER_API_KEY,
+      ...(options.headers || {}),
+    },
+  });
+  return res.json();
+}
 
 function startServer() {
   return new Promise((resolve, reject) => {
@@ -357,199 +375,148 @@ app.whenReady().then(async () => {
     try { const win = BrowserWindow.fromWebContents(event.sender); if (win) win.close(); } catch {}
   });
 
-  // Data persistence for groups and students
-  const dataDir = path.join(app.getPath('userData'), 'classroom-data');
-  const groupsFile = path.join(dataDir, 'groups.json');
-  const studentsFile = path.join(dataDir, 'students.json');
-  const quizzesFile = path.join(dataDir, 'quizzes.json');
-  const quizSubmissionsFile = path.join(dataDir, 'quiz-submissions.json');
-
-  function ensureDataDir() {
+  ipcMain.on('maximize-window', (event) => {
     try {
-      if (!fs.existsSync(dataDir)) {
-        fs.mkdirSync(dataDir, { recursive: true });
-      }
+      const win = BrowserWindow.fromWebContents(event.sender);
+      if (win) win.isMaximized() ? win.unmaximize() : win.maximize();
     } catch {}
-  }
+  });
+
+  // ===== Groups & Students — delegate to SQLite via HTTP API =====
 
   ipcMain.handle('load-groups', async () => {
-    try {
-      ensureDataDir();
-      if (fs.existsSync(groupsFile)) {
-        const data = fs.readFileSync(groupsFile, 'utf8');
-        return JSON.parse(data);
-      }
-      return [];
-    } catch (error) {
-      log.error('Error loading groups:', error);
-      return [];
-    }
+    try { return await serverFetch('/api/groups'); }
+    catch (e) { log.error('load-groups:', e.message); return []; }
   });
 
   ipcMain.handle('save-groups', async (_e, groups) => {
+    try { return await serverFetch('/api/groups/bulk', { method: 'PUT', body: JSON.stringify(groups) }); }
+    catch (e) { log.error('save-groups:', e.message); return { ok: false, error: e.message }; }
+  });
+
+  ipcMain.handle('update-group', async (_e, group) => {
     try {
-      ensureDataDir();
-      fs.writeFileSync(groupsFile, JSON.stringify(groups, null, 2), 'utf8');
-      return { ok: true };
-    } catch (error) {
-      log.error('Error saving groups:', error);
-      return { ok: false, error: error.message };
-    }
+      if (!group?.id) return { ok: false, error: 'Missing group id' };
+      return await serverFetch(`/api/groups/${group.id}`, { method: 'PUT', body: JSON.stringify(group) });
+    } catch (e) { log.error('update-group:', e.message); return { ok: false, error: e.message }; }
+  });
+
+  ipcMain.handle('delete-group', async (_e, groupId) => {
+    try {
+      if (!groupId) return { ok: false, error: 'Missing group id' };
+      return await serverFetch(`/api/groups/${groupId}`, { method: 'DELETE' });
+    } catch (e) { log.error('delete-group:', e.message); return { ok: false, error: e.message }; }
   });
 
   ipcMain.handle('load-students', async () => {
-    try {
-      ensureDataDir();
-      if (fs.existsSync(studentsFile)) {
-        const data = fs.readFileSync(studentsFile, 'utf8');
-        return JSON.parse(data);
-      }
-      return [];
-    } catch (error) {
-      log.error('Error loading students:', error);
-      return [];
-    }
+    try { return await serverFetch('/api/students'); }
+    catch (e) { log.error('load-students:', e.message); return []; }
   });
 
   ipcMain.handle('save-students', async (_e, students) => {
-    try {
-      ensureDataDir();
-      fs.writeFileSync(studentsFile, JSON.stringify(students, null, 2), 'utf8');
-      return { ok: true };
-    } catch (error) {
-      log.error('Error saving students:', error);
-      return { ok: false, error: error.message };
-    }
+    try { return await serverFetch('/api/students/bulk', { method: 'PUT', body: JSON.stringify(students) }); }
+    catch (e) { log.error('save-students:', e.message); return { ok: false, error: e.message }; }
   });
-
-  // Granular student CRUD. preload.js advertised add/update/delete-student but
-  // these handlers were missing, so those calls rejected silently (e.g. an
-  // Excel re-import would fail to delete the old record and create duplicates).
-  function readStudentsFile() {
-    try {
-      ensureDataDir();
-      if (fs.existsSync(studentsFile)) {
-        return JSON.parse(fs.readFileSync(studentsFile, 'utf8')) || [];
-      }
-    } catch (error) {
-      log.error('Error reading students file:', error);
-    }
-    return [];
-  }
-  function writeStudentsFile(students) {
-    ensureDataDir();
-    fs.writeFileSync(studentsFile, JSON.stringify(students, null, 2), 'utf8');
-  }
 
   ipcMain.handle('add-student', async (_e, student) => {
     try {
-      if (!student || typeof student !== 'object') {
-        return { ok: false, error: 'Invalid student' };
-      }
-      const students = readStudentsFile();
-      const newStudent = { id: student.id || crypto.randomUUID(), ...student };
-      students.push(newStudent);
-      writeStudentsFile(students);
-      return { ok: true, student: newStudent };
-    } catch (error) {
-      log.error('Error adding student:', error);
-      return { ok: false, error: error.message };
-    }
+      if (!student || typeof student !== 'object') return { ok: false, error: 'Invalid student' };
+      return await serverFetch('/api/students', { method: 'POST', body: JSON.stringify(student) });
+    } catch (e) { log.error('add-student:', e.message); return { ok: false, error: e.message }; }
   });
 
   ipcMain.handle('update-student', async (_e, student) => {
     try {
-      if (!student || !student.id) return { ok: false, error: 'Missing student id' };
-      const students = readStudentsFile();
-      const idx = students.findIndex((s) => s.id === student.id);
-      if (idx === -1) return { ok: false, error: 'Student not found' };
-      students[idx] = { ...students[idx], ...student };
-      writeStudentsFile(students);
-      return { ok: true, student: students[idx] };
-    } catch (error) {
-      log.error('Error updating student:', error);
-      return { ok: false, error: error.message };
-    }
+      if (!student?.id) return { ok: false, error: 'Missing student id' };
+      return await serverFetch(`/api/students/${student.id}`, { method: 'PUT', body: JSON.stringify(student) });
+    } catch (e) { log.error('update-student:', e.message); return { ok: false, error: e.message }; }
   });
 
   ipcMain.handle('delete-student', async (_e, studentId) => {
     try {
       if (!studentId) return { ok: false, error: 'Missing student id' };
-      const students = readStudentsFile();
-      const filtered = students.filter((s) => s.id !== studentId);
-      if (filtered.length === students.length) {
-        return { ok: false, error: 'Student not found' };
-      }
-      writeStudentsFile(filtered);
-      return { ok: true };
-    } catch (error) {
-      log.error('Error deleting student:', error);
-      return { ok: false, error: error.message };
-    }
+      return await serverFetch(`/api/students/${studentId}`, { method: 'DELETE' });
+    } catch (e) { log.error('delete-student:', e.message); return { ok: false, error: e.message }; }
   });
 
-  // ===== Quizzes IPC Handlers =====
+  // ===== Quizzes — delegate to SQLite via HTTP API =====
+
   ipcMain.handle('load-quizzes', async () => {
-    try {
-      ensureDataDir();
-      if (fs.existsSync(quizzesFile)) {
-        const data = fs.readFileSync(quizzesFile, 'utf8');
-        return JSON.parse(data);
-      }
-      return [];
-    } catch (error) {
-      log.error('Error loading quizzes:', error);
-      return [];
-    }
+    try { return await serverFetch('/api/quizzes'); }
+    catch (e) { log.error('load-quizzes:', e.message); return []; }
   });
 
-  ipcMain.handle('save-quizzes', async (_e, quizzes) => {
-    try {
-      ensureDataDir();
-      fs.writeFileSync(quizzesFile, JSON.stringify(quizzes, null, 2), 'utf8');
-      return { ok: true };
-    } catch (error) {
-      log.error('Error saving quizzes:', error);
-      return { ok: false, error: error.message };
-    }
+  ipcMain.handle('save-quizzes', async () => {
+    // Quizzes are now managed directly via REST endpoints; bulk-save is a no-op.
+    return { ok: true };
   });
 
   ipcMain.handle('delete-quiz', async (_e, quizId) => {
     try {
-      ensureDataDir();
-      const existing = fs.existsSync(quizzesFile) ? JSON.parse(fs.readFileSync(quizzesFile, 'utf8')) : [];
-      const filtered = Array.isArray(existing) ? existing.filter(q => q.id !== quizId) : [];
-      fs.writeFileSync(quizzesFile, JSON.stringify(filtered, null, 2), 'utf8');
-      return { ok: true };
-    } catch (error) {
-      log.error('Error deleting quiz:', error);
-      return { ok: false, error: error.message };
-    }
+      if (!quizId) return { ok: false, error: 'Missing quiz id' };
+      return await serverFetch(`/api/quizzes/${quizId}`, { method: 'DELETE' });
+    } catch (e) { log.error('delete-quiz:', e.message); return { ok: false, error: e.message }; }
+  });
+
+  // Create a new quiz
+  ipcMain.handle('create-quiz', async (_e, quiz) => {
+    try {
+      if (!quiz) return { ok: false };
+      return await serverFetch('/api/quizzes', { method: 'POST', body: JSON.stringify(quiz) });
+    } catch (e) { log.error('create-quiz:', e.message); return { ok: false, error: e.message }; }
+  });
+
+  // Update quiz metadata (name, groupId, status, etc.)
+  ipcMain.handle('update-quiz', async (_e, quizId, updates) => {
+    try {
+      if (!quizId) return { ok: false };
+      return await serverFetch(`/api/quizzes/${quizId}`, { method: 'PUT', body: JSON.stringify(updates) });
+    } catch (e) { log.error('update-quiz:', e.message); return { ok: false, error: e.message }; }
+  });
+
+  // Load a single quiz with its full questions list
+  ipcMain.handle('load-quiz', async (_e, quizId) => {
+    try {
+      if (!quizId) return null;
+      return await serverFetch(`/api/quizzes/${quizId}`);
+    } catch (e) { log.error('load-quiz:', e.message); return null; }
+  });
+
+  // Save a single question (create if new uid, update if existing UUID)
+  ipcMain.handle('save-question', async (_e, quizId, question) => {
+    try {
+      if (!quizId || !question) return { ok: false };
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(question.id || '');
+      if (isUUID) {
+        return await serverFetch(`/api/questions/${question.id}`, {
+          method: 'PUT',
+          body: JSON.stringify(question)
+        });
+      } else {
+        return await serverFetch(`/api/quizzes/${quizId}/questions`, {
+          method: 'POST',
+          body: JSON.stringify(question)
+        });
+      }
+    } catch (e) { log.error('save-question:', e.message); return { ok: false, error: e.message }; }
+  });
+
+  // Delete a single question
+  ipcMain.handle('delete-question', async (_e, questionId) => {
+    try {
+      if (!questionId) return { ok: false };
+      return await serverFetch(`/api/questions/${questionId}`, { method: 'DELETE' });
+    } catch (e) { log.error('delete-question:', e.message); return { ok: false }; }
   });
 
   ipcMain.handle('load-quiz-submissions', async () => {
-    try {
-      ensureDataDir();
-      if (fs.existsSync(quizSubmissionsFile)) {
-        const data = fs.readFileSync(quizSubmissionsFile, 'utf8');
-        return JSON.parse(data);
-      }
-      return [];
-    } catch (error) {
-      log.error('Error loading quiz submissions:', error);
-      return [];
-    }
+    try { return await serverFetch('/results'); }
+    catch (e) { log.error('load-quiz-submissions:', e.message); return []; }
   });
 
-  ipcMain.handle('save-quiz-submissions', async (_e, submissions) => {
-    try {
-      ensureDataDir();
-      fs.writeFileSync(quizSubmissionsFile, JSON.stringify(submissions, null, 2), 'utf8');
-      return { ok: true };
-    } catch (error) {
-      log.error('Error saving quiz submissions:', error);
-      return { ok: false, error: error.message };
-    }
+  ipcMain.handle('save-quiz-submissions', async () => {
+    // Submissions are written directly to SQLite via /api/submit-answers; no-op here.
+    return { ok: true };
   });
 
   // Excel file operations
@@ -712,6 +679,10 @@ app.whenReady().then(async () => {
   ipcMain.handle('get-api-key', () => SERVER_API_KEY);
 
   // Million Game IPC Handlers
+  const dataDir = path.join(app.getPath('userData'), 'classroom-data');
+  function ensureDataDir() {
+    try { if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true }); } catch {}
+  }
   const millionSessionsFile = path.join(dataDir, 'million-sessions.json');
   
   function loadMillionSessions() {
@@ -829,9 +800,9 @@ app.whenReady().then(async () => {
       let questions = [];
 
       if (sourceType === 'quiz') {
-        const allQuizzes = fs.existsSync(quizzesFile) ? JSON.parse(fs.readFileSync(quizzesFile, 'utf8')) : [];
-        const quiz = allQuizzes.find(q => q.id === settings.quizId);
-        
+        let quiz = null;
+        try { quiz = await serverFetch(`/api/quizzes/${settings.quizId}`); } catch (e) { log.error('million:createSession fetch quiz:', e.message); }
+
         if (!quiz || !Array.isArray(quiz.questions)) {
           return { ok: false, error: 'الاختبار غير موجود أو لا يحتوي على أسئلة' };
         }
@@ -840,17 +811,23 @@ app.whenReady().then(async () => {
           .map(transformMillionQuestion)
           .filter(Boolean);
       } else if (sourceType === 'manual') {
-        const allQuizzes = fs.existsSync(quizzesFile) ? JSON.parse(fs.readFileSync(quizzesFile, 'utf8')) : [];
+        // Load quizzes from SQLite via HTTP
+        let allQuizzes = [];
+        try {
+          allQuizzes = await serverFetch('/api/quizzes');
+          // Fetch full question data for each quiz
+          allQuizzes = await Promise.all(allQuizzes.map(q => serverFetch(`/api/quizzes/${q.id}`)));
+        } catch (e) { log.error('million:createSession fetch quizzes:', e.message); }
+
         const selectedQuestionIds = settings.selectedQuestionIds || [];
-        
+
         allQuizzes.forEach(quiz => {
           if (Array.isArray(quiz.questions)) {
-            quiz.questions.forEach((q, idx) => {
-              if (selectedQuestionIds.includes(idx)) {
+            quiz.questions.forEach((q) => {
+              // Fix: filter by question id, not array index
+              if (selectedQuestionIds.includes(q.id)) {
                 const transformed = transformMillionQuestion(q);
-                if (transformed) {
-                  questions.push(transformed);
-                }
+                if (transformed) questions.push(transformed);
               }
             });
           }

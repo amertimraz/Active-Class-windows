@@ -1,33 +1,6 @@
 /* محرر الأسئلة المتقدم */
 
-/* ===== متغيرات الألوان ===== */
-:root {
-  --primary-color: #4f46e5;
-  --primary-light: #6366f1;
-  --primary-dark: #3730a3;
-  --secondary-color: #7c3aed;
-  --accent-color: #06b6d4;
-  --success-color: #10b981;
-  --warning-color: #f59e0b;
-  --error-color: #ef4444;
-  --info-color: #06b6d4;
-  --bg-primary: #f8fafc;
-  --bg-secondary: #f1f5f9;
-  --bg-card: #ffffff;
-  --text-primary: #1e293b;
-  --text-secondary: #64748b;
-  --text-muted: #94a3b8;
-  --border-color: #e2e8f0;
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-  --radius-sm: 0.375rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
-  --transition: 0.3s ease;
-}
+/* Variables are inherited from styles.css (app theme) + quizzes.css aliases */
 
 /* ===== Base Styles ===== */
 body {
@@ -59,7 +32,6 @@ body {
   align-items: center;
   justify-content: center;
   z-index: 9999;
-  backdrop-filter: blur(4px);
 }
 
 .loading-spinner {
@@ -84,7 +56,7 @@ body {
 
 /* ===== Editor Header ===== */
 .editor-header {
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, #0ea5e9 100%);
   color: white;
   padding: 2.5rem;
   border-radius: var(--radius-xl);
@@ -162,13 +134,12 @@ body {
   gap: 0.5rem;
   padding: 0.875rem 1.5rem;
   border: 2px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.15);
   color: white;
   border-radius: var(--radius-lg);
   font-weight: 600;
   cursor: pointer;
-  transition: all var(--transition);
-  backdrop-filter: blur(10px);
+  transition: background var(--transition), border-color var(--transition), transform var(--transition), box-shadow var(--transition);
   text-decoration: none;
 }
 
@@ -191,12 +162,11 @@ body {
 .home-btn {
   padding: 0.75rem;
   border: 2px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.15);
   color: white;
   border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: all var(--transition);
-  backdrop-filter: blur(10px);
+  transition: background var(--transition), border-color var(--transition);
 }
 
 .home-btn:hover {
@@ -289,13 +259,13 @@ body {
   font-size: 1rem;
   background: var(--bg-card);
   color: var(--text-primary);
-  transition: all var(--transition);
+  transition: border-color var(--transition), box-shadow var(--transition);
 }
 
 .search-input:focus {
   outline: none;
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12);
 }
 
 .clear-search-btn {
@@ -309,7 +279,7 @@ body {
   cursor: pointer;
   padding: 0.25rem;
   border-radius: var(--radius-sm);
-  transition: all var(--transition);
+  transition: color var(--transition), background var(--transition);
 }
 
 .clear-search-btn:hover {
@@ -329,14 +299,14 @@ body {
   font-size: 1rem;
   background: var(--bg-card);
   color: var(--text-primary);
-  transition: all var(--transition);
+  transition: border-color var(--transition), box-shadow var(--transition);
   min-width: 150px;
 }
 
 .filter-select:focus {
   outline: none;
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12);
 }
 
 .stats-section {
@@ -430,7 +400,7 @@ body {
   border: 2px solid var(--border-color);
   border-radius: var(--radius-xl);
   overflow: hidden;
-  transition: all var(--transition);
+  transition: border-color var(--transition), box-shadow var(--transition);
   position: relative;
 }
 
@@ -553,7 +523,7 @@ body {
   background: var(--bg-card);
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all var(--transition);
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
   font-size: 0.875rem;
   color: var(--text-secondary);
 }
@@ -582,7 +552,7 @@ body {
   cursor: pointer;
   padding: 0.5rem;
   border-radius: var(--radius-md);
-  transition: all var(--transition);
+  transition: background var(--transition), color var(--transition);
   font-size: 1.2rem;
 }
 
@@ -630,7 +600,7 @@ body {
   padding: 1rem;
   border: 2px solid var(--border-color);
   border-radius: var(--radius-lg);
-  transition: all var(--transition);
+  transition: border-color var(--transition), background var(--transition);
 }
 
 .option-item.correct {
@@ -730,7 +700,7 @@ body {
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  transition: all var(--transition);
+  transition: background var(--transition), box-shadow var(--transition), transform var(--transition);
   text-decoration: none;
   white-space: nowrap;
   user-select: none;
@@ -806,7 +776,7 @@ body {
   font-family: inherit;
   background: var(--bg-card);
   color: var(--text-primary);
-  transition: all var(--transition);
+  transition: border-color var(--transition), box-shadow var(--transition);
 }
 
 .form-input:focus,
@@ -814,7 +784,7 @@ body {
 .form-textarea:focus {
   outline: none;
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12);
 }
 
 .form-textarea {
@@ -888,7 +858,7 @@ body {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all var(--transition);
+  transition: border-color var(--transition), background var(--transition), color var(--transition), transform var(--transition);
   background: white;
   color: transparent;
   font-size: 14px;
@@ -937,7 +907,7 @@ body {
   padding: 0.5rem;
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all var(--transition);
+  transition: background var(--transition);
 }
 
 .remove-option-btn:hover {
@@ -951,7 +921,7 @@ body {
   padding: 0.75rem 1rem;
   border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: all var(--transition);
+  transition: background var(--transition), transform var(--transition);
   font-weight: 600;
   display: flex;
   align-items: center;
@@ -969,22 +939,22 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.55);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  backdrop-filter: blur(4px);
 }
 
 .modal {
   background: var(--bg-card);
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-xl);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
   max-width: 90vw;
   max-height: 90vh;
   overflow: hidden;
-  animation: modalSlideIn 0.3s ease;
+  animation: qe-modal-in 0.18s ease both;
+  will-change: transform, opacity;
 }
 
 .modal-small { width: 480px; }
@@ -1163,15 +1133,9 @@ body {
   #questionModal .type-text-row { grid-template-columns: 1fr; }
 }
 
-@keyframes modalSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-20px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+@keyframes qe-modal-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .modal-header {
@@ -1198,7 +1162,7 @@ body {
   padding: 0.5rem;
   border-radius: var(--radius-md);
   color: var(--text-muted);
-  transition: all var(--transition);
+  transition: background var(--transition), color var(--transition);
 }
 
 .modal-close:hover {
@@ -1348,7 +1312,7 @@ body {
   font-weight: 600;
   z-index: 10000;
   transform: translateX(120%);
-  transition: all 0.3s ease;
+  transition: transform 0.3s ease, opacity 0.3s ease;
   box-shadow: var(--shadow-xl);
   cursor: pointer;
   max-width: 400px;
@@ -1404,3 +1368,34 @@ body {
   font-size: 0.75rem;
   margin: 0 0.25rem;
 }
+
+/* ══════════════════════════════════════════
+   DARK MODE
+══════════════════════════════════════════ */
+
+[data-theme="dark"] .toolbar-card,
+[data-theme="dark"] .section-card,
+[data-theme="dark"] .question-item,
+[data-theme="dark"] .type-settings-box,
+[data-theme="dark"] .text-image-box,
+[data-theme="dark"] .options-box,
+[data-theme="dark"] .keyboard-hint { border-color: rgba(255,255,255,0.08); }
+
+[data-theme="dark"] .section-header,
+[data-theme="dark"] .question-header,
+[data-theme="dark"] .toolbar-card { background: rgba(255,255,255,0.03); }
+
+[data-theme="dark"] .question-header:hover { background: rgba(255,255,255,0.06); }
+
+[data-theme="dark"] .modal-header,
+[data-theme="dark"] .modal-footer { background: rgba(255,255,255,0.03); }
+
+[data-theme="dark"] .radio-label { background: var(--card); border-color: var(--border); }
+
+[data-theme="dark"] .stat-value { color: var(--primary); }
+
+[data-theme="dark"] .question-number { background: var(--primary); }
+
+[data-theme="dark"] .type-header { background: rgba(255,255,255,0.04); }
+
+[data-theme="dark"] .options-side { background: rgba(255,255,255,0.04); }

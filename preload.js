@@ -12,9 +12,11 @@ contextBridge.exposeInMainWorld('api', {
   // Data persistence operations
   loadGroups: () => ipcRenderer.invoke('load-groups'),
   saveGroups: (groups) => ipcRenderer.invoke('save-groups', groups),
+  updateGroup: (group) => ipcRenderer.invoke('update-group', group),
+  deleteGroup: (groupId) => ipcRenderer.invoke('delete-group', groupId),
   loadStudents: () => ipcRenderer.invoke('load-students'),
   saveStudents: (students) => ipcRenderer.invoke('save-students', students),
-  
+
   // Individual student operations
   addStudent: (student) => ipcRenderer.invoke('add-student', student),
   updateStudent: (student) => ipcRenderer.invoke('update-student', student),
@@ -27,6 +29,11 @@ contextBridge.exposeInMainWorld('api', {
   loadQuizzes: () => ipcRenderer.invoke('load-quizzes'),
   saveQuizzes: (quizzes) => ipcRenderer.invoke('save-quizzes', quizzes),
   deleteQuiz: (quizId) => ipcRenderer.invoke('delete-quiz', quizId),
+  createQuiz: (quiz) => ipcRenderer.invoke('create-quiz', quiz),
+  updateQuiz: (quizId, updates) => ipcRenderer.invoke('update-quiz', quizId, updates),
+  loadQuiz: (quizId) => ipcRenderer.invoke('load-quiz', quizId),
+  saveQuestion: (quizId, question) => ipcRenderer.invoke('save-question', quizId, question),
+  deleteQuestion: (questionId) => ipcRenderer.invoke('delete-question', questionId),
   
   // Quiz submissions operations
   loadQuizSubmissions: () => ipcRenderer.invoke('load-quiz-submissions'),
@@ -45,6 +52,7 @@ contextBridge.exposeInMainWorld('api', {
   resizeWindow: (width, height) => ipcRenderer.send('resize-window', { width, height }),
   // Standard names
   minimize: () => ipcRenderer.send('minimize-window'),
+  maximize: () => ipcRenderer.send('maximize-window'),
   close: () => ipcRenderer.send('close-window'),
   // Backward-compatible aliases used by names.js
   minimizeWindow: () => ipcRenderer.send('minimize-window'),

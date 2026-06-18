@@ -68,6 +68,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
         resetUiState();
         if (loginScreen) {
+            loginScreen.classList.remove('is-visible');
             loginScreen.style.display = 'none';
             loginScreen.style.pointerEvents = 'none';
         }
@@ -88,13 +89,13 @@ window.addEventListener('DOMContentLoaded', () => {
 
     const showSuccess = (message) => {
         if (!loginSuccess) return;
-        loginSuccess.textContent = message;
+        loginSuccess.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span>${message}</span>`;
         loginSuccess.classList.add('is-visible');
     };
 
     const clearSuccess = () => {
         if (!loginSuccess) return;
-        loginSuccess.textContent = '';
+        loginSuccess.innerHTML = '';
         loginSuccess.classList.remove('is-visible');
     };
 
@@ -130,17 +131,17 @@ window.addEventListener('DOMContentLoaded', () => {
         showLogin();
     };
 
-    // Auto-login logic (commented out in original but effectively implemented via showApp call)
-    if (loginScreen) {
-        loginScreen.classList.remove('is-visible');
-        loginScreen.style.display = 'none';
-        loginScreen.style.pointerEvents = 'none';
+    // Show login screen on startup; auto-login only if a session was saved
+    const savedSession = localStorage.getItem('cm_session') || sessionStorage.getItem('cm_session');
+    if (savedSession) {
+        showApp(savedSession, !!localStorage.getItem('cm_session'));
+    } else {
+        showLogin();
     }
-    showApp();
 
     const clearError = () => {
         if (loginError) {
-            loginError.textContent = '';
+            loginError.innerHTML = '';
             loginError.classList.remove('is-visible');
         }
         clearSuccess();
@@ -148,7 +149,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     const showError = (message) => {
         if (!loginError) return;
-        loginError.textContent = message;
+        loginError.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>${message}</span>`;
         loginError.classList.add('is-visible');
     };
 
@@ -156,7 +157,10 @@ window.addEventListener('DOMContentLoaded', () => {
         togglePassword.addEventListener('click', () => {
             const isHidden = loginPassword.type === 'password';
             loginPassword.type = isHidden ? 'text' : 'password';
-            togglePassword.textContent = isHidden ? 'إخفاء' : 'إظهار';
+            const showIcon = document.getElementById('eyeIconShow');
+            const hideIcon = document.getElementById('eyeIconHide');
+            if (showIcon) showIcon.style.display = isHidden ? 'none' : '';
+            if (hideIcon) hideIcon.style.display = isHidden ? ''     : 'none';
         });
     }
 

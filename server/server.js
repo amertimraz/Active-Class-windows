@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const path = require('path');
 const fs = require('fs').promises;
 const fsSync = require('fs');
@@ -165,8 +165,8 @@ async function writeDB(data) {
 // Get all educational content structure
 app.get('/api/educational-content', async (req, res) => {
   try {
-    const db = await readDB();
-    res.json({ grades: db.grades });
+    const content = await readDB();
+    res.json({ grades: content.grades });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -180,6 +180,7 @@ app.get('/api/quizzes', authenticateTeacher, (_req, res) => {
              COALESCE(q.name, 'Quiz') as name,
              q.duration,
              q.group_id as groupId,
+             COALESCE(q.status, 'active') as status,
              (
                SELECT COUNT(*) FROM questions WHERE quiz_id = q.id
              ) as questionsCount
@@ -192,7 +193,8 @@ app.get('/api/quizzes', authenticateTeacher, (_req, res) => {
       name: r.name,
       questionsCount: Number(r.questionsCount) || 0,
       duration: r.duration,
-      groupId: r.groupId || null
+      groupId: r.groupId || null,
+      status: r.status || 'active'
     })));
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -202,21 +204,19 @@ app.get('/api/quizzes', authenticateTeacher, (_req, res) => {
 // Get a single lesson's details
 app.get('/api/lesson/:id', async (req, res) => {
   try {
-    const db = await readDB();
-    const lesson = findLesson(db.grades, req.params.id);
+    const content = await readDB();
+    const lesson = findLesson(content.grades, req.params.id);
 
     if (!lesson) {
       return res.status(404).json({ message: 'Lesson not found.' });
     }
 
-    // If content includes quizzes, augment with quiz titles for convenience
+    // Augment quiz content items with titles from SQLite
     if (lesson.content && lesson.content.length > 0) {
       lesson.content.forEach(item => {
         if (item.type === 'quiz' && item.quizId) {
-          const quiz = (db.quizzes || []).find(q => q.id === item.quizId);
-          if (quiz) {
-            item.title = quiz.title; // Add quiz title to the content item
-          }
+          const row = db.prepare('SELECT name FROM quizzes WHERE id = ?').get(item.quizId);
+          if (row) item.title = row.name;
         }
       });
     }
@@ -242,14 +242,14 @@ app.post('/api/content/upload', authenticateTeacher, handleUpload(upload.single(
   };
 
   try {
-    const db = await readDB();
-    const lesson = findLesson(db.grades, lessonId);
+    const content = await readDB();
+    const lesson = findLesson(content.grades, lessonId);
     if (!lesson) return res.status(404).json({ message: 'Lesson not found.' });
 
     if (!lesson.content) lesson.content = [];
     lesson.content.push(newContentItem);
 
-    await writeDB(db);
+    await writeDB(content);
     res.status(201).json(newContentItem);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -271,14 +271,14 @@ app.post('/api/content/link', authenticateTeacher, async (req, res) => {
   };
 
   try {
-    const db = await readDB();
-    const lesson = findLesson(db.grades, lessonId);
+    const content = await readDB();
+    const lesson = findLesson(content.grades, lessonId);
     if (!lesson) return res.status(404).json({ message: 'Lesson not found.' });
 
     if (!lesson.content) lesson.content = [];
     lesson.content.push(newContentItem);
 
-    await writeDB(db);
+    await writeDB(content);
     res.status(201).json(newContentItem);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -299,14 +299,14 @@ app.post('/api/content/quiz', authenticateTeacher, async (req, res) => {
   };
 
   try {
-    const db = await readDB();
-    const lesson = findLesson(db.grades, lessonId);
+    const content = await readDB();
+    const lesson = findLesson(content.grades, lessonId);
     if (!lesson) return res.status(404).json({ message: 'Lesson not found.' });
 
     if (!lesson.content) lesson.content = [];
     lesson.content.push(newContentItem);
 
-    await writeDB(db);
+    await writeDB(content);
     res.status(201).json(newContentItem);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -317,9 +317,9 @@ app.post('/api/content/quiz', authenticateTeacher, async (req, res) => {
 app.delete('/api/content/:id', authenticateTeacher, async (req, res) => {
   const { id } = req.params;
   try {
-    const db = await readDB();
+    const content = await readDB();
     let found = false;
-    db.grades.forEach(grade => {
+    content.grades.forEach(grade => {
       grade.units.forEach(unit => {
         unit.lessons.forEach(lesson => {
           if (lesson.content) {
@@ -332,8 +332,8 @@ app.delete('/api/content/:id', authenticateTeacher, async (req, res) => {
     });
 
     if (found) {
-      await writeDB(db);
-      res.status(204).send(); // No Content
+      await writeDB(content);
+      res.status(204).send();
     } else {
       res.status(404).json({ message: 'Content item not found.' });
     }
@@ -350,10 +350,10 @@ app.post('/api/lessons/reorder', authenticateTeacher, async (req, res) => {
   }
 
   try {
-    const db = await readDB();
+    const content = await readDB();
     let unitFound = null;
 
-    for (const grade of db.grades) {
+    for (const grade of content.grades) {
       const unit = grade.units.find(u => u.id === unitId);
       if (unit) {
         unitFound = unit;
@@ -371,7 +371,7 @@ app.post('/api/lessons/reorder', authenticateTeacher, async (req, res) => {
       }
 
       unitFound.lessons = orderedLessons;
-      await writeDB(db);
+      await writeDB(content);
       res.status(200).json({ message: 'Lessons reordered successfully.' });
     } else {
       res.status(404).json({ message: 'Unit not found.' });
@@ -389,8 +389,8 @@ app.post('/api/content/reorder', authenticateTeacher, async (req, res) => {
   }
 
   try {
-    const db = await readDB();
-    const lesson = findLesson(db.grades, lessonId);
+    const content = await readDB();
+    const lesson = findLesson(content.grades, lessonId);
 
     if (lesson) {
       if (!lesson.content) lesson.content = [];
@@ -404,7 +404,7 @@ app.post('/api/content/reorder', authenticateTeacher, async (req, res) => {
       }
 
       lesson.content = orderedContent;
-      await writeDB(db);
+      await writeDB(content);
       res.status(200).json({ message: 'Content reordered successfully.' });
     } else {
       res.status(404).json({ message: 'Lesson not found.' });
@@ -433,14 +433,14 @@ app.post('/api/grades', authenticateTeacher, async (req, res) => {
   }
 
   try {
-    const db = await readDB();
+    const content = await readDB();
     const newGrade = {
       id: crypto.randomUUID(),
       name,
       units: [],
     };
-    db.grades.push(newGrade);
-    await writeDB(db);
+    content.grades.push(newGrade);
+    await writeDB(content);
     res.status(201).json(newGrade);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -455,8 +455,8 @@ app.post('/api/units', authenticateTeacher, async (req, res) => {
   }
 
   try {
-    const db = await readDB();
-    const grade = db.grades.find(g => g.id === gradeId);
+    const content = await readDB();
+    const grade = content.grades.find(g => g.id === gradeId);
     if (!grade) {
       return res.status(404).json({ message: 'Grade not found.' });
     }
@@ -467,7 +467,7 @@ app.post('/api/units', authenticateTeacher, async (req, res) => {
       lessons: [],
     };
     grade.units.push(newUnit);
-    await writeDB(db);
+    await writeDB(content);
     res.status(201).json(newUnit);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -553,9 +553,9 @@ app.post('/api/lessons', authenticateTeacher, async (req, res) => {
   }
 
   try {
-    const db = await readDB();
+    const content = await readDB();
     let unit = null;
-    for (const grade of db.grades) {
+    for (const grade of content.grades) {
       unit = grade.units.find(u => u.id === unitId);
       if (unit) break;
     }
@@ -570,7 +570,7 @@ app.post('/api/lessons', authenticateTeacher, async (req, res) => {
       content: [],
     };
     unit.lessons.push(newLesson);
-    await writeDB(db);
+    await writeDB(content);
     res.status(201).json(newLesson);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -608,22 +608,142 @@ async function readJSONFile(filepath, fallback) {
 
 // [Consolidated] GET /api/quizzes/:id is defined later in the file with short link support
 
-// GET /api/students (optional seed)
-app.get('/api/students', async (_req, res) => {
-  const students = await readJSONFile(studentsPath, []);
-  res.json(students);
+// ===== Groups & Students — SQLite CRUD =====
+
+function rowToStudent(r) {
+  const extra = parseJSONSafe(r.extra_json, {});
+  return { id: r.id, groupId: r.group_id, name: r.name, code: r.code, gender: r.gender, photo: r.photo, attendanceDate: r.attendance_date, notes: r.notes, ...extra };
+}
+
+function rowToGroup(r) {
+  const extra = parseJSONSafe(r.extra_json, {});
+  return { id: r.id, name: r.name, color: r.color, icon: r.icon, ...extra };
+}
+
+// GET /api/students
+app.get('/api/students', (_req, res) => {
+  try {
+    res.json(db.prepare('SELECT * FROM students ORDER BY name').all().map(rowToStudent));
+  } catch (e) { res.status(500).json({ message: e.message }); }
 });
 
-// GET /api/groups (optional seed)
-app.get('/api/groups', async (_req, res) => {
-  const groups = await readJSONFile(groupsPath, []);
-  res.json(groups);
+// GET /api/groups
+app.get('/api/groups', (_req, res) => {
+  try {
+    res.json(db.prepare('SELECT * FROM groups ORDER BY name').all().map(rowToGroup));
+  } catch (e) { res.status(500).json({ message: e.message }); }
 });
 
-// GET /api/group/:id/students → students filtered by groupId
-app.get('/api/group/:id/students', async (req, res) => {
-  const students = await readJSONFile(studentsPath, []);
-  res.json(students.filter(s => s.groupId === req.params.id));
+// GET /api/group/:id/students
+app.get('/api/group/:id/students', (req, res) => {
+  try {
+    res.json(db.prepare('SELECT * FROM students WHERE group_id = ? ORDER BY name').all(req.params.id).map(rowToStudent));
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
+// PUT /api/groups/bulk — replace entire groups list (used by save-groups IPC)
+app.put('/api/groups/bulk', authenticateTeacher, (req, res) => {
+  try {
+    const groups = Array.isArray(req.body) ? req.body : [];
+    const now = new Date().toISOString();
+    db.transaction(() => {
+      db.prepare('DELETE FROM groups').run();
+      const ins = db.prepare('INSERT INTO groups (id,name,color,icon,extra_json,created_at,updated_at) VALUES (?,?,?,?,?,?,?)');
+      for (const g of groups) {
+        const { id, name, color, icon, created_at, updated_at, ...rest } = g;
+        delete rest.students;
+        ins.run(id || crypto.randomUUID(), name || 'مجموعة', color || '#6366f1', icon || null, JSON.stringify(rest), created_at || now, updated_at || now);
+      }
+    })();
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
+// PUT /api/students/bulk — replace entire students list (used by save-students IPC)
+app.put('/api/students/bulk', authenticateTeacher, (req, res) => {
+  try {
+    const students = Array.isArray(req.body) ? req.body : [];
+    const now = new Date().toISOString();
+    db.transaction(() => {
+      db.prepare('DELETE FROM students').run();
+      const ins = db.prepare('INSERT INTO students (id,group_id,name,code,gender,photo,attendance_date,notes,extra_json,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)');
+      for (const s of students) {
+        const { id, group_id, groupId, name, code, gender, photo, attendance_date, attendanceDate, notes, created_at, updated_at, ...rest } = s;
+        ins.run(id || crypto.randomUUID(), group_id || groupId || null, name || '', code || null, gender || null, photo || null, attendance_date || attendanceDate || null, notes || null, JSON.stringify(rest), created_at || now, updated_at || now);
+      }
+    })();
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
+// POST /api/students — add single student
+app.post('/api/students', authenticateTeacher, (req, res) => {
+  try {
+    const { id, group_id, groupId, name, code, gender, photo, attendanceDate, notes, ...rest } = req.body || {};
+    if (!name) return res.status(400).json({ message: 'name is required' });
+    const now = new Date().toISOString();
+    const sid = id || crypto.randomUUID();
+    db.prepare('INSERT INTO students (id,group_id,name,code,gender,photo,attendance_date,notes,extra_json,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)')
+      .run(sid, group_id || groupId || null, name, code || null, gender || null, photo || null, attendanceDate || null, notes || null, JSON.stringify(rest), now, now);
+    res.status(201).json({ ok: true, student: rowToStudent(db.prepare('SELECT * FROM students WHERE id=?').get(sid)) });
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
+// PUT /api/students/:id — update single student
+app.put('/api/students/:id', authenticateTeacher, (req, res) => {
+  try {
+    const prev = db.prepare('SELECT * FROM students WHERE id=?').get(req.params.id);
+    if (!prev) return res.status(404).json({ message: 'Student not found' });
+    const { name, code, gender, photo, group_id, groupId, attendanceDate, notes, ...rest } = req.body || {};
+    const now = new Date().toISOString();
+    db.prepare('UPDATE students SET name=?,code=?,gender=?,photo=?,group_id=?,attendance_date=?,notes=?,extra_json=?,updated_at=? WHERE id=?')
+      .run(name || prev.name, code ?? prev.code, gender ?? prev.gender, photo ?? prev.photo, group_id || groupId || prev.group_id, attendanceDate ?? prev.attendance_date, notes ?? prev.notes, JSON.stringify(rest), now, req.params.id);
+    res.json({ ok: true, student: rowToStudent(db.prepare('SELECT * FROM students WHERE id=?').get(req.params.id)) });
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
+// DELETE /api/students/:id
+app.delete('/api/students/:id', authenticateTeacher, (req, res) => {
+  try {
+    const info = db.prepare('DELETE FROM students WHERE id=?').run(req.params.id);
+    if (info.changes === 0) return res.status(404).json({ message: 'Student not found' });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
+// POST /api/groups — add single group
+app.post('/api/groups', authenticateTeacher, (req, res) => {
+  try {
+    const { id, name, color, icon, ...rest } = req.body || {};
+    if (!name) return res.status(400).json({ message: 'name is required' });
+    const now = new Date().toISOString();
+    const gid = id || crypto.randomUUID();
+    db.prepare('INSERT INTO groups (id,name,color,icon,extra_json,created_at,updated_at) VALUES (?,?,?,?,?,?,?)')
+      .run(gid, name, color || '#6366f1', icon || null, JSON.stringify(rest), now, now);
+    res.status(201).json({ ok: true, group: rowToGroup(db.prepare('SELECT * FROM groups WHERE id=?').get(gid)) });
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
+// PUT /api/groups/:id — update single group
+app.put('/api/groups/:id', authenticateTeacher, (req, res) => {
+  try {
+    const prev = db.prepare('SELECT * FROM groups WHERE id=?').get(req.params.id);
+    if (!prev) return res.status(404).json({ message: 'Group not found' });
+    const { name, color, icon, ...rest } = req.body || {};
+    const now = new Date().toISOString();
+    db.prepare('UPDATE groups SET name=?,color=?,icon=?,extra_json=?,updated_at=? WHERE id=?')
+      .run(name || prev.name, color || prev.color, icon ?? prev.icon, JSON.stringify(rest), now, req.params.id);
+    res.json({ ok: true, group: rowToGroup(db.prepare('SELECT * FROM groups WHERE id=?').get(req.params.id)) });
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
+// DELETE /api/groups/:id
+app.delete('/api/groups/:id', authenticateTeacher, (req, res) => {
+  try {
+    const info = db.prepare('DELETE FROM groups WHERE id=?').run(req.params.id);
+    if (info.changes === 0) return res.status(404).json({ message: 'Group not found' });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ message: e.message }); }
 });
 
 // POST /api/submit-answers → store submission in SQLite
@@ -1099,32 +1219,40 @@ app.get('/api/local-ip', (_req, res) => {
   }
 });
 
-// 2) Get single quiz with questions (Public for students, but includes answers)
+// 2) Get single quiz with questions.
+// Teachers (authenticated) receive correctAnswer + explanation for the editor.
+// Students (unauthenticated, LAN) only receive question text + options — answers are hidden.
 app.get('/api/quizzes/:id', (req, res) => {
   try {
     const { id } = req.params;
+    const authorized = isAuthorized(req);
+
     const q = db.prepare('SELECT * FROM quizzes WHERE id = ?').get(id);
     if (!q) return res.status(404).json({ message: 'Quiz not found' });
 
     const questions = db.prepare(`
-      SELECT id, quiz_id, type, text, image, options_json, correct_answer, difficulty, points, explanation, position
+      SELECT id, type, text, image, options_json, correct_answer, difficulty, points, explanation, position
       FROM questions
       WHERE quiz_id = ?
       ORDER BY COALESCE(position, rowid)
-    `).all(id).map(row => ({
-      id: row.id,
-      type: row.type || 'mcq',
-      text: row.text,
-      image: row.image || null,
-      options: parseJSONSafe(row.options_json, []),
-      correctAnswer: (typeof row.correct_answer === 'number') ? row.correct_answer : row.correct_answer == null ? null : Number(row.correct_answer),
-      difficulty: row.difficulty || null,
-      points: (typeof row.points === 'number') ? row.points : row.points == null ? 1 : Number(row.points) || 1,
-      explanation: row.explanation || '',
-      position: row.position || null
-    }));
+    `).all(id).map(row => {
+      const base = {
+        id: row.id,
+        type: row.type || 'mcq',
+        text: row.text,
+        image: row.image || null,
+        options: parseJSONSafe(row.options_json, []),
+        difficulty: row.difficulty || null,
+        points: (typeof row.points === 'number') ? row.points : row.points == null ? 1 : Number(row.points) || 1,
+        position: row.position || null,
+      };
+      if (authorized) {
+        base.correctAnswer = (typeof row.correct_answer === 'number') ? row.correct_answer : row.correct_answer == null ? null : Number(row.correct_answer);
+        base.explanation = row.explanation || '';
+      }
+      return base;
+    });
 
-    // Include short code if exists
     ensureShortLinksTable();
     const shortRow = db.prepare('SELECT short FROM short_links WHERE quiz_id = ?').get(id);
 

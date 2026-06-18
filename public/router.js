@@ -125,7 +125,6 @@
     '/million': () => fetchPageContent('/pages/million/million-game.html'),
     '/basketball-quiz': () => fetchPageContent('/pages/basketball-quiz.html'),
     '/hero-attack': () => fetchPageContent('/pages/hero-attack.html'),
-    '/platform-game': () => fetchPageContent('/pages/platform-game.html'),
     '/dino-english': () => fetchPageContent('/pages/dino-english.html'),
     '/duck-race': () => fetchPageContent('/pages/duck-race.html'),
     '/game-geography-map': () => fetchPageContent('/pages/game_geography_map.html'),
@@ -240,38 +239,67 @@
   function home(){
     console.log('Home function called');
     app.innerHTML = `
-      <section class="home-section">
-        <div class="home-container">
-          <!-- Welcome -->
-          <div class="home-welcome">
-            <h1 class="home-title">مرحبًا بك في Active Class 👋</h1>
-            <p class="home-subtitle">اختر ما تريد البدء به من البطاقات بالأسفل.</p>
-          </div>
+      <section class="home-v2">
 
-          <!-- Summary Stats Section -->
-          <div class="summary-stats-grid">
-            ${summaryCard('إجمالي الألعاب التعليمية', '0', '🎮', 'blue')}
-            ${summaryCard('إجمالي الاختبارات', '0', '📋', 'green')}
-            ${summaryCard('إجمالي المجموعات', '0', '👥', 'orange')}
-            ${summaryCard('إجمالي الطلاب', '0', '🎓', 'teal')}
-          </div>
-
-          <!-- Features Grid (single source of navigation actions) -->
-          <div class="features-grid">
-            ${featureCard('#/quizzes', '📝', 'الاختبارات', 'إنشاء وإدارة الاختبارات والتقييمات.', 'إنشاء اختبار', 'orange')}
-            ${featureCard('#/groups', '👥', 'المجموعات والطلاب', 'إنشاء وإدارة مجموعات الطلاب.', 'الذهاب للمجموعات', 'blue')}
-            ${featureCard('#/games', '🎮', 'الألعاب التعليمية', 'بناء ألعاب تعليمية تفاعلية وممتعة.', 'بدء اللعبة', 'pink')}
-            ${featureCard('#/content', '📚', 'المحتوى التعليمي', 'إدارة وعرض المحاضرات والمحتوى الدراسي.', 'تصفح المحتوى', 'teal')}
-            ${featureCard('#/ai-generator', '✨', 'الذكاء الاصطناعي', 'تحويل الـ PDF لدروس تفاعلية ممتعة.', 'توليد بالذكاء الاصطناعي', 'purple')}
-            ${featureCard('#/competitions', '📈', 'تتبع التقدم', 'مراقبة أداء الطلاب وتقاريرهم.', 'عرض التقارير', 'gold')}
+        <!-- ── Hero (centred) ── -->
+        <div class="hv2-hero">
+          <div class="hv2-hero-inner">
+            <div class="hv2-badge">منصة إدارة الصف التفاعلي</div>
+            <h1 class="hv2-headline">حوّل فصلك إلى<br><span>تجربة لا تُنسى</span></h1>
+            <p class="hv2-sub">ألعاب تعليمية، اختبارات تفاعلية، وذكاء اصطناعي —<br>كل ما تحتاجه في مكان واحد.</p>
+            <div class="hv2-ctas">
+              <a href="#/quizzes" class="hv2-btn-primary">ابدأ أول اختبار ←</a>
+              <a href="#/games" class="hv2-btn-secondary">استكشف الألعاب</a>
+            </div>
           </div>
         </div>
+
+        <!-- ── Stats Band ── -->
+        <div class="hv2-stats-bar">
+          <div class="hv2-stats-row">
+            <div class="hv2-stat">
+              <span class="hv2-stat-num" id="homeStatsStudents">—</span>
+              <span class="hv2-stat-lbl">طالب مسجّل</span>
+            </div>
+            <div class="hv2-stat-divider"></div>
+            <div class="hv2-stat">
+              <span class="hv2-stat-num" id="homeStatsGroups">—</span>
+              <span class="hv2-stat-lbl">مجموعة</span>
+            </div>
+            <div class="hv2-stat-divider"></div>
+            <div class="hv2-stat">
+              <span class="hv2-stat-num" id="homeStatsQuizzes">—</span>
+              <span class="hv2-stat-lbl">اختبار</span>
+            </div>
+            <div class="hv2-stat-divider"></div>
+            <div class="hv2-stat">
+              <span class="hv2-stat-num">11</span>
+              <span class="hv2-stat-lbl">لعبة تعليمية</span>
+            </div>
+          </div>
+          <div class="hv2-stats-progress">
+            <span class="hv2-stats-progress-label">تقدّم الطلاب</span>
+            <div class="hv2-stats-progress-track">
+              <div class="hv2-stats-progress-fill"></div>
+            </div>
+            <span class="hv2-stats-progress-pct">68%</span>
+          </div>
+        </div>
+
+        <!-- ── Feature Cards ── -->
+        <div class="hv2-features">
+          ${featureCardV2('#/quizzes',    '#f97316', 'M9 11l3 3L22 4 M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11', 'الاختبارات',         'أنشئ اختبارات تفاعلية لحظية وتابع نتائج طلابك فوراً.',  'إنشاء اختبار',   '#fff7ed', '#f97316')}
+          ${featureCardV2('#/groups',     '#3b82f6', 'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75', 'المجموعات والطلاب', 'أدر مجموعاتك واعرف أداء كل طالب بنظرة واحدة.',         'إدارة المجموعات', '#eff6ff', '#3b82f6')}
+          ${featureCardV2('#/games',      '#ec4899', 'M8 21h8m-4-4v4M7 4H4v6a8 8 0 0 0 16 0V4h-3 M4 4a16 16 0 0 0 16 0',                                 'الألعاب التعليمية',  '11 لعبة تفاعلية تحوّل المراجعة إلى تنافس ممتع.',       'ابدأ لعبة',       '#fdf2f8', '#ec4899')}
+          ${featureCardV2('#/content',    '#14b8a6', 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20 M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z', 'المحتوى التعليمي',  'ارفع دروسك وعرضها بشكل احترافي داخل الفصل.',          'تصفح المحتوى',    '#f0fdfa', '#14b8a6')}
+          ${featureCardV2('#/ai-generator','#8b5cf6','M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5z',                                         'الذكاء الاصطناعي',  'حوّل أي PDF لدرس تفاعلي مع أسئلة جاهزة في ثوانٍ.',    'جرّب الآن',       '#f5f3ff', '#8b5cf6')}
+          ${featureCardV2('#/competitions','#eab308','M8 21h8m-4-4v4M7 4H4v6a8 8 0 0 0 16 0V4h-3 M4 4a16 16 0 0 0 16 0',                                  'تتبع التقدم',        'راقب أداء طلابك وتقاريرهم عبر الزمن.',                 'عرض التقارير',    '#fefce8', '#eab308')}
+        </div>
+
       </section>
     `;
-    
-    // Apply translations to any data-i18n in the injected HTML
-    try { I18n.apply(app); } catch {}
 
+    try { I18n.apply(app); } catch {}
     loadHomeStats();
   }
 
@@ -308,6 +336,22 @@
         </div>
         <a href="${href}" class="feature-btn">${btnText}</a>
       </div>
+    `;
+  }
+
+  function featureCardV2(href, accentColor, svgPath, title, desc, btnText, bgColor, iconColor) {
+    return `
+      <a href="${href}" class="fv2-card" style="--fv2-accent:${accentColor};--fv2-bg:${bgColor};--fv2-icon:${iconColor};">
+        <div class="fv2-top-stripe"></div>
+        <div class="fv2-icon-wrap">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            ${svgPath.split(' M').map((p,i)=>`<path d="${i===0?p:'M'+p}"/>`).join('')}
+          </svg>
+        </div>
+        <h3 class="fv2-title">${title}</h3>
+        <p class="fv2-desc">${desc}</p>
+        <div class="fv2-btn">${btnText} ←</div>
+      </a>
     `;
   }
 
@@ -353,9 +397,7 @@
     const studentsEl = document.getElementById('homeStatsStudents');
     const groupsEl = document.getElementById('homeStatsGroups');
     const quizzesEl = document.getElementById('homeStatsQuizzes');
-    const gamesEl = document.getElementById('homeStatsGames');
-
-    if (!studentsEl || !groupsEl || !quizzesEl || !gamesEl) {
+    if (!studentsEl || !groupsEl || !quizzesEl) {
       return;
     }
 
@@ -413,7 +455,6 @@
     studentsEl.textContent = studentCount;
     groupsEl.textContent = groupCount;
     quizzesEl.textContent = quizCount;
-    gamesEl.textContent = gamesCount;
   }
 
   // Attach quick tools events
@@ -1071,7 +1112,7 @@
 
     // Clean up game-page state on every navigation
     const gameRoutes = ['/space-mission', '/dino-arabic', '/grammar-hunter', '/ethics-path', '/million',
-      '/basketball-quiz', '/hero-attack', '/platform-game', '/dino-english', '/duck-race', '/game-geography-map',
+      '/basketball-quiz', '/hero-attack', '/dino-english', '/duck-race', '/game-geography-map',
       '/game-engine', '/game-engine/word-match', '/game-engine/edu-platformer'];
     const isGameRoute = gameRoutes.includes(hash);
     const isEngineRoute = hash === '/game-engine' || hash.startsWith('/game-engine/');
