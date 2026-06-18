@@ -2101,16 +2101,10 @@ body.loading-state::after {
   content: none !important;
 }
 
-.modal-overlay {
-  pointer-events: none;
-}
-
+/* pointer-events intentionally omitted — display:none already blocks interaction.
+   Modals opened via style.display='flex' (without .active class) remain clickable. */
 .modal-overlay.active {
   pointer-events: auto;
-}
-
-#settingsModal {
-  pointer-events: none;
 }
 
 #settingsModal.active {

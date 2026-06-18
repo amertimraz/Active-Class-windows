@@ -1079,8 +1079,25 @@ body {
     grid-template-columns: 1fr; /* stack on small screens */
   }
 }
-#questionModal .option-input-group { gap: .5rem; }
-#questionModal .option-input { padding: .4rem .6rem; }
+#questionModal .option-input-group { gap: .6rem; padding: .65rem .85rem; }
+
+/* Reset global input[type="text"] overrides — specificity (1,1,1) beats global (0,1,1) */
+#questionModal .option-input-group .option-input {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+  padding: .45rem .6rem;
+  font-size: .95rem;
+  min-height: 34px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  outline: none;
+  color: var(--text-primary);
+}
+#questionModal .option-input-group .option-input:focus { border: none; box-shadow: none; background: transparent; }
+
 #questionModal .correct-answer-note small { font-size: .8rem; color: var(--text-secondary); }
 
 /* Reduce heights by ~20% for type box and question text box */
