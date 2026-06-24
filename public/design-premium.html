@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Active Class — Premium Design</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { cairo: ['Cairo', 'sans-serif'] },
+          colors: {
+            primary: { 50:'#f0fdfa', 100:'#ccfbf1', 200:'#99f6e4', 500:'#14b8a6', 600:'#0d9488', 700:'#0f766e', 800:'#115e59' }
+          },
+          backgroundImage: {
+            'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; font-family: 'Cairo', sans-serif; }
+
+    /* ─── Drag regions ─── */
+    .drag    { -webkit-app-region: drag; }
+    .no-drag { -webkit-app-region: no-drag; }
+
+    /* ─── Glassmorphism ─── */
+    .glass {
+      background: rgba(255,255,255,0.72);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border: 1px solid rgba(255,255,255,0.55);
+    }
+    .glass-sm {
+      background: rgba(255,255,255,0.55);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.4);
+    }
+
+    /* ─── Gradient text ─── */
+    .text-gradient {
+      background: linear-gradient(135deg, #0f766e 0%, #0ea5e9 60%, #6366f1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ─── Stat number gradient ─── */
+    .stat-num {
+      background: linear-gradient(135deg, #0f766e, #0ea5e9);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ─── Background glow orbs ─── */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(90px);
+      opacity: 0.35;
+      pointer-events: none;
+      animation: orb-drift 12s ease-in-out infinite alternate;
+    }
+    @keyframes orb-drift {
+      from { transform: translate(0,0) scale(1); }
+      to   { transform: translate(30px,20px) scale(1.08); }
+    }
+
+    /* ─── Feature card ─── */
+    .feat-card {
+      transition: transform 0.28s cubic-bezier(.4,0,.2,1), box-shadow 0.28s cubic-bezier(.4,0,.2,1);
+    }
+    .feat-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 24px 48px rgba(15,23,42,0.12);
+    }
+    .feat-card:hover .feat-icon { transform: scale(1.12) rotate(-4deg); }
+    .feat-icon { transition: transform 0.28s cubic-bezier(.4,0,.2,1); }
+
+    /* ─── Window control buttons ─── */
+    .wc-btn {
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: filter 0.15s, transform 0.15s;
+      flex-shrink: 0;
+    }
+    .wc-btn:hover { filter: brightness(0.85); transform: scale(1.1); }
+    .wc-btn svg { width: 7px; height: 7px; opacity: 0; transition: opacity 0.15s; }
+    .wc-btn:hover svg { opacity: 1; }
+
+    /* ─── Primary button glow ─── */
+    .btn-primary-glow {
+      box-shadow: 0 6px 22px rgba(15,118,110,0.35);
+      transition: transform 0.2s, box-shadow 0.2s, filter 0.2s;
+    }
+    .btn-primary-glow:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.08);
+      box-shadow: 0 12px 32px rgba(15,118,110,0.45);
+    }
+
+    /* ─── Scrollbar ─── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(15,118,110,0.25); border-radius: 99px; }
+
+    /* ─── Nav item active ─── */
+    .nav-pill.active {
+      background: rgba(15,118,110,0.12);
+      color: #0f766e;
+    }
+
+    /* ─── Progress bar animation ─── */
+    .prog-fill { animation: prog 1.6s cubic-bezier(.4,0,.2,1) forwards; }
+    @keyframes prog { from { width: 0 } to { width: 68% } }
+
+    /* ─── Stat counter pop ─── */
+    .stat-card { animation: stat-pop 0.5s cubic-bezier(.34,1.56,.64,1) both; }
+    .stat-card:nth-child(1) { animation-delay: 0.1s; }
+    .stat-card:nth-child(2) { animation-delay: 0.2s; }
+    .stat-card:nth-child(3) { animation-delay: 0.3s; }
+    .stat-card:nth-child(4) { animation-delay: 0.4s; }
+    @keyframes stat-pop {
+      from { opacity:0; transform: translateY(12px) scale(0.95); }
+      to   { opacity:1; transform: translateY(0) scale(1); }
+    }
+
+    /* ─── Hero text entrance ─── */
+    .hero-enter { animation: hero-in 0.7s cubic-bezier(.4,0,.2,1) both; }
+    .hero-enter-2 { animation: hero-in 0.7s 0.15s cubic-bezier(.4,0,.2,1) both; }
+    .hero-enter-3 { animation: hero-in 0.7s 0.3s cubic-bezier(.4,0,.2,1) both; }
+    @keyframes hero-in {
+      from { opacity:0; transform: translateY(18px); }
+      to   { opacity:1; transform: translateY(0); }
+    }
+
+    /* ─── Pulse dot ─── */
+    .pulse-dot { animation: pulse-a 1.8s ease-in-out infinite; }
+    @keyframes pulse-a { 0%,100%{ opacity:1; transform:scale(1); } 50%{ opacity:.5; transform:scale(0.7); } }
+  </style>
+</head>
+
+<body class="bg-slate-50 font-cairo text-slate-800 overflow-hidden h-screen select-none">
+
+  <!-- ═══════════════════════════════════════
+       Background ambient orbs
+  ════════════════════════════════════════ -->
+  <div class="orb w-96 h-96 bg-teal-300"   style="top:-120px;  right:-80px;  animation-duration:14s;"></div>
+  <div class="orb w-72 h-72 bg-sky-300"    style="bottom:60px; left:-60px;   animation-duration:10s; animation-delay:-5s;"></div>
+  <div class="orb w-56 h-56 bg-emerald-200" style="top:45%;    right:35%;    animation-duration:16s; animation-delay:-3s;"></div>
+
+  <!-- ═══════════════════════════════════════
+       CUSTOM TITLE BAR (Frameless)
+  ════════════════════════════════════════ -->
+  <header class="drag h-11 flex items-center justify-between px-4 relative z-50
+                 bg-white/80 backdrop-blur-xl border-b border-slate-200/60 shadow-sm">
+
+    <!-- Window Controls (Left — macOS style) -->
+    <div class="no-drag flex items-center gap-1.5">
+      <div class="wc-btn bg-red-400"    title="إغلاق"   onclick="window.api?.close?.()">
+        <svg viewBox="0 0 8 8" fill="none" stroke="#7f0000" stroke-width="1.8" stroke-linecap="round">
+          <line x1="1.5" y1="1.5" x2="6.5" y2="6.5"/><line x1="6.5" y1="1.5" x2="1.5" y2="6.5"/>
+        </svg>
+      </div>
+      <div class="wc-btn bg-yellow-400" title="تصغير"   onclick="window.api?.minimize?.()">
+        <svg viewBox="0 0 8 2" fill="#7a4500" width="8" height="2"><rect width="8" height="2" rx="1"/></svg>
+      </div>
+      <div class="wc-btn bg-green-400"  title="تكبير"   onclick="window.api?.maximize?.()">
+        <svg viewBox="0 0 8 8" fill="none" stroke="#1a4731" stroke-width="1.5">
+          <rect x="1" y="1" width="6" height="6" rx="0.8"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Centre: Logo + App name (absolute centred) -->
+    <div class="absolute inset-x-0 flex items-center justify-center gap-2 pointer-events-none">
+      <div class="w-6 h-6 rounded-lg bg-gradient-to-br from-teal-500 to-teal-700
+                  flex items-center justify-center shadow-sm shadow-teal-200">
+        <span class="text-white text-[10px] font-black">AC</span>
+      </div>
+      <span class="text-sm font-bold text-slate-700 tracking-tight">Active Class</span>
+    </div>
+
+    <!-- Right: Nav pills + avatar -->
+    <div class="no-drag flex items-center gap-1">
+      <!-- Quick-tool pills -->
+      <button class="nav-pill text-xs font-semibold text-slate-500 px-2.5 py-1 rounded-lg
+                     hover:bg-slate-100 transition-colors"
+              onclick="location.hash='#/timer'">⏱ مؤقت</button>
+      <button class="nav-pill text-xs font-semibold text-slate-500 px-2.5 py-1 rounded-lg
+                     hover:bg-slate-100 transition-colors">🎡 عجلة</button>
+      <button class="nav-pill text-xs font-semibold text-slate-500 px-2.5 py-1 rounded-lg
+                     hover:bg-slate-100 transition-colors">🔢 أرقام</button>
+
+      <div class="w-px h-5 bg-slate-200 mx-1"></div>
+
+      <!-- Settings -->
+      <button class="w-8 h-8 rounded-lg flex items-center justify-center
+                     text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+
+      <!-- Avatar -->
+      <div class="w-8 h-8 rounded-full bg-gradient-to-br from-teal-400 to-teal-700
+                  flex items-center justify-center text-white text-xs font-bold
+                  shadow-sm shadow-teal-200 mr-1 cursor-pointer hover:shadow-md transition-shadow">
+        م
+      </div>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════
+       MAIN SCROLL AREA
+  ════════════════════════════════════════ -->
+  <main class="h-[calc(100vh-44px)] overflow-y-auto">
+    <div class="max-w-5xl mx-auto px-6 pt-8 pb-10">
+
+      <!-- ─── HERO ─── -->
+      <section class="text-center mb-9">
+
+        <!-- Badge -->
+        <div class="hero-enter inline-flex items-center gap-2 mb-5
+                    bg-teal-50 border border-teal-200/80 text-teal-700
+                    text-xs font-bold px-4 py-1.5 rounded-full">
+          <span class="pulse-dot w-1.5 h-1.5 bg-teal-500 rounded-full inline-block"></span>
+          منصة إدارة الصف التفاعلي
+        </div>
+
+        <!-- Headline -->
+        <h1 class="hero-enter-2 text-5xl font-black leading-snug mb-4 tracking-tight">
+          حوّل فصلك إلى<br />
+          <span class="text-gradient">تجربة لا تُنسى</span>
+        </h1>
+
+        <!-- Sub -->
+        <p class="hero-enter-3 text-slate-500 text-base font-medium mb-7
+                  max-w-lg mx-auto leading-relaxed">
+          ألعاب تعليمية، اختبارات تفاعلية، وذكاء اصطناعي —
+          <br />كل ما تحتاجه في مكان واحد.
+        </p>
+
+        <!-- CTAs -->
+        <div class="hero-enter-3 flex items-center justify-center gap-3">
+          <a href="#/quizzes"
+             class="btn-primary-glow bg-gradient-to-l from-teal-700 to-teal-500
+                    text-white font-bold px-7 py-3 rounded-2xl text-sm no-drag">
+            ابدأ أول اختبار ←
+          </a>
+          <a href="#/games"
+             class="glass-sm text-slate-700 font-bold px-7 py-3 rounded-2xl text-sm
+                    hover:border-teal-300 transition-all duration-200 no-drag
+                    hover:shadow-md hover:-translate-y-0.5">
+            استكشف الألعاب
+          </a>
+        </div>
+      </section>
+
+      <!-- ─── STATS GLASS CARD ─── -->
+      <div class="glass rounded-3xl shadow-2xl shadow-slate-200/60 mb-8 overflow-hidden">
+        <div class="grid grid-cols-4">
+
+          <div class="stat-card text-center py-5 px-4 relative">
+            <div class="stat-num text-4xl font-black mb-0.5" id="homeStatsStudents">16</div>
+            <div class="text-slate-500 text-xs font-semibold">طالب مسجّل</div>
+            <div class="absolute left-0 top-1/4 bottom-1/4 w-px bg-slate-200"></div>
+          </div>
+
+          <div class="stat-card text-center py-5 px-4 relative">
+            <div class="stat-num text-4xl font-black mb-0.5" id="homeStatsGroups">1</div>
+            <div class="text-slate-500 text-xs font-semibold">مجموعة</div>
+            <div class="absolute left-0 top-1/4 bottom-1/4 w-px bg-slate-200"></div>
+          </div>
+
+          <div class="stat-card text-center py-5 px-4 relative">
+            <div class="stat-num text-4xl font-black mb-0.5" id="homeStatsQuizzes">0</div>
+            <div class="text-slate-500 text-xs font-semibold">اختبار</div>
+            <div class="absolute left-0 top-1/4 bottom-1/4 w-px bg-slate-200"></div>
+          </div>
+
+          <div class="stat-card text-center py-5 px-4">
+            <div class="stat-num text-4xl font-black mb-0.5">11</div>
+            <div class="text-slate-500 text-xs font-semibold">لعبة تعليمية</div>
+          </div>
+
+        </div>
+
+        <!-- Progress hint -->
+        <div class="border-t border-slate-100 px-6 py-3 flex items-center gap-3">
+          <span class="text-xs text-slate-400 font-semibold whitespace-nowrap">تقدّم الطلاب</span>
+          <div class="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+            <div class="prog-fill h-full bg-gradient-to-l from-teal-400 to-teal-600 rounded-full"></div>
+          </div>
+          <span class="text-xs font-bold text-teal-600 whitespace-nowrap">68%</span>
+        </div>
+      </div>
+
+      <!-- ─── FEATURE GRID 3×2 ─── -->
+      <div class="grid grid-cols-3 gap-4">
+
+        <!-- 1 · الاختبارات -->
+        <a href="#/quizzes" class="feat-card glass rounded-2xl p-5 block group
+                                   border-t-[3px] border-orange-400 no-drag">
+          <div class="feat-icon w-12 h-12 bg-orange-50 rounded-xl flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+              <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+            </svg>
+          </div>
+          <h3 class="font-bold text-slate-800 text-base mb-1.5">الاختبارات</h3>
+          <p class="text-slate-500 text-xs leading-relaxed mb-4">
+            أنشئ اختبارات تفاعلية لحظية وتابع نتائج طلابك فوراً.
+          </p>
+          <span class="text-orange-500 text-xs font-bold flex items-center gap-1
+                       group-hover:gap-2 transition-all">
+            إنشاء اختبار
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </span>
+        </a>
+
+        <!-- 2 · المجموعات -->
+        <a href="#/groups" class="feat-card glass rounded-2xl p-5 block group
+                                  border-t-[3px] border-blue-400 no-drag">
+          <div class="feat-icon w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+          </div>
+          <h3 class="font-bold text-slate-800 text-base mb-1.5">المجموعات والطلاب</h3>
+          <p class="text-slate-500 text-xs leading-relaxed mb-4">
+            أدر مجموعاتك واعرف أداء كل طالب بنظرة واحدة.
+          </p>
+          <span class="text-blue-500 text-xs font-bold flex items-center gap-1
+                       group-hover:gap-2 transition-all">
+            إدارة المجموعات
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </span>
+        </a>
+
+        <!-- 3 · الألعاب -->
+        <a href="#/games" class="feat-card glass rounded-2xl p-5 block group
+                                 border-t-[3px] border-pink-400 no-drag">
+          <div class="feat-icon w-12 h-12 bg-pink-50 rounded-xl flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-pink-500" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+              <rect x="2" y="6" width="20" height="12" rx="4"/>
+              <path d="M8 12h4m-2-2v4"/>
+              <circle cx="17" cy="11" r="1" fill="currentColor" stroke="none"/>
+              <circle cx="17" cy="13" r="1" fill="currentColor" stroke="none"/>
+            </svg>
+          </div>
+          <h3 class="font-bold text-slate-800 text-base mb-1.5">الألعاب التعليمية</h3>
+          <p class="text-slate-500 text-xs leading-relaxed mb-4">
+            11 لعبة تفاعلية تحوّل المراجعة إلى تنافس ممتع.
+          </p>
+          <span class="text-pink-500 text-xs font-bold flex items-center gap-1
+                       group-hover:gap-2 transition-all">
+            ابدأ لعبة
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </span>
+        </a>
+
+        <!-- 4 · الذكاء الاصطناعي -->
+        <a href="#/ai-generator" class="feat-card glass rounded-2xl p-5 block group
+                                        border-t-[3px] border-violet-400 no-drag">
+          <div class="feat-icon w-12 h-12 bg-violet-50 rounded-xl flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-violet-500" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+              <path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5z"/>
+            </svg>
+          </div>
+          <h3 class="font-bold text-slate-800 text-base mb-1.5">الذكاء الاصطناعي</h3>
+          <p class="text-slate-500 text-xs leading-relaxed mb-4">
+            حوّل أي PDF لدرس تفاعلي مع أسئلة جاهزة في ثوانٍ.
+          </p>
+          <span class="text-violet-500 text-xs font-bold flex items-center gap-1
+                       group-hover:gap-2 transition-all">
+            جرّب الآن
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </span>
+        </a>
+
+        <!-- 5 · المحتوى التعليمي -->
+        <a href="#/content" class="feat-card glass rounded-2xl p-5 block group
+                                   border-t-[3px] border-teal-400 no-drag">
+          <div class="feat-icon w-12 h-12 bg-teal-50 rounded-xl flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-teal-600" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+            </svg>
+          </div>
+          <h3 class="font-bold text-slate-800 text-base mb-1.5">المحتوى التعليمي</h3>
+          <p class="text-slate-500 text-xs leading-relaxed mb-4">
+            ارفع دروسك وعرضها احترافياً داخل الفصل.
+          </p>
+          <span class="text-teal-600 text-xs font-bold flex items-center gap-1
+                       group-hover:gap-2 transition-all">
+            تصفح المحتوى
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </span>
+        </a>
+
+        <!-- 6 · تتبع التقدم -->
+        <a href="#/competitions" class="feat-card glass rounded-2xl p-5 block group
+                                        border-t-[3px] border-amber-400 no-drag">
+          <div class="feat-icon w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+              <path d="M18 20V10M12 20V4M6 20v-6"/>
+            </svg>
+          </div>
+          <h3 class="font-bold text-slate-800 text-base mb-1.5">تتبع التقدم</h3>
+          <p class="text-slate-500 text-xs leading-relaxed mb-4">
+            راقب أداء طلابك وتقاريرهم عبر الزمن.
+          </p>
+          <span class="text-amber-500 text-xs font-bold flex items-center gap-1
+                       group-hover:gap-2 transition-all">
+            عرض التقارير
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </span>
+        </a>
+
+      </div>
+      <!-- /grid -->
+
+    </div>
+  </main>
+
+  <!-- ════════════════════════════════════
+       JS: window controls + stat loader
+  ═════════════════════════════════════ -->
+  <script>
+    // Maximize toggle (add to preload.js if not there)
+    document.querySelector('[title="تكبير"]')?.addEventListener('click', () => {
+      window.api?.maximize?.() ?? ipcRenderer?.send?.('maximize-window');
+    });
+
+    // Load real stats from existing API
+    async function loadStats() {
+      const sEl = document.getElementById('homeStatsStudents');
+      const gEl = document.getElementById('homeStatsGroups');
+      const qEl = document.getElementById('homeStatsQuizzes');
+      if (!sEl) return;
+      try {
+        const [students, groups, quizzes] = await Promise.all([
+          window.api?.loadStudents?.() ?? [],
+          window.api?.loadGroups?.()   ?? [],
+          window.api?.loadQuizzes?.()  ?? [],
+        ]);
+        if (Array.isArray(students)) sEl.textContent = students.length;
+        if (Array.isArray(groups))   gEl.textContent = groups.length;
+        if (Array.isArray(quizzes))  qEl.textContent = quizzes.length;
+      } catch {}
+    }
+    loadStats();
+  </script>
+</body>
+</html>

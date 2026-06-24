@@ -115,42 +115,41 @@
 
     showLoading();
     try {
-      // Load quiz data
-      let quizzes = [];
-      if (hasAPI && window.api.loadQuizzes) {
-        quizzes = await window.api.loadQuizzes() || [];
-      } else {
-        quizzes = loadLocal(LS_QUIZZES);
+      // Load full quiz (with questions) via IPC
+      if (hasAPI && window.api.loadQuiz) {
+        currentQuiz = await window.api.loadQuiz(quizId);
       }
-
-      currentQuiz = quizzes.find(q => q.id === quizId);
+      if (!currentQuiz) {
+        // fallback: find in list
+        const list = hasAPI && window.api.loadQuizzes ? await window.api.loadQuizzes() || [] : loadLocal(LS_QUIZZES);
+        currentQuiz = list.find(q => q.id === quizId);
+      }
       if (!currentQuiz) {
         showToast('الاختبار غير موجود', 'error');
         setTimeout(() => window.location.href = '/#/quizzes', 2000);
         return;
       }
 
-      // Load submissions
+      // Load submissions filtered by quizId
       if (hasAPI && window.api.loadQuizSubmissions) {
         submissions = await window.api.loadQuizSubmissions(quizId) || [];
       } else {
-        const allSubmissions = loadLocal(LS_SUBMISSIONS);
-        submissions = allSubmissions.filter(s => s.quizId === quizId);
+        submissions = loadLocal(LS_SUBMISSIONS).filter(s => s.quizId === quizId || s.testId === quizId);
       }
 
-      // Load students
+      // Load students for name lookup
       if (hasAPI && window.api.loadStudents) {
         students = await window.api.loadStudents() || [];
       } else {
         students = loadLocal(LS_STUDENTS);
       }
 
-      // Process submissions with student data
+      // Process submissions: attach student info and compute results
       submissions = submissions.map(submission => {
         const student = students.find(s => s.id === submission.studentId);
         return {
           ...submission,
-          studentName: student ? student.name : 'طالب غير معروف',
+          studentName: submission.studentName || (student ? student.name : 'طالب غير معروف'),
           studentCode: student ? student.code : '',
           results: calculateSubmissionResults(submission)
         };
@@ -171,79 +170,84 @@
   }
 
   function calculateSubmissionResults(submission) {
-    if (!currentQuiz.questions) return null;
+    // Use server-computed score if available (most reliable)
+    if (submission.score && typeof submission.score.correct === 'number') {
+      const correct = submission.score.correct;
+      const total = submission.score.total || (currentQuiz.questions ? currentQuiz.questions.length : 0);
+      const incorrect = total - correct;
+      const percentage = submission.score.percent ?? (total > 0 ? Math.round((correct / total) * 100) : 0);
+      return {
+        correctCount: correct,
+        incorrectCount: incorrect,
+        skippedCount: 0,
+        totalQuestions: total,
+        earnedPoints: correct,
+        totalPoints: total,
+        percentage
+      };
+    }
 
-    let correctCount = 0;
-    let incorrectCount = 0;
-    let skippedCount = 0;
-    let totalPoints = 0;
-    let earnedPoints = 0;
+    // Fallback: recalculate from answers array if quiz questions are available
+    if (!currentQuiz || !Array.isArray(currentQuiz.questions)) return null;
 
-    currentQuiz.questions.forEach((question, index) => {
-      const userAnswer = submission.answers[index];
-      const questionPoints = question.points || 1;
-      totalPoints += questionPoints;
+    // Server stores answers as [{questionId, answerIndex}] — build a lookup map
+    const answerMap = new Map();
+    if (Array.isArray(submission.answers)) {
+      submission.answers.forEach(a => {
+        if (a && a.questionId != null) answerMap.set(a.questionId, a.answerIndex);
+        else if (typeof a === 'number') answerMap.set(null, a); // old numeric format
+      });
+    }
 
-      if (userAnswer === null || userAnswer === undefined || userAnswer === '') {
+    let correctCount = 0, incorrectCount = 0, skippedCount = 0, totalPoints = 0, earnedPoints = 0;
+    currentQuiz.questions.forEach(question => {
+      const points = question.points || 1;
+      totalPoints += points;
+      const userAnswer = answerMap.get(question.id);
+      if (userAnswer == null || userAnswer < 0) {
         skippedCount++;
       } else {
         const isCorrect = checkAnswer(question, userAnswer);
-        if (isCorrect) {
-          correctCount++;
-          earnedPoints += questionPoints;
-        } else {
-          incorrectCount++;
-        }
+        if (isCorrect) { correctCount++; earnedPoints += points; }
+        else incorrectCount++;
       }
     });
 
     const percentage = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
-
-    return {
-      correctCount,
-      incorrectCount,
-      skippedCount,
-      totalQuestions: currentQuiz.questions.length,
-      earnedPoints,
-      totalPoints,
-      percentage
-    };
+    return { correctCount, incorrectCount, skippedCount, totalQuestions: currentQuiz.questions.length, earnedPoints, totalPoints, percentage };
   }
 
   function checkAnswer(question, userAnswer) {
     const correctAnswer = question.correctAnswer;
 
     switch (question.type) {
+      case 'mcq':
       case 'multiple-choice':
         if (question.allowMultiple) {
           if (!Array.isArray(userAnswer) || !Array.isArray(correctAnswer)) return false;
-          return userAnswer.length === correctAnswer.length && 
+          return userAnswer.length === correctAnswer.length &&
                  userAnswer.every(ans => correctAnswer.includes(ans));
-        } else {
-          return userAnswer === correctAnswer;
         }
+        // numeric comparison (both may come as number or string from different paths)
+        return Number(userAnswer) === Number(correctAnswer);
 
       case 'true-false':
-        return userAnswer === correctAnswer;
-
-
+        return Number(userAnswer) === Number(correctAnswer);
 
       case 'fill-blanks':
         if (!Array.isArray(userAnswer) || !Array.isArray(correctAnswer)) return false;
-        return userAnswer.every((ans, index) => {
-          const correct = correctAnswer[index];
-          if (typeof correct === 'string') {
-            return ans.toLowerCase().trim() === correct.toLowerCase().trim();
-          }
+        return userAnswer.every((ans, i) => {
+          const correct = correctAnswer[i];
+          if (typeof correct === 'string') return String(ans).toLowerCase().trim() === correct.toLowerCase().trim();
           return ans === correct;
         });
 
-      case 'matching':
+      case 'matching': {
         if (typeof userAnswer !== 'object' || typeof correctAnswer !== 'object') return false;
-        const userKeys = Object.keys(userAnswer);
-        const correctKeys = Object.keys(correctAnswer);
-        return userKeys.length === correctKeys.length &&
-               userKeys.every(key => userAnswer[key] === correctAnswer[key]);
+        const uKeys = Object.keys(userAnswer);
+        const cKeys = Object.keys(correctAnswer);
+        return uKeys.length === cKeys.length && uKeys.every(k => userAnswer[k] === correctAnswer[k]);
+      }
 
       default:
         return false;
@@ -324,7 +328,7 @@
         case 'name':
           return a.studentName.localeCompare(b.studentName, 'ar') * direction;
         case 'time':
-          return (new Date(a.submittedAt) - new Date(b.submittedAt)) * direction;
+          return (new Date(a.ts) - new Date(b.ts)) * direction;
         case 'duration':
           return ((a.duration || 0) - (b.duration || 0)) * direction;
         default:
@@ -347,14 +351,34 @@
     if (emptyState) emptyState.style.display = 'none';
 
     if (resultsTableBody) {
+      // Calculate average for below-average coloring
+      const avg = filteredSubmissions.length
+        ? filteredSubmissions.reduce((s, sub) => s + (sub.results?.percentage || 0), 0) / filteredSubmissions.length
+        : 0;
+
+      // Sort by percentage desc to assign ranks (we sort a copy, not the display order)
+      const rankMap = new Map();
+      [...filteredSubmissions]
+        .sort((a, b) => (b.results?.percentage || 0) - (a.results?.percentage || 0))
+        .forEach((sub, i) => rankMap.set(sub.id, i + 1));
+
+      const medals = ['🥇', '🥈', '🥉'];
+
       resultsTableBody.innerHTML = filteredSubmissions.map(submission => {
         const results = submission.results;
         const percentage = results?.percentage || 0;
         const percentageClass = getPercentageClass(percentage);
         const grade = getGrade(percentage);
+        const rank = rankMap.get(submission.id);
+        const belowAvg = avg > 0 && percentage < avg;
+
+        const rankDisplay = rank <= 3
+          ? `<span class="rank-medal">${medals[rank - 1]}</span>`
+          : `<span class="rank-num">${rank}</span>`;
 
         return `
-          <tr data-submission-id="${submission.id}">
+          <tr data-submission-id="${submission.id}" class="${belowAvg ? 'row-below-avg' : ''}">
+            <td class="rank-col">${rankDisplay}</td>
             <td>
               <div class="student-name">${escapeHTML(submission.studentName)}</div>
               <div class="student-code">${escapeHTML(submission.studentCode)}</div>
@@ -369,8 +393,8 @@
             <td class="correct-answers">${results?.correctCount || 0}/${results?.totalQuestions || 0}</td>
             <td class="duration-cell">${formatDuration(submission.duration || 0)}</td>
             <td class="date-cell">
-              <div>${formatDate(submission.submittedAt)}</div>
-              <div>${formatTime(submission.submittedAt)}</div>
+              <div>${formatDate(submission.ts)}</div>
+              <div>${formatTime(submission.ts)}</div>
             </td>
             <td class="actions-cell">
               <button class="action-btn primary" onclick="viewStudentDetails('${submission.id}')">
@@ -497,10 +521,19 @@
 
     // Render answers
     if (studentAnswers && currentQuiz.questions) {
+      // Build questionId → answerIndex map (server format: [{questionId, answerIndex}])
+      const answerMap = new Map();
+      if (Array.isArray(submission.answers)) {
+        submission.answers.forEach((a, i) => {
+          if (a && a.questionId != null) answerMap.set(a.questionId, a.answerIndex);
+          else if (typeof a === 'number' || typeof a === 'boolean') answerMap.set(i, a);
+        });
+      }
+
       studentAnswers.innerHTML = currentQuiz.questions.map((question, index) => {
-        const userAnswer = submission.answers[index];
-        const isCorrect = userAnswer !== null && userAnswer !== undefined && checkAnswer(question, userAnswer);
-        const isSkipped = userAnswer === null || userAnswer === undefined || userAnswer === '';
+        const userAnswer = answerMap.has(question.id) ? answerMap.get(question.id) : answerMap.get(index);
+        const isSkipped = userAnswer === null || userAnswer === undefined || userAnswer < 0;
+        const isCorrect = !isSkipped && checkAnswer(question, userAnswer);
         
         let statusClass = 'skipped';
         let statusText = 'مُتجاهل';
@@ -534,33 +567,77 @@
   };
 
   function formatAnswer(question, answer) {
+    if (answer === null || answer === undefined) return '';
     switch (question.type) {
-      case 'multiple-choice':
-        if (question.allowMultiple && Array.isArray(answer)) {
-          return answer.map(index => question.options[index]?.text || '').join(', ');
-        } else {
-          return question.options[answer]?.text || '';
-        }
+      case 'mcq':
+      case 'multiple-choice': {
+        const optText = (i) => {
+          const opt = question.options?.[Number(i)];
+          return (opt && typeof opt === 'object' ? opt.text : opt) || `خيار ${Number(i) + 1}`;
+        };
+        if (question.allowMultiple && Array.isArray(answer)) return answer.map(optText).join('، ');
+        return optText(answer);
+      }
 
       case 'true-false':
-        return answer ? 'صحيح' : 'خطأ';
-
-
+        return Number(answer) === 1 ? 'صحيح' : 'خطأ';
 
       case 'fill-blanks':
-        return Array.isArray(answer) ? answer.join(', ') : answer;
+        return Array.isArray(answer) ? answer.join('، ') : String(answer);
 
       case 'matching':
-        if (typeof answer === 'object') {
-          return Object.entries(answer).map(([left, right]) => 
-            `${question.leftItems[left]} → ${question.rightItems[right]}`
-          ).join(', ');
+        if (typeof answer === 'object' && !Array.isArray(answer)) {
+          return Object.entries(answer)
+            .map(([l, r]) => `${question.leftItems?.[l] || l} ← ${question.rightItems?.[r] || r}`)
+            .join('، ');
         }
-        return '';
+        return String(answer);
 
       default:
-        return String(answer || '');
+        return String(answer ?? '');
     }
+  }
+
+  // ===== Share Results =====
+  function shareResults() {
+    if (submissions.length === 0) {
+      showToast('لا توجد نتائج للمشاركة', 'warning');
+      return;
+    }
+
+    const quizTitle = document.getElementById('quizTitle')?.textContent?.trim() || 'الاختبار';
+    const total = submissions.length;
+    const avg = Math.round(
+      submissions.reduce((s, sub) => s + (sub.results?.percentage || 0), 0) / total
+    );
+    const top = Math.max(...submissions.map(s => s.results?.percentage || 0));
+    const passed = submissions.filter(s => (s.results?.percentage || 0) >= 60).length;
+
+    // Sort by percentage desc for ranking
+    const ranked = [...submissions]
+      .sort((a, b) => (b.results?.percentage || 0) - (a.results?.percentage || 0));
+
+    const medals = ['🥇', '🥈', '🥉'];
+    const topThree = ranked.slice(0, 3)
+      .map((s, i) => `${medals[i]} ${s.studentName} — ${s.results?.percentage || 0}%`)
+      .join('\n');
+
+    const text =
+`📊 *نتائج ${quizTitle}*
+
+👥 عدد المشاركين: ${total}
+✅ الناجحون: ${passed} من ${total}
+📈 متوسط الدرجات: ${avg}%
+🏆 أعلى درجة: ${top}%
+
+*أعلى الطلاب:*
+${topThree}
+
+#ActiveClass`;
+
+    navigator.clipboard.writeText(text)
+      .then(() => showToast('✅ تم نسخ النتائج — جاهزة للمشاركة على واتساب', 'success'))
+      .catch(() => showToast('تعذّر النسخ', 'error'));
   }
 
   // ===== Export Functions =====
@@ -589,7 +666,7 @@
         results?.incorrectCount || 0,
         results?.skippedCount || 0,
         formatDuration(submission.duration || 0),
-        formatDate(submission.submittedAt)
+        formatDate(submission.ts)
       ];
     });
 
@@ -652,6 +729,12 @@
       });
     }
 
+    // Share results button
+    const shareResultsBtn = document.getElementById('shareResults');
+    if (shareResultsBtn) {
+      shareResultsBtn.addEventListener('click', shareResults);
+    }
+
     // Action buttons
     if (exportResultsBtn) {
       exportResultsBtn.addEventListener('click', exportResults);
@@ -663,7 +746,39 @@
 
     if (backToQuizzesBtn) {
       backToQuizzesBtn.addEventListener('click', () => {
+        if (pollTimer) clearInterval(pollTimer);
         window.location.href = '/#/quizzes';
+      });
+    }
+
+    // Clear results button — custom confirm modal
+    const clearResultsBtn  = document.getElementById('clearResults');
+    const confirmClearModal = document.getElementById('confirmClearModal');
+    const confirmClearOk   = document.getElementById('confirmClearOk');
+    const confirmClearCancel = document.getElementById('confirmClearCancel');
+
+    if (clearResultsBtn && confirmClearModal) {
+      clearResultsBtn.addEventListener('click', () => openModal(confirmClearModal));
+      confirmClearCancel.addEventListener('click', () => closeModal(confirmClearModal));
+
+      confirmClearOk.addEventListener('click', async () => {
+        closeModal(confirmClearModal);
+        const urlParams = new URLSearchParams(window.location.search);
+        const quizId = urlParams.get('id');
+        try {
+          if (hasAPI && window.api.clearQuizResults) {
+            await window.api.clearQuizResults(quizId);
+          } else {
+            await fetch(`/api/quizzes/${quizId}/results`, { method: 'DELETE' });
+          }
+          submissions = [];
+          updateStatistics();
+          render();
+          renderQuestionAnalysis();
+          showToast('تم حذف جميع النتائج', 'success');
+        } catch (e) {
+          showToast('حدث خطأ أثناء الحذف', 'error');
+        }
       });
     }
 
@@ -680,8 +795,51 @@
       printStudentResultBtn.addEventListener('click', () => window.print());
     }
 
-    // Load data
-    loadData();
+    // Load data then start live stream
+    loadData().then(() => startLiveStream());
   });
+
+  // ===== Live Results (polling) =====
+  let pollTimer = null;
+  let lastCount = 0;
+
+  function startLiveStream() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const quizId = urlParams.get('id');
+    if (!quizId) return;
+
+    const liveBadge = document.getElementById('liveBadge');
+    if (liveBadge) liveBadge.style.display = 'inline-flex';
+
+    async function poll() {
+      try {
+        let fresh = null;
+        if (hasAPI && window.api.loadQuizSubmissions) {
+          fresh = await window.api.loadQuizSubmissions(quizId);
+        }
+        if (!Array.isArray(fresh)) return;
+
+        // only re-render if count changed
+        if (fresh.length !== lastCount) {
+          lastCount = fresh.length;
+          submissions = fresh.map(sub => {
+            const student = students.find(s => s.id === sub.studentId);
+            return {
+              ...sub,
+              studentName: sub.studentName || (student ? student.name : 'طالب غير معروف'),
+              studentCode: student ? student.code : '',
+              results: calculateSubmissionResults(sub)
+            };
+          });
+          updateStatistics();
+          render();
+          renderQuestionAnalysis();
+        }
+      } catch {}
+    }
+
+    pollTimer = setInterval(poll, 5000);
+    window.addEventListener('beforeunload', () => clearInterval(pollTimer));
+  }
 
 })();

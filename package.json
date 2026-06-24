@@ -5,6 +5,7 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "dist": "electron-builder --win",
     "server": "node server/server.js",
     "migrate:sqlite": "node server/migrate-sqlite.js",
     "lint": "eslint .",
@@ -18,15 +19,74 @@
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "better-sqlite3": "^12.10.0",
+    "electron-updater": "^6.8.9",
     "express": "^4.21.2",
     "multer": "^2.0.2",
     "pdf-parse": "^2.4.5",
     "sql.js": "^1.14.1",
     "xlsx": "^0.18.5"
   },
+  "build": {
+    "appId": "com.activeclassapp.classroom-manager",
+    "productName": "Active Class",
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "public/assets/icon.gif"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Active Class",
+      "installerLanguages": [
+        "ar",
+        "en"
+      ]
+    },
+    "compression": "maximum",
+    "files": [
+      "main.js",
+      "preload.js",
+      "public/**/*",
+      "server/**/*",
+      "package.json",
+      "!node_modules/.bin",
+      "!node_modules/xlsx/dist/cpexcel.full.mjs",
+      "!**/*.md",
+      "!**/*.map",
+      "!**/*.ts",
+      "!**/test/**",
+      "!**/tests/**",
+      "!**/docs/**",
+      "!data/**",
+      "!db.json",
+      "!**/*.db",
+      "!**/*.sqlite",
+      "!**/*.sqlite3",
+      "!public/uploads/**"
+    ],
+    "asarUnpack": [
+      "server/**/*",
+      "node_modules/better-sqlite3/**/*"
+    ],
+    "extraResources": [],
+    "publish": {
+      "provider": "github",
+      "owner": "amertimraz",
+      "repo": "Active-Class-windows"
+    }
+  },
   "devDependencies": {
     "autoprefixer": "^10.5.0",
     "electron": "^39.3.0",
+    "electron-builder": "^25.1.8",
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^9.1.2",
     "globals": "^15.15.0",

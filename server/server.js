@@ -30,7 +30,10 @@ fs.mkdir(uploadsDir, { recursive: true });
 const CSP_POLICY =
   "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; " +
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; " +
-  "img-src 'self' data: blob: https:; connect-src 'self' http://localhost:* https://cdnjs.cloudflare.com; media-src 'self' data: blob:;";
+  "img-src 'self' data: blob: https:; connect-src 'self' http://localhost:* https://cdnjs.cloudflare.com https://script.google.com https://script.googleusercontent.com; " +
+  "media-src 'self' data: blob:; " +
+  "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com; " +
+  "worker-src 'self' blob: https://cdnjs.cloudflare.com;";
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'no-referrer');
@@ -41,6 +44,10 @@ app.use((req, res, next) => {
 
 app.use(express.static(publicDir));
 app.use('/assets', express.static(assetsDir));
+/* PDF.js v5 (local) — avoids CDN blocks & uses latest Arabic support */
+app.use('/pdfjs-build', express.static(path.join(__dirname, '../node_modules/pdfjs-dist/build')));
+app.use('/pdfjs-cmaps', express.static(path.join(__dirname, '../node_modules/pdfjs-dist/cmaps')));
+app.use('/pdfjs-fonts', express.static(path.join(__dirname, '../node_modules/pdfjs-dist/standard_fonts')));
 app.use(express.json({ limit: '5mb' }));
 
 // Security Middleware
@@ -234,10 +241,12 @@ app.post('/api/content/upload', authenticateTeacher, handleUpload(upload.single(
   }
 
   const { lessonId } = req.body;
+  /* multer decodes originalname as latin1 → re-decode as UTF-8 so Arabic names are correct */
+  const originalName = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
   const newContentItem = {
     id: crypto.randomUUID(),
     type: 'file',
-    name: req.file.originalname,
+    name: originalName,
     path: `/uploads/${req.file.filename}`,
   };
 
@@ -283,6 +292,22 @@ app.post('/api/content/link', authenticateTeacher, async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
+});
+
+// Add a whiteboard slide
+app.post('/api/content/whiteboard', authenticateTeacher, async (req, res) => {
+  const { lessonId, name } = req.body;
+  if (!lessonId) return res.status(400).json({ message: 'lessonId is required.' });
+  const item = { id: crypto.randomUUID(), type: 'whiteboard', name: name || 'لوح رسم' };
+  try {
+    const content = await readDB();
+    const lesson  = findLesson(content.grades, lessonId);
+    if (!lesson) return res.status(404).json({ message: 'Lesson not found.' });
+    if (!lesson.content) lesson.content = [];
+    lesson.content.push(item);
+    await writeDB(content);
+    res.status(201).json(item);
+  } catch (e) { res.status(500).json({ message: e.message }); }
 });
 
 // Add a quiz
@@ -381,6 +406,34 @@ app.post('/api/lessons/reorder', authenticateTeacher, async (req, res) => {
   }
 });
 
+// Reorder grades
+app.post('/api/grades/reorder', authenticateTeacher, async (req, res) => {
+  const { orderedGradeIds } = req.body;
+  if (!Array.isArray(orderedGradeIds)) return res.status(400).json({ message: 'Invalid parameters.' });
+  try {
+    const content = await readDB();
+    const ordered = orderedGradeIds.map(id => content.grades.find(g => g.id === id)).filter(Boolean);
+    content.grades = ordered;
+    await writeDB(content);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
+// Reorder units within a grade
+app.post('/api/units/reorder', authenticateTeacher, async (req, res) => {
+  const { gradeId, orderedUnitIds } = req.body;
+  if (!gradeId || !Array.isArray(orderedUnitIds)) return res.status(400).json({ message: 'Invalid parameters.' });
+  try {
+    const content = await readDB();
+    const grade = content.grades.find(g => g.id === gradeId);
+    if (!grade) return res.status(404).json({ message: 'Grade not found.' });
+    const ordered = orderedUnitIds.map(id => grade.units.find(u => u.id === id)).filter(Boolean);
+    grade.units = ordered;
+    await writeDB(content);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
 // Endpoint to reorder content items within a lesson
 app.post('/api/content/reorder', authenticateTeacher, async (req, res) => {
   const { lessonId, orderedContentIds } = req.body;
@@ -424,6 +477,112 @@ function findLesson(grades, lessonId) {
   }
   return null;
 }
+
+// Rename a grade
+app.put('/api/grades/:id', authenticateTeacher, async (req, res) => {
+  const { name } = req.body;
+  if (!name) return res.status(400).json({ message: 'name is required' });
+  try {
+    const content = await readDB();
+    const grade = content.grades.find(g => g.id === req.params.id);
+    if (!grade) return res.status(404).json({ message: 'Grade not found' });
+    grade.name = name;
+    await writeDB(content);
+    res.json(grade);
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
+// Delete a grade (cascade: removes all units, lessons, and their content files)
+app.delete('/api/grades/:id', authenticateTeacher, async (req, res) => {
+  try {
+    const content = await readDB();
+    const idx = content.grades.findIndex(g => g.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ message: 'Grade not found' });
+    const grade = content.grades[idx];
+    for (const unit of grade.units) {
+      for (const lesson of unit.lessons) {
+        for (const item of (lesson.content || [])) {
+          if (item.path) fs.unlink(path.join(__dirname, '..', item.path)).catch(() => {});
+        }
+      }
+    }
+    content.grades.splice(idx, 1);
+    await writeDB(content);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
+// Rename a unit
+app.put('/api/units/:id', authenticateTeacher, async (req, res) => {
+  const { name } = req.body;
+  if (!name) return res.status(400).json({ message: 'name is required' });
+  try {
+    const content = await readDB();
+    for (const g of content.grades) {
+      const unit = g.units.find(u => u.id === req.params.id);
+      if (unit) { unit.name = name; await writeDB(content); return res.json(unit); }
+    }
+    res.status(404).json({ message: 'Unit not found' });
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
+// Delete a unit (cascade)
+app.delete('/api/units/:id', authenticateTeacher, async (req, res) => {
+  try {
+    const content = await readDB();
+    for (const g of content.grades) {
+      const idx = g.units.findIndex(u => u.id === req.params.id);
+      if (idx !== -1) {
+        for (const lesson of g.units[idx].lessons) {
+          for (const item of (lesson.content || [])) {
+            if (item.path) fs.unlink(path.join(__dirname, '..', item.path)).catch(() => {});
+          }
+        }
+        g.units.splice(idx, 1);
+        await writeDB(content);
+        return res.json({ ok: true });
+      }
+    }
+    res.status(404).json({ message: 'Unit not found' });
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
+// Rename a lesson
+app.put('/api/lessons/:id', authenticateTeacher, async (req, res) => {
+  const { name } = req.body;
+  if (!name) return res.status(400).json({ message: 'name is required' });
+  try {
+    const content = await readDB();
+    for (const g of content.grades) {
+      for (const u of g.units) {
+        const lesson = u.lessons.find(l => l.id === req.params.id);
+        if (lesson) { lesson.name = name; await writeDB(content); return res.json(lesson); }
+      }
+    }
+    res.status(404).json({ message: 'Lesson not found' });
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
+// Delete a lesson (cascade)
+app.delete('/api/lessons/:id', authenticateTeacher, async (req, res) => {
+  try {
+    const content = await readDB();
+    for (const g of content.grades) {
+      for (const u of g.units) {
+        const idx = u.lessons.findIndex(l => l.id === req.params.id);
+        if (idx !== -1) {
+          for (const item of (u.lessons[idx].content || [])) {
+            if (item.path) fs.unlink(path.join(__dirname, '..', item.path)).catch(() => {});
+          }
+          u.lessons.splice(idx, 1);
+          await writeDB(content);
+          return res.json({ ok: true });
+        }
+      }
+    }
+    res.status(404).json({ message: 'Lesson not found' });
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
 
 // Add a new grade
 app.post('/api/grades', authenticateTeacher, async (req, res) => {
@@ -485,15 +644,15 @@ app.post('/api/generate-ai-quiz', authenticateTeacher, handleUpload(pdfUpload.si
   const title = req.body.title || req.file.originalname.replace('.pdf', '');
   
   try {
-    // Get Gemini API key from settings
-    const settingRow = db.prepare("SELECT value FROM settings WHERE key = 'gemini_api_key'").get();
+    // Get Groq API key from settings
+    const settingRow = db.prepare("SELECT value FROM settings WHERE key = 'groq_api_key'").get();
     let apiKey = '';
     if (settingRow) {
       try { apiKey = JSON.parse(settingRow.value); } catch { apiKey = settingRow.value; }
     }
 
     if (!apiKey) {
-      return res.status(400).json({ message: 'مفتاح API الخاص بـ Gemini غير موجود في الإعدادات.' });
+      return res.status(400).json({ message: 'مفتاح API الخاص بـ Groq غير موجود. أضفه من الإعدادات ← الذكاء الاصطناعي.' });
     }
 
     // Call AI Service
@@ -616,8 +775,8 @@ function rowToStudent(r) {
 }
 
 function rowToGroup(r) {
-  const extra = parseJSONSafe(r.extra_json, {});
-  return { id: r.id, name: r.name, color: r.color, icon: r.icon, ...extra };
+  const { studentCount: _sc, studentsCount: _old, ...extra } = parseJSONSafe(r.extra_json, {});
+  return { id: r.id, name: r.name, color: r.color, icon: r.icon, studentCount: r.student_count ?? 0, ...extra };
 }
 
 // GET /api/students
@@ -630,7 +789,14 @@ app.get('/api/students', (_req, res) => {
 // GET /api/groups
 app.get('/api/groups', (_req, res) => {
   try {
-    res.json(db.prepare('SELECT * FROM groups ORDER BY name').all().map(rowToGroup));
+    const rows = db.prepare(`
+      SELECT g.*, COUNT(s.id) AS student_count
+      FROM groups g
+      LEFT JOIN students s ON s.group_id = g.id
+      GROUP BY g.id
+      ORDER BY g.name
+    `).all();
+    res.json(rows.map(rowToGroup));
   } catch (e) { res.status(500).json({ message: e.message }); }
 });
 
@@ -641,18 +807,32 @@ app.get('/api/group/:id/students', (req, res) => {
   } catch (e) { res.status(500).json({ message: e.message }); }
 });
 
-// PUT /api/groups/bulk — replace entire groups list (used by save-groups IPC)
+// PUT /api/groups/bulk — upsert groups list (never DELETE to avoid ON DELETE SET NULL cascade)
 app.put('/api/groups/bulk', authenticateTeacher, (req, res) => {
   try {
     const groups = Array.isArray(req.body) ? req.body : [];
     const now = new Date().toISOString();
     db.transaction(() => {
-      db.prepare('DELETE FROM groups').run();
-      const ins = db.prepare('INSERT INTO groups (id,name,color,icon,extra_json,created_at,updated_at) VALUES (?,?,?,?,?,?,?)');
+      const upsert = db.prepare(`
+        INSERT INTO groups (id,name,color,icon,extra_json,created_at,updated_at)
+        VALUES (?,?,?,?,?,?,?)
+        ON CONFLICT(id) DO UPDATE SET
+          name=excluded.name, color=excluded.color, icon=excluded.icon,
+          extra_json=excluded.extra_json, updated_at=excluded.updated_at
+      `);
+      const incomingIds = [];
       for (const g of groups) {
         const { id, name, color, icon, created_at, updated_at, ...rest } = g;
         delete rest.students;
-        ins.run(id || crypto.randomUUID(), name || 'مجموعة', color || '#6366f1', icon || null, JSON.stringify(rest), created_at || now, updated_at || now);
+        const gid = id || crypto.randomUUID();
+        incomingIds.push(gid);
+        upsert.run(gid, name || 'مجموعة', color || '#6366f1', icon || null, JSON.stringify(rest), created_at || now, updated_at || now);
+      }
+      // حذف المجموعات المحذوفة — لكن بعد نقل طلابها لـ NULL بشكل صريح قبل الحذف
+      if (incomingIds.length > 0) {
+        const placeholders = incomingIds.map(() => '?').join(',');
+        db.prepare(`UPDATE students SET group_id = NULL WHERE group_id NOT IN (${placeholders})`).run(...incomingIds);
+        db.prepare(`DELETE FROM groups WHERE id NOT IN (${placeholders})`).run(...incomingIds);
       }
     })();
     res.json({ ok: true });
@@ -749,7 +929,7 @@ app.delete('/api/groups/:id', authenticateTeacher, (req, res) => {
 // POST /api/submit-answers → store submission in SQLite
 app.post('/api/submit-answers', async (req, res) => {
   try {
-    const { testId, studentId, studentName, answers } = req.body || {};
+    const { testId, studentId, studentName, answers, duration } = req.body || {};
     if (!testId || !Array.isArray(answers)) {
       return res.status(400).json({ message: 'Invalid payload' });
     }
@@ -769,10 +949,12 @@ app.post('/api/submit-answers', async (req, res) => {
 
     const id = crypto.randomUUID();
     db.prepare(`
-      INSERT INTO results (id, test_id, student_id, student_name, answers_json, score_correct, score_total, score_percent, ts)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, testId, cleanStudentId || null, cleanName || null, JSON.stringify(answers), correct, total, percent, new Date().toISOString());
+      INSERT INTO results (id, test_id, student_id, student_name, answers_json, score_correct, score_total, score_percent, duration, ts)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, testId, cleanStudentId || null, cleanName || null, JSON.stringify(answers), correct, total, percent, Number(duration) || 0, new Date().toISOString());
 
+    // notify live results listeners
+    broadcastResults(testId);
     return res.status(201).json({ ok: true, message: 'تم تسجيل الإجابة بنجاح', recordId: id, score: { correct, total, percent } });
   } catch (e) {
     return res.status(500).json({ message: 'Internal error' });
@@ -1011,12 +1193,64 @@ app.get('/api/quizzes/:id/results', authenticateTeacher, (req, res) => {
       studentName: r.student_name,
       answers: (() => { try { return JSON.parse(r.answers_json || '[]'); } catch { return []; } })(),
       score: { correct: r.score_correct, total: r.score_total, percent: r.score_percent },
+      duration: r.duration || 0,
       ts: r.ts,
     }));
     res.json(list);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
+});
+
+// DELETE /api/quizzes/:id/results — clear all results for a quiz
+app.delete('/api/quizzes/:id/results', authenticateTeacher, (req, res) => {
+  try {
+    const { count } = db.prepare('DELETE FROM results WHERE test_id = ?').run(req.params.id);
+    // notify SSE listeners
+    broadcastResults(req.params.id);
+    res.json({ ok: true, deleted: count });
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
+// SSE — real-time results stream per quiz
+const sseClients = new Map(); // quizId → Set<res>
+
+function broadcastResults(quizId) {
+  const clients = sseClients.get(quizId);
+  if (!clients || clients.size === 0) return;
+  try {
+    const rows = db.prepare('SELECT * FROM results WHERE test_id = ? ORDER BY ts DESC').all(quizId);
+    const list = rows.map(r => ({
+      id: r.id, testId: r.test_id, studentId: r.student_id,
+      studentName: r.student_name,
+      answers: (() => { try { return JSON.parse(r.answers_json || '[]'); } catch { return []; } })(),
+      score: { correct: r.score_correct, total: r.score_total, percent: r.score_percent },
+      duration: r.duration || 0, ts: r.ts,
+    }));
+    const data = `data: ${JSON.stringify(list)}\n\n`;
+    for (const client of clients) {
+      try { client.write(data); } catch { clients.delete(client); }
+    }
+  } catch {}
+}
+
+app.get('/api/quizzes/:id/results/stream', authenticateTeacher, (req, res) => {
+  const quizId = req.params.id;
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  if (!sseClients.has(quizId)) sseClients.set(quizId, new Set());
+  sseClients.get(quizId).add(res);
+
+  // send current data immediately
+  broadcastResults(quizId);
+
+  req.on('close', () => {
+    const clients = sseClients.get(quizId);
+    if (clients) { clients.delete(res); if (clients.size === 0) sseClients.delete(quizId); }
+  });
 });
 
 // Settings API endpoints (GET is public for theme/lang, others are protected)
@@ -1219,13 +1453,10 @@ app.get('/api/local-ip', (_req, res) => {
   }
 });
 
-// 2) Get single quiz with questions.
-// Teachers (authenticated) receive correctAnswer + explanation for the editor.
-// Students (unauthenticated, LAN) only receive question text + options — answers are hidden.
+// 2) Get single quiz with questions (including correctAnswer for self-graded feedback).
 app.get('/api/quizzes/:id', (req, res) => {
   try {
     const { id } = req.params;
-    const authorized = isAuthorized(req);
 
     const q = db.prepare('SELECT * FROM quizzes WHERE id = ?').get(id);
     if (!q) return res.status(404).json({ message: 'Quiz not found' });
@@ -1235,23 +1466,18 @@ app.get('/api/quizzes/:id', (req, res) => {
       FROM questions
       WHERE quiz_id = ?
       ORDER BY COALESCE(position, rowid)
-    `).all(id).map(row => {
-      const base = {
-        id: row.id,
-        type: row.type || 'mcq',
-        text: row.text,
-        image: row.image || null,
-        options: parseJSONSafe(row.options_json, []),
-        difficulty: row.difficulty || null,
-        points: (typeof row.points === 'number') ? row.points : row.points == null ? 1 : Number(row.points) || 1,
-        position: row.position || null,
-      };
-      if (authorized) {
-        base.correctAnswer = (typeof row.correct_answer === 'number') ? row.correct_answer : row.correct_answer == null ? null : Number(row.correct_answer);
-        base.explanation = row.explanation || '';
-      }
-      return base;
-    });
+    `).all(id).map(row => ({
+      id: row.id,
+      type: row.type || 'mcq',
+      text: row.text,
+      image: row.image || null,
+      options: parseJSONSafe(row.options_json, []),
+      correctAnswer: (typeof row.correct_answer === 'number') ? row.correct_answer : row.correct_answer == null ? null : Number(row.correct_answer),
+      explanation: row.explanation || '',
+      difficulty: row.difficulty || null,
+      points: (typeof row.points === 'number') ? row.points : row.points == null ? 1 : Number(row.points) || 1,
+      position: row.position || null,
+    }));
 
     ensureShortLinksTable();
     const shortRow = db.prepare('SELECT short FROM short_links WHERE quiz_id = ?').get(id);
@@ -1302,6 +1528,47 @@ app.post('/api/quizzes/:id/questions', authenticateTeacher, (req, res) => {
     );
 
     res.status(201).json({ id: qid });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// 4b) Bulk import questions
+app.post('/api/quizzes/:id/questions/bulk', authenticateTeacher, (req, res) => {
+  try {
+    const { id } = req.params;
+    const existing = db.prepare('SELECT id FROM quizzes WHERE id = ?').get(id);
+    if (!existing) return res.status(404).json({ message: 'Quiz not found' });
+
+    const questions = req.body;
+    if (!Array.isArray(questions) || questions.length === 0)
+      return res.status(400).json({ message: 'No questions provided' });
+
+    const insert = db.prepare(`
+      INSERT INTO questions (id, quiz_id, type, text, options_json, correct_answer, points, position)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    // Get current max position
+    const maxPos = db.prepare(`SELECT COALESCE(MAX(position),0) as m FROM questions WHERE quiz_id = ?`).get(id).m;
+
+    const insertMany = db.transaction((qs) => {
+      qs.forEach((q, i) => {
+        insert.run(
+          crypto.randomUUID(),
+          id,
+          'mcq',
+          String(q.text).trim(),
+          JSON.stringify(q.options),
+          q.correctAnswer,
+          1,
+          maxPos + i + 1
+        );
+      });
+    });
+
+    insertMany(questions);
+    res.status(201).json({ ok: true, inserted: questions.length });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -1383,10 +1650,64 @@ app.get('/test-settings', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'test-settings-simple.html'));
 });
 
-// SPA fallback
-app.get('*', (req, res) => {
-  res.sendFile(path.join(publicDir, 'index.html'));
+// ── Trial Config & Stats API ───────────────────────────────────────────────
+const TRIAL_CONFIG_FILE = path.join(dataDir, 'trial-config.json');
+const TRIAL_LOG_FILE    = path.join(dataDir, 'trial-log.json');
+
+const DEFAULT_TRIAL_CONFIG = {
+  daysLimit:      7,
+  maxGroups:      1,
+  maxStudents:    10,
+  maxQuizzes:     2,
+  allowedGames:   3,
+  competitions:   false,
+  content:        false,
+};
+
+async function readTrialConfig() {
+  try { return JSON.parse(await fs.readFile(TRIAL_CONFIG_FILE, 'utf8')); }
+  catch { return { ...DEFAULT_TRIAL_CONFIG }; }
+}
+async function readTrialLog() {
+  try { return JSON.parse(await fs.readFile(TRIAL_LOG_FILE, 'utf8')); }
+  catch { return []; }
+}
+
+app.get('/api/trial-config', async (req, res) => {
+  res.json(await readTrialConfig());
 });
+
+app.post('/api/trial-config', async (req, res) => {
+  try {
+    const cfg = { ...DEFAULT_TRIAL_CONFIG, ...req.body };
+    // sanitize numbers
+    cfg.daysLimit    = Math.max(1,  parseInt(cfg.daysLimit)    || 7);
+    cfg.maxGroups    = Math.max(1,  parseInt(cfg.maxGroups)    || 1);
+    cfg.maxStudents  = Math.max(1,  parseInt(cfg.maxStudents)  || 10);
+    cfg.maxQuizzes   = Math.max(1,  parseInt(cfg.maxQuizzes)   || 2);
+    cfg.allowedGames = Math.max(1,  parseInt(cfg.allowedGames) || 3);
+    cfg.competitions = !!cfg.competitions;
+    cfg.content      = !!cfg.content;
+    await fs.writeFile(TRIAL_CONFIG_FILE, JSON.stringify(cfg, null, 2), 'utf8');
+    res.json({ ok: true, config: cfg });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.get('/api/trial-stats', async (req, res) => {
+  const log = await readTrialLog();
+  res.json({ count: log.length, entries: log });
+});
+
+// Called by main.js (via internal fetch) when a trial is started
+app.post('/api/trial-log', async (req, res) => {
+  try {
+    const log = await readTrialLog();
+    log.push({ activatedAt: new Date().toISOString(), machineId: req.body.machineId || '' });
+    await fs.writeFile(TRIAL_LOG_FILE, JSON.stringify(log, null, 2), 'utf8');
+    res.json({ ok: true });
+  } catch { res.json({ ok: false }); }
+});
+// ──────────────────────────────────────────────────────────────────────────
 
 // Bind host is configurable. Default is all interfaces (0.0.0.0) because LAN
 // access is a core feature (students join quizzes from their own devices via

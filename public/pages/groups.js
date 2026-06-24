@@ -262,16 +262,19 @@
     }
   }
   
-  async function apiAddStudent(s){ 
-    if (!hasAPI || !window.api.addStudent) return null; 
-    try { 
-      const r = await window.api.addStudent(s); 
-      return r?.ok !== false; 
-    } catch(e){ 
-      console.error(e); 
-      showToast(I18n.t('groups.toast.add_student_failed'),'error'); 
-      return false; 
-    } 
+  async function apiAddStudent(s){
+    if (!hasAPI || !window.api.addStudent) return null;
+    try {
+      const r = await window.api.addStudent(s);
+      if (r?.ok === true) return true;
+      // فشل — fallback على bulk save
+      console.warn('apiAddStudent failed, falling back to bulk save:', r);
+      return null;
+    } catch(e){
+      console.error(e);
+      showToast(I18n.t('groups.toast.add_student_failed'),'error');
+      return false;
+    }
   }
   
   async function apiUpdateStudent(s){ 
@@ -328,6 +331,9 @@
       nameInput?.focus();
       return;
     }
+
+    // Trial gate
+    if (window.trialBlock && window.trialBlock('groups', groups.length)) return;
 
     const newGroup = { id: uid(), name: nameVal, description: descVal, color: getUniqueColor(), icon: getRandomIcon(), createdAt: new Date().toISOString(), studentsCount: 0, groupCode: getNextAvailableGroupCode() };
     showLoading();
@@ -580,30 +586,22 @@
     const content = document.getElementById('studentsModalContent');
     if (!modal || !content) return;
     
-    console.log('Opening students modal:', {
-      groupId,
-      hasAPI,
-      studentsInMemory: students.length
-    });
-    
-    // Reload fresh data to ensure we have the latest state
     if (hasAPI) {
-      console.log('Loading fresh data from API...');
       const freshStudents = await apiGetStudents();
-      if (freshStudents !== null) {
-        console.log('Loaded from API:', freshStudents.length, 'students');
-        students = freshStudents;
+      if (Array.isArray(freshStudents)) {
+        if (freshStudents.length < students.length) {
+          // الـ DB فيه طلاب أقل من الـ in-memory — نستعيد البيانات للـ DB
+          await apiSaveStudents(students);
+        } else {
+          students = freshStudents;
+        }
       }
     } else {
-      console.log('Loading from localStorage...');
-      const localStudents = loadLocal(LS_STUDENTS);
-      console.log('Loaded from localStorage:', localStudents.length, 'students');
-      students = localStudents;
+      students = loadLocal(LS_STUDENTS);
     }
-    
+
     // Get current group students
     const groupStudents = students.filter(s=> s.groupId === groupId);
-    console.log('Final result - Group students:', groupStudents.length);
     const totalStudents = groupStudents.length;
     const maleCount = groupStudents.filter(s => s.gender === 'male').length;
     const femaleCount = groupStudents.filter(s => s.gender === 'female').length;
@@ -620,32 +618,34 @@
             <form id="addStudentForm" class="add-student-form">
               <div class="add-student-title"><span>➕</span> <span data-i18n="groups.students.add.title">${I18n.t('groups.students.add.title')}</span></div>
               <div class="form-row">
-                <div class="form-group">
-                  <input type="text" name="studentName" class="form-input" data-i18n-placeholder="groups.students.add.name_placeholder" placeholder="${I18n.t('groups.students.add.name_placeholder')}" required />
-                </div>
-                <div class="form-group">
-                  <select name="studentGender" class="form-select" required id="studentGenderSelect">
-                    <option value="" data-i18n="groups.students.add.gender_placeholder">${I18n.t('groups.students.add.gender_placeholder')}</option>
-                    <option value="male" data-i18n="groups.students.gender.male">${I18n.t('groups.students.gender.male')}</option>
-                    <option value="female" data-i18n="groups.students.gender.female">${I18n.t('groups.students.gender.female')}</option>
-                  </select>
-                </div>
-                <div class="form-group actions">
+                <div class="form-row-main">
+                  <div class="form-group">
+                    <input type="text" name="studentName" class="form-input" placeholder="${I18n.t('groups.students.add.name_placeholder')}" required />
+                  </div>
+                  <div class="form-group">
+                    <select name="studentGender" class="form-select" required id="studentGenderSelect">
+                      <option value="">${I18n.t('groups.students.add.gender_placeholder')}</option>
+                      <option value="male">${I18n.t('groups.students.gender.male')}</option>
+                      <option value="female">${I18n.t('groups.students.gender.female')}</option>
+                    </select>
+                  </div>
                   <button type="submit" class="btn btn-primary">
                     <span class="btn-icon">➕</span>
-                    <span data-i18n="groups.students.add.submit">${I18n.t('groups.students.add.submit')}</span>
+                    <span>${I18n.t('groups.students.add.submit')}</span>
                   </button>
-                  <button type="button" class="btn btn-outline" id="openImportExcelBtn" data-i18n-title="groups.students.controls.open_import_title" title="${I18n.t('groups.students.controls.open_import_title')}">
+                </div>
+                <div class="form-row-actions">
+                  <button type="button" class="btn btn-outline" id="openImportExcelBtn" title="${I18n.t('groups.students.controls.open_import_title')}">
                     <span class="btn-icon">📥</span>
-                    <span data-i18n="groups.students.controls.open_import">${I18n.t('groups.students.controls.open_import')}</span>
+                    <span>${I18n.t('groups.students.controls.open_import')}</span>
                   </button>
-                  <button type="button" class="btn btn-outline" id="downloadTemplateBtn" data-i18n-title="groups.students.controls.download_template_title" title="${I18n.t('groups.students.controls.download_template_title')}">
+                  <button type="button" class="btn btn-outline" id="downloadTemplateBtn" title="${I18n.t('groups.students.controls.download_template_title')}">
                     <span class="btn-icon">📄</span>
-                    <span data-i18n="groups.students.controls.download_template">${I18n.t('groups.students.controls.download_template')}</span>
+                    <span>${I18n.t('groups.students.controls.download_template')}</span>
                   </button>
-                  <button type="button" class="btn btn-outline" id="openBulkAddBtn" data-i18n-title="groups.students.controls.open_bulk_add_title" title="${I18n.t('groups.students.controls.open_bulk_add_title')}">
+                  <button type="button" class="btn btn-outline" id="openBulkAddBtn" title="${I18n.t('groups.students.controls.open_bulk_add_title')}">
                     <span class="btn-icon">👥</span>
-                    <span data-i18n="groups.students.controls.open_bulk_add">${I18n.t('groups.students.controls.open_bulk_add')}</span>
+                    <span>${I18n.t('groups.students.controls.open_bulk_add')}</span>
                   </button>
                 </div>
               </div>
@@ -1106,19 +1106,30 @@
     // Attendance date: use provided date or today
     const attendanceDate = dateStr ? new Date(dateStr + 'T00:00:00').toISOString() : new Date().toISOString();
 
+    // Trial gate — students limit
+    const groupStudents = students.filter(s => s.groupId === currentGroupId).length;
+    if (window.trialBlock && window.trialBlock('students', groupStudents)) return;
+
     const payload = { id: uid(), name, gender, groupId: currentGroupId, photo, createdAt: attendanceDate, attendanceDate, code, codeSeq: seq };
 
-    students.push(payload);
-    
     if (hasAPI) {
-      const saved = await apiSaveStudents(students);
-      if (!saved) {
-        // Rollback on failure
-        students.pop();
-        showToast('فشل في حفظ الطالب', 'error');
+      const result = await apiAddStudent(payload);
+      if (result === false) {
+        // فشل كامل — لا تضيف
         return;
       }
+      students.push(payload);
+      if (result === null) {
+        // POST فشل — fallback: احفظ الكل عبر bulk
+        const bulkOk = await apiSaveStudents(students);
+        if (!bulkOk) {
+          students.pop();
+          showToast('فشل في حفظ الطالب', 'error');
+          return;
+        }
+      }
     } else {
+      students.push(payload);
       saveLocal(LS_STUDENTS, students);
     }
 
@@ -1145,15 +1156,12 @@
     // Update group card count in real-time
     const cardCount = document.getElementById(`groupCount-${currentGroupId}`);
     if (cardCount) cardCount.textContent = String(group?.studentsCount || students.filter(s=>s.groupId===currentGroupId).length);
-    // Focus the name input and prefill last gender
-    const nameInput2 = document.querySelector('#addStudentForm input[name="studentName"]');
-    if (nameInput2) nameInput2.focus();
-    const genderSelect2 = document.getElementById('studentGenderSelect');
-    if (genderSelect2 && lastSelectedGender) genderSelect2.value = lastSelectedGender;
-
     // Reset add form inputs and preview
     const addForm = document.getElementById('addStudentForm');
     if (addForm) addForm.reset();
+    // رجّع النوع بعد الـ reset عشان الـ reset بيمسحه
+    const genderSelect2 = document.getElementById('studentGenderSelect');
+    if (genderSelect2 && lastSelectedGender) genderSelect2.value = lastSelectedGender;
     const prev = document.getElementById('photoPreview');
     const clearBtn = document.getElementById('clearPhotoBtn');
     if (prev) prev.style.display = 'none';

@@ -1,986 +1,960 @@
 'use strict';
 
-// CompetitionsPage - Interactive competitions system
-(function(){
-  // ====== DOM ======
-  const typeSelect = document.getElementById('competitionType');
-  const groupSelect = document.getElementById('groupSelect');
-  // const levelFilter = document.getElementById('levelFilter');
-  const studentsList = document.getElementById('studentsList') || document.getElementById('participantsList');
-  // const selectRandomBtn = document.getElementById('selectRandom');
-  const clearSelectionBtn = document.getElementById('clearSelection');
-  const selectAllBtn = document.getElementById('selectAll');
-  const toggleParticipantsBtn = document.getElementById('toggleParticipants');
-  const bulkLevelSelect = document.getElementById('bulkLevelSelect');
-  const applyBulkLevelBtn = document.getElementById('applyBulkLevel');
-  const saveLevelsInlineBtn = document.getElementById('saveLevelsInline');
-  const levelsBox = document.getElementById('levelsBox');
-  const levelsList = document.getElementById('levelsList');
+(function () {
 
-  const teamSetup = document.getElementById('teamSetup');
-  const teamsCountInput = document.getElementById('teamsCount');
-  const distributeTeamsBtn = document.getElementById('distributeTeams');
-  const customTeamNamesWrap = document.getElementById('customTeamNames');
-  const questionsSource = document.getElementById('questionsSource');
-  const quizSelectRow = document.getElementById('quizSelectRow');
-  const quizSelect = document.getElementById('quizSelect');
-  const questionsCountInput = document.getElementById('questionsCount');
-  const questionDurationInput = document.getElementById('questionDuration');
+  // Trial gate — block entire page
+  if (window.trialBlock && window.trialBlock('competitions')) {
+    document.body.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:80vh;gap:16px;font-family:Cairo,sans-serif;text-align:center;color:#64748b">
+        <div style="font-size:3rem">🏆</div>
+        <h2 style="color:#1e293b;margin:0">المسابقات غير متاحة في النسخة التجريبية</h2>
+        <p style="margin:0;font-size:.9rem">فعّل البرنامج للوصول إلى المسابقات وجميع الميزات</p>
+        <a href="/pages/activation.html" style="background:#0f766e;color:#fff;padding:10px 24px;border-radius:10px;text-decoration:none;font-weight:700;font-size:.95rem">فعّل الآن ←</a>
+      </div>`;
+    return;
+  }
 
-  const startBtn = document.getElementById('startCompetition');
+  // ═══════════════════════════════════════════
+  // DOM refs
+  // ═══════════════════════════════════════════
+  const setupScreen    = document.getElementById('setupScreen');
+  const prematchScreen = document.getElementById('prematchScreen');
+  const gameScreen     = document.getElementById('gameScreen');
+  const resultsScreen  = document.getElementById('resultsScreen');
 
-  const stage = document.getElementById('stage');
-  const leaderboardEl = document.getElementById('leaderboard');
-  const questionIndexEl = document.getElementById('questionIndex');
-  const questionTextEl = document.getElementById('questionText');
-  const optionsEl = document.getElementById('options');
-  const timerFillEl = document.getElementById('timerFill');
-  const timerLabelEl = document.getElementById('timerLabel');
-  const pauseBtn = document.getElementById('pauseBtn');
-  const resumeBtn = document.getElementById('resumeBtn');
-  const nextBtn = document.getElementById('nextBtn');
-  const endBtn = document.getElementById('endBtn');
-  const celebrateEl = document.getElementById('celebrate');
+  // Setup
+  const quizSelect       = document.getElementById('cmpQuizSelect');
+  const groupSelect      = document.getElementById('cmpGroupSelect');
+  const refreshGroupsBtn = document.getElementById('cmpRefreshGroups');
+  const timeBtns         = document.querySelectorAll('.cmp-time-btn');
+  const questionsCountEl = document.getElementById('cmpQuestionsCount');
+  const modeTabs         = document.querySelectorAll('.cmp-mode-tab');
+  const teamSetupCol     = document.getElementById('teamSetupCol');
+  const pvpSetupCol      = document.getElementById('pvpSetupCol');
+  const countBtns        = document.querySelectorAll('.cmp-count-btn');
+  const distributeBtn    = document.getElementById('cmpDistributeBtn');
+  const teamsPreviewEl   = document.getElementById('cmpTeamsPreview');
+  const pvpStudent1El    = document.getElementById('pvpStudent1');
+  const pvpStudent2El    = document.getElementById('pvpStudent2');
+  const pvpRandomBtn     = document.getElementById('pvpRandomBtn');
+  const startBtn         = document.getElementById('cmpStartBtn');
 
-  const teamsSummaryEl = document.getElementById('teamsSummary');
+  // Game
+  const questionCounterEl = document.getElementById('cmpQuestionCounter');
+  const turnBadgeEl       = document.getElementById('cmpTurnBadge');
+  const turnDotEl         = document.getElementById('cmpTurnDot'); // قد لا يوجد بعد الـ redesign
+  const turnNameEl        = document.getElementById('cmpTurnName');
+  const pauseBtn          = document.getElementById('cmpPauseBtn');
+  const resumeBtn         = document.getElementById('cmpResumeBtn');
+  const nextBtn           = document.getElementById('cmpNextBtn');
+  const endBtn            = document.getElementById('cmpEndBtn');
+  const scoreboardEl      = document.getElementById('cmpScoreboard');
+  const timerFillEl       = document.getElementById('cmpTimerFill');
+  const timerLabelEl      = document.getElementById('cmpTimerNum');
+  const questionTextEl    = document.getElementById('cmpQuestionText');
+  const optionsEl         = document.getElementById('cmpOptions');
+  const judgeHintEl       = document.getElementById('cmpJudgeHintText');
+  const continueBtn       = document.getElementById('cmpContinueBtn');
+  const fullscreenBtn     = document.getElementById('cmpFullscreenBtn');
 
-  // Live modal refs
-  const liveModal = document.getElementById('liveModal');
-  const closeLiveModalBtn = document.getElementById('closeLiveModal');
-  const modalTeamsRosterEl = document.getElementById('modalTeamsRoster');
-  const modalLeaderboardEl = document.getElementById('modalLeaderboard');
-  const modalQuestionIndexEl = document.getElementById('modalQuestionIndex');
-  const modalQuestionTextEl = document.getElementById('modalQuestionText');
-  const modalOptionsEl = document.getElementById('modalOptions');
-  const modalTimerFillEl = document.getElementById('modalTimerFill');
-  const modalTimerLabelEl = document.getElementById('modalTimerLabel');
-  const modalPauseBtn = document.getElementById('modalPauseBtn');
-  const modalResumeBtn = document.getElementById('modalResumeBtn');
-  const modalNextBtn = document.getElementById('modalNextBtn');
-  const modalEndBtn = document.getElementById('modalEndBtn');
+  // Results
+  const podiumEl     = document.getElementById('cmpPodium');
+  const playAgainBtn = document.getElementById('cmpPlayAgainBtn');
 
-  const toastEl = document.getElementById('toast');
+  // Toast / celebrate
+  const toastEl     = document.getElementById('cmpToast');
+  const celebrateEl = document.getElementById('cmpCelebrate');
 
-  // ====== State ======
-  const hasAPI = !!(window.api);
-  let allGroups = [];
-  let allStudents = [];
-  let allQuizzes = [];
-
-  const LEVELS = ['beginner','intermediate','advanced'];
-  const RANDOM_TEAM_NAMES = [
-    'النمور','الصقور','الأبطال','النسور','الفرسان','العواصف','النجوم','الذئاب','الأقوياء','المحاربون'
+  // ═══════════════════════════════════════════
+  // Constants
+  // ═══════════════════════════════════════════
+  const TEAM_PRESETS = [
+    { name: 'الأسود',    icon: '🦁', color: '#d97706' },
+    { name: 'التنانين', icon: '🐉', color: '#dc2626' },
+    { name: 'الصواعق',  icon: '⚡', color: '#2563eb' },
+    { name: 'البراكين', icon: '🔥', color: '#ea580c' },
+    { name: 'الأمواج',  icon: '🌊', color: '#0891b2' },
+    { name: 'الصقور',   icon: '🦅', color: '#0f766e' },
+    { name: 'النجوم',   icon: '⭐', color: '#7c3aed' },
+    { name: 'الذئاب',   icon: '🐺', color: '#4f46e5' },
   ];
-  const TEAM_COLORS = ['#60a5fa','#22c55e','#f59e0b','#ef4444','#a78bfa','#14b8a6'];
 
-  let setup = {
-    type: 'pvp', // 'pvp' | 'team'
-    selectedGroupId: '',
-    level: '', // '', 'beginner','intermediate','advanced'
-    selectedStudentIds: new Set(),
-    teamsCount: 2,
-    teamNamesMode: 'random',
-    customTeamNames: [],
-    teams: [], // [{id,name,color,members:[studentId], score:0}]
-    // Quiz / questions
-    source: 'quiz', // 'quiz' | 'bank'
-    selectedQuizId: '',
+  // ═══════════════════════════════════════════
+  // State
+  // ═══════════════════════════════════════════
+  let cfg = {
+    mode: 'team',
+    quizId: '',
+    groupId: '',
+    questionDuration: 20,
     questionsCount: 10,
-    questionDuration: 20
+    teamsCount: 3,
   };
 
-  let runtime = {
-    started: false,
-    paused: false,
-    timerTotal: 20,
-    timerLeft: 20,
-    timerTick: null,
-    currentIndex: 0,
-    questions: [], // [{text, options:[..], correctAnswer: idx}]
-    participants: [], // pvp: [{id,name,score}], team: teams with score
-    answered: false,
-    lastAnswerTimeSec: 0,
-    // Highlighting: who is answering now (id of team or participant)
-    activeResponderId: null
+  let data = {
+    allStudents: [],
+    allGroups:   [],
+    allQuizzes:  [],
   };
 
-  // ====== Utils ======
-  function showToast(msg, type='info'){
+  // teams/pvpPlayers: [{id, name, color, members:[], score}]
+  let game = {
+    teams:            [],
+    pvpPlayers:       [],
+    questions:        [],
+    currentIndex:     0,
+    turnIndex:        0,   // دور مين دلوقتي (round-robin)
+    paused:           false,
+    timerLeft:        20,
+    timerTotal:       20,
+    timerStartedAt:   0,
+    timerTick:        null,
+    questionRevealed: false,
+      };
+
+  // ═══════════════════════════════════════════
+  // Utils
+  // ═══════════════════════════════════════════
+  function uid() { return Math.random().toString(36).slice(2, 9); }
+
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function toast(msg, type = 'info') {
     if (!toastEl) return;
     toastEl.textContent = msg;
+    toastEl.className = 'cmp-toast cmp-toast-' + type + ' show';
     toastEl.hidden = false;
-    toastEl.classList.add('show');
-    setTimeout(()=>{ toastEl.classList.remove('show'); toastEl.hidden = true; }, 2600);
+    clearTimeout(toastEl._t);
+    toastEl._t = setTimeout(() => { toastEl.classList.remove('show'); toastEl.hidden = true; }, 2800);
   }
 
-  function uid(){ return Math.random().toString(36).slice(2,10); }
-  function shuffle(arr){
-    for (let i=arr.length-1;i>0;i--){
-      const j = Math.floor(Math.random()*(i+1));
-      [arr[i],arr[j]]=[arr[j],arr[i]];
-    }
-    return arr;
-  }
-  function sample(arr, n){
-    const a = [...arr];
-    shuffle(a);
-    return a.slice(0, n);
+  // ═══════════════════════════════════════════
+  // Sound (Web Audio API — بدون ملفات صوت)
+  // ═══════════════════════════════════════════
+  let _audioCtx = null;
+  function getAudioCtx() {
+    if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return _audioCtx;
   }
 
-  function ensureArray(v){ return Array.isArray(v) ? v : []; }
-
-  function normalizeStudent(student){
-    // If no level is defined, leave undefined for manual assignment box
-    if (!student.level || !LEVELS.includes(student.level)) student.level = undefined;
-    return student;
-  }
-
-  // Convert quizzes to a uniform shape if needed
-  function normalizeQuiz(quiz){
-    if (quiz && Array.isArray(quiz.questions) && quiz.questions.length) {
-      // ensure each question has {text, options[], correctAnswer}
-      const questions = quiz.questions.map(q => {
-        if (q && typeof q === 'object'){
-          const text = q.text || q.question || q.title || 'سؤال';
-          const options = ensureArray(q.options || q.choices || q.answers || []);
-          let correct = typeof q.correctAnswer === 'number' ? q.correctAnswer
-                      : typeof q.correctIndex === 'number' ? q.correctIndex
-                      : (typeof q.correct === 'number' ? q.correct : 0);
-          // Clamp
-          if (!options.length) {
-            // minimal fallback
-            return { text, options: ['صح','خطأ','—','—'], correctAnswer: 0 };
-          }
-          correct = Math.max(0, Math.min(options.length-1, Number(correct)||0));
-          return { text, options, correctAnswer: correct };
-        }
-        return { text: 'سؤال', options: ['أ','ب','ج','د'], correctAnswer: 0 };
-      });
-      return { id: quiz.id || uid(), title: quiz.title || quiz.name || 'اختبار', questions };
-    }
-    return null;
-  }
-
-  // Basic fallback question bank
-  function fallbackBank(n=20){
-    const qs = [];
-    const ops = (a,b,c,d)=>[String(a),String(b),String(c),String(d)];
-    for (let i=1;i<=n;i++){
-      const a = Math.ceil(Math.random()*10);
-      const b = Math.ceil(Math.random()*10);
-      const sum = a+b;
-      const wrong = [sum+1, sum-1, sum+2];
-      const options = shuffle(ops(sum, wrong[0], wrong[1], wrong[2]));
-      const correctAnswer = options.indexOf(String(sum));
-      qs.push({ text: `ما ناتج ${a} + ${b}؟`, options, correctAnswer });
-    }
-    return qs;
-  }
-
-  function buildSampleQuizzes(){
-    // Inspired by race.js sample structure
-    return [
-      {
-        id: 'sample-quiz-1',
-        title: 'اختبار عام 1',
-        questions: [
-          { text: 'ما هو أكبر كوكب؟', options: ['الأرض','المريخ','المشتري','زحل'], correctAnswer: 2 },
-          { text: 'عاصمة فرنسا؟', options: ['لندن','برلين','باريس','روما'], correctAnswer: 2 }
-        ]
-      },
-      {
-        id: 'sample-quiz-2',
-        title: 'اختبار رياضيات',
-        questions: [
-          { text: '15 × 12 = ؟', options: ['170','180','175','185'], correctAnswer: 1 },
-          { text: 'الجذر التربيعي لـ 144؟', options: ['10','12','14','16'], correctAnswer: 1 }
-        ]
-      }
-    ];
-  }
-
-  // ====== Data Loading ======
-  async function loadGroups(){
+  function playSound(type) {
     try {
-      if (hasAPI && window.api.loadGroups){
-        const r = await window.api.loadGroups();
-        allGroups = Array.isArray(r) ? r : [];
-      } else {
-        const raw = localStorage.getItem('cm_groups_v1');
-        allGroups = raw ? JSON.parse(raw) : [
-          { id:'group1', name:'المجموعة الأولى' },
-          { id:'group2', name:'المجموعة الثانية' }
-        ];
-      }
-    } catch {
-      allGroups = [];
-    }
-    // populate UI
-    groupSelect.innerHTML = '<option value="">— اختر مجموعة —</option>';
-    allGroups.forEach(g => {
-      const opt = document.createElement('option');
-      opt.value = g.id; opt.textContent = g.name;
-      groupSelect.appendChild(opt);
-    });
-    // restore selection
-    if (setup.selectedGroupId) groupSelect.value = setup.selectedGroupId;
-  }
+      const ctx  = getAudioCtx();
+      const gain = ctx.createGain();
+      gain.connect(ctx.destination);
+      const t = ctx.currentTime;
 
-  async function loadStudents(){
-    try {
-      if (hasAPI && window.api.loadStudents){
-        const r = await window.api.loadStudents();
-        allStudents = Array.isArray(r) ? r.map(normalizeStudent) : [];
-      } else {
-        const raw = localStorage.getItem('cm_students_v1');
-        const sample = [
-          { id:'1', name:'أحمد محمد', groupId:'group1', level:'beginner' },
-          { id:'2', name:'فاطمة علي', groupId:'group1', level:'intermediate' },
-          { id:'3', name:'محمد أحمد', groupId:'group1', level:'advanced' },
-          { id:'4', name:'سارة خالد', groupId:'group2', level:'beginner' },
-          { id:'5', name:'يوسف إبراهيم', groupId:'group2', level:'intermediate' },
-          { id:'6', name:'مريم حسن', groupId:'group2', level:'advanced' }
-        ];
-        allStudents = raw ? JSON.parse(raw).map(normalizeStudent) : sample;
-      }
-    } catch {
-      allStudents = [];
-    }
-  }
-
-  async function loadQuizzes(){
-    try {
-      if (hasAPI && window.api.loadQuizzes){
-        const r = await window.api.loadQuizzes();
-        const list = Array.isArray(r) ? r : [];
-        const normalized = list.map(normalizeQuiz).filter(Boolean);
-        if (normalized.length) {
-          allQuizzes = normalized;
-        } else {
-          // fallback to built-in samples
-          allQuizzes = buildSampleQuizzes();
-        }
-      } else {
-        // Try from localStorage used by quizzes page
-        const raw = localStorage.getItem('cm_quizzes_v1');
-        const list = raw ? JSON.parse(raw) : [];
-        const normalized = list.map(normalizeQuiz).filter(Boolean);
-        allQuizzes = normalized.length ? normalized : buildSampleQuizzes();
-      }
-    } catch {
-      allQuizzes = buildSampleQuizzes();
-    }
-
-    // Populate quiz select
-    if (!quizSelect) return;
-    quizSelect.innerHTML = '<option value="">— اختر اختبار —</option>';
-    allQuizzes.forEach(q => {
-      const opt = document.createElement('option');
-      opt.value = q.id; opt.textContent = q.title || 'اختبار';
-      quizSelect.appendChild(opt);
-    });
-    // restore selection
-    if (setup.selectedQuizId) quizSelect.value = setup.selectedQuizId;
-  }
-
-  // ====== Participants UI ======
-  function getFilteredStudents(){
-    const gid = setup.selectedGroupId;
-    const lvl = setup.level;
-    return allStudents
-      .filter(s => !gid || s.groupId === gid)
-      .filter(s => !lvl || (s.level === lvl));
-  }
-
-  function renderStudents(){
-    if (!studentsList) return;
-    const list = getFilteredStudents();
-    studentsList.innerHTML = '';
-    // اضبط كثافة الشبكة بحسب العدد لزيادة عدد العناصر في الصف الواحد
-    studentsList.classList.remove('dense','xdense');
-    if (list.length > 36) {
-      studentsList.classList.add('xdense');
-    } else if (list.length > 18) {
-      studentsList.classList.add('dense');
-    }
-    if (!list.length){
-      studentsList.innerHTML = '<div class="page-competitions-note">لا يوجد طلاب مطابقون.</div>';
-      return;
-    }
-    list.forEach(s => {
-      const el = document.createElement('label');
-      el.className = 'student';
-      el.dataset.level = s.level || 'unset';
-      el.innerHTML = `
-        <input type="checkbox" value="${s.id}" ${setup.selectedStudentIds.has(s.id)?'checked':''} />
-        <span class="name">${s.name}</span>
-        <select class="level-inline" data-student-id="${s.id}">
-          <option value="">غير محدد</option>
-          <option value="beginner" ${s.level==='beginner'?'selected':''}>مبتدئ</option>
-          <option value="intermediate" ${s.level==='intermediate'?'selected':''}>متوسط</option>
-          <option value="advanced" ${s.level==='advanced'?'selected':''}>متقدم</option>
-        </select>
-      `;
-      const input = el.querySelector('input');
-      input.addEventListener('change', () => {
-        if (input.checked) setup.selectedStudentIds.add(s.id); else setup.selectedStudentIds.delete(s.id);
-      });
-      const levelSel = el.querySelector('select.level-inline');
-      levelSel.addEventListener('change', () => {
-        const val = levelSel.value || undefined;
-        const idx = allStudents.findIndex(st => st.id===s.id);
-        if (idx>=0){ allStudents[idx].level = val; }
-        el.dataset.level = val || 'unset';
-      });
-      studentsList.appendChild(el);
-    });
-  }
-
-  function levelLabel(l){
-    switch(l){
-      case 'beginner': return 'مبتدئ';
-      case 'intermediate': return 'متوسط';
-      case 'advanced': return 'متقدم';
-      default: return 'غير محدد';
-    }
-  }
-
-  function ensureCustomTeamInputs(){
-    const count = Number(teamsCountInput.value||2);
-    customTeamNamesWrap.innerHTML = '';
-    for (let i=0;i<count;i++){
-      const row = document.createElement('div');
-      row.className = 'team-slot';
-      row.innerHTML = `
-        <label style="display:flex;align-items:center;gap:8px">
-          <span class="team-badge"><span class="team-color" style="background:${TEAM_COLORS[i%TEAM_COLORS.length]}"></span> فريق ${i+1}</span>
-          <input type="text" placeholder="اسم الفريق" data-team-name-index="${i}" style="flex:1;background:#0b1220;border:1px solid #1e293b;border-radius:8px;color:#e5e7eb;padding:8px" />
-        </label>
-      `;
-      customTeamNamesWrap.appendChild(row);
-    }
-  }
-
-  function buildTeams(){
-    const count = Math.max(2, Math.min(6, Number(teamsCountInput.value||2)));
-    const selected = getSelectedParticipants();
-    if (selected.length < count) {
-      showToast('عدد المشاركين أقل من عدد الفرق', 'warning');
-    }
-    // Require levels before distribution
-    const missingLevels = selected.filter(s => !LEVELS.includes(s.level));
-    if (missingLevels.length){
-      showToast('حدد مستويات المشاركين أولاً من زر "تعيين المستويات"', 'warning');
-      if (levelsBox){
-        renderLevelsBox();
-        levelsBox.classList.remove('hidden');
-        levelsBox.setAttribute('aria-hidden','false');
-      }
-      return;
-    }
-    // Team names
-    const teams = [];
-    if (getTeamNamesMode()==='random'){
-      const names = shuffle([...RANDOM_TEAM_NAMES]).slice(0, count);
-      for (let i=0;i<count;i++){
-        teams.push({ id: uid(), name: names[i], color: TEAM_COLORS[i%TEAM_COLORS.length], members: [], score: 0 });
-      }
-    } else {
-      const inputs = customTeamNamesWrap.querySelectorAll('[data-team-name-index]');
-      for (let i=0;i<count;i++){
-        const name = inputs[i]?.value?.trim() || `فريق ${i+1}`;
-        teams.push({ id: uid(), name, color: TEAM_COLORS[i%TEAM_COLORS.length], members: [], score: 0 });
-      }
-    }
-
-    // Ensure every selected student has a level (manual assignment may be pending)
-    selected.forEach(s => { if (!LEVELS.includes(s.level)) s.level = 'intermediate'; });
-
-    // Distribute by level balance then fill (merge مختلف المستويات في كل فريق)
-    const byLevel = {
-      beginner: selected.filter(s=>s.level==='beginner'),
-      intermediate: selected.filter(s=>s.level==='intermediate'),
-      advanced: selected.filter(s=>s.level==='advanced')
-    };
-    Object.values(byLevel).forEach(arr => shuffle(arr));
-
-    // Round-robin across Advanced -> Intermediate -> Beginner, to mix levels fairly
-    const rounds = [byLevel.advanced, byLevel.intermediate, byLevel.beginner];
-    const queue = rounds.flat();
-    let idx = 0;
-    queue.forEach(s => { teams[idx%teams.length].members.push(s); idx++; });
-
-    setup.teams = teams;
-    showToast('تم توزيع الفرق بنجاح','success');
-    renderLeaderboard();
-    renderTeamsSummary();
-  }
-
-  function getTeamNamesMode(){
-    const checked = document.querySelector('input[name="teamNamesMode"]:checked');
-    return checked ? checked.value : 'random';
-  }
-
-  function getSelectedParticipants(){
-    const ids = Array.from(setup.selectedStudentIds);
-    return getFilteredStudents().filter(s => ids.includes(s.id));
-  }
-
-  // [REMOVED] selectRandomParticipants was removed per request
-
-  // ====== Questions/Quiz ======
-  function buildQuestions(){
-    const total = Math.max(1, Math.min(50, Number(questionsCountInput.value||10)));
-    let questions = [];
-    if (setup.source === 'quiz'){
-      const quiz = allQuizzes.find(q => q.id === setup.selectedQuizId);
-      if (quiz) questions = quiz.questions.slice(0, total);
-    } else {
-      // bank mode: take random from all quizzes; if empty, fallback
-      const bank = allQuizzes.flatMap(q => q.questions || []);
-      if (bank.length){
-        questions = sample(bank, Math.min(total, bank.length));
-      }
-    }
-    if (!questions.length){
-      questions = fallbackBank(total);
-    }
-    return questions;
-  }
-
-  // ====== Stage / Rendering ======
-  function renderLeaderboard(){
-    if (!leaderboardEl) return;
-    leaderboardEl.innerHTML = '';
-
-    const items = (setup.type==='team') ? setup.teams.map(t => ({
-      id: t.id, name: t.name, score: t.score || 0, meta: `${t.members.length} مشارك`
-    })) : getSelectedParticipants().map(s => ({
-      id: s.id, name: s.name, score: (runtime.participants.find(p=>p.id===s.id)?.score)||0
-    }));
-
-    items.sort((a,b)=>b.score-a.score);
-
-    items.forEach((it, i) => {
-      const row = document.createElement('div');
-      row.className = 'board-item' + (runtime.activeResponderId===it.id ? ' active' : '');
-      row.innerHTML = `
-        <div class="name">${i+1}. ${it.name}</div>
-        <div class="score">${it.score}</div>
-      `;
-      row.setAttribute('data-id', it.id);
-      row.title = 'تعيين/إزالة المجاوب الحالي';
-      row.addEventListener('click', () => {
-        setActiveResponder(runtime.activeResponderId===it.id ? null : it.id);
-      });
-      leaderboardEl.appendChild(row);
-    });
-
-    // Mirror to modal leaderboard if exists
-    if (modalLeaderboardEl){
-      modalLeaderboardEl.innerHTML = '';
-      items.forEach((it, i) => {
-        const row = document.createElement('div');
-        row.className = 'board-item' + (runtime.activeResponderId===it.id ? ' active' : '');
-        row.innerHTML = `
-          <div class="name">${i+1}. ${it.name}</div>
-          <div class="score">${it.score}</div>
-        `;
-        row.setAttribute('data-id', it.id);
-        row.title = 'تعيين/إزالة المجاوب الحالي';
-        row.addEventListener('click', () => {
-          setActiveResponder(runtime.activeResponderId===it.id ? null : it.id);
+      if (type === 'correct') {
+        // وتر صاعد احتفالي
+        [[523,.08],[659,.18],[784,.28],[1047,.38]].forEach(([freq, when]) => {
+          const o = ctx.createOscillator();
+          o.type = 'sine'; o.frequency.value = freq;
+          o.connect(gain); o.start(t + when); o.stop(t + when + .25);
         });
-        modalLeaderboardEl.appendChild(row);
+        gain.gain.setValueAtTime(.28, t);
+        gain.gain.exponentialRampToValueAtTime(.001, t + .7);
+      } else if (type === 'wrong') {
+        const o = ctx.createOscillator();
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(300, t);
+        o.frequency.linearRampToValueAtTime(120, t + .35);
+        o.connect(gain); o.start(t); o.stop(t + .35);
+        gain.gain.setValueAtTime(.22, t);
+        gain.gain.exponentialRampToValueAtTime(.001, t + .35);
+      } else if (type === 'tick') {
+        const o = ctx.createOscillator();
+        o.type = 'sine'; o.frequency.value = 880;
+        o.connect(gain); o.start(t); o.stop(t + .06);
+        gain.gain.setValueAtTime(.12, t);
+        gain.gain.exponentialRampToValueAtTime(.001, t + .06);
+      } else if (type === 'timeup') {
+        const o = ctx.createOscillator();
+        o.type = 'square'; o.frequency.value = 220;
+        o.connect(gain); o.start(t); o.stop(t + .5);
+        gain.gain.setValueAtTime(.18, t);
+        gain.gain.exponentialRampToValueAtTime(.001, t + .5);
+      }
+    } catch {}
+  }
+
+  // ═══════════════════════════════════════════
+  // Celebrate — كونفيتي أقوى
+  // ═══════════════════════════════════════════
+  function celebrate() {
+    if (!celebrateEl) return;
+    celebrateEl.innerHTML = '';
+    const colors = ['#f59e0b','#10b981','#3b82f6','#ec4899','#8b5cf6','#ef4444'];
+    for (let i = 0; i < 60; i++) {
+      const el = document.createElement('div');
+      el.className = 'cmp-confetti-piece';
+      el.style.cssText = `
+        left:${Math.random()*100}%;
+        background:${colors[Math.floor(Math.random()*colors.length)]};
+        width:${6+Math.random()*8}px; height:${6+Math.random()*8}px;
+        border-radius:${Math.random()>.5?'50%':'2px'};
+        animation-delay:${Math.random()*.5}s;
+        animation-duration:${.8+Math.random()*.8}s;
+      `;
+      celebrateEl.appendChild(el);
+    }
+    celebrateEl.classList.remove('hidden');
+    setTimeout(() => { celebrateEl.classList.add('hidden'); celebrateEl.innerHTML=''; }, 2000);
+  }
+
+  function getEntities() {
+    return cfg.mode === 'team' ? game.teams : game.pvpPlayers;
+  }
+
+  function getCurrentEntity() {
+    const entities = getEntities();
+    return entities[game.turnIndex % entities.length];
+  }
+
+  // ═══════════════════════════════════════════
+  // Data loading
+  // ═══════════════════════════════════════════
+  async function loadAll() {
+    await Promise.all([loadGroups(), loadStudents(), loadQuizzes()]);
+    renderStudentSelects();
+  }
+
+  async function loadGroups() {
+    try {
+      const api = window.api;
+      data.allGroups = api && api.loadGroups
+        ? (await api.loadGroups()) || []
+        : JSON.parse(localStorage.getItem('cm_groups_v1') || '[]');
+    } catch { data.allGroups = []; }
+
+    groupSelect.innerHTML = '<option value="">— كل الطلاب —</option>';
+    data.allGroups.forEach(g => {
+      const o = document.createElement('option');
+      o.value = g.id; o.textContent = g.name;
+      groupSelect.appendChild(o);
+    });
+  }
+
+  async function loadStudents() {
+    try {
+      const api = window.api;
+      data.allStudents = api && api.loadStudents
+        ? (await api.loadStudents()) || []
+        : JSON.parse(localStorage.getItem('cm_students_v1') || '[]');
+    } catch { data.allStudents = []; }
+  }
+
+  async function loadQuizzes() {
+    try {
+      const api = window.api;
+      const list = api && api.loadQuizzes
+        ? (await api.loadQuizzes()) || []
+        : JSON.parse(localStorage.getItem('cm_quizzes_v1') || '[]');
+
+      data.allQuizzes = list.filter(q => q && q.id).map(q => ({
+        id:             q.id,
+        title:          q.title || q.name || 'اختبار',
+        groupId:        q.groupId || q.group_id || '',
+        questionsCount: Number(q.questionsCount) || 0,
+      }));
+    } catch { data.allQuizzes = []; }
+  }
+
+  async function fetchFullQuiz(quizId) {
+    try {
+      const api = window.api;
+      const quiz = api && api.loadQuiz ? await api.loadQuiz(quizId) : null;
+      return normalizeQuiz(quiz);
+    } catch { return null; }
+  }
+
+  function normalizeQuiz(quiz) {
+    if (!quiz || !Array.isArray(quiz.questions)) return null;
+    const questions = quiz.questions.map(q => {
+      const text    = q.text || q.question || q.title || 'سؤال';
+      const options = Array.isArray(q.options || q.choices) ? (q.options || q.choices) : [];
+      if (options.length < 2) return null;
+      const ca = typeof q.correctAnswer === 'number' ? q.correctAnswer
+               : typeof q.correctIndex  === 'number' ? q.correctIndex : 0;
+      return { text, options, correctAnswer: Math.max(0, Math.min(options.length - 1, ca)) };
+    }).filter(Boolean);
+    if (!questions.length) return null;
+    return { id: quiz.id, title: quiz.title || quiz.name || 'اختبار', questions };
+  }
+
+  // ═══════════════════════════════════════════
+  // Quiz filter by group
+  // ═══════════════════════════════════════════
+  function filterQuizzesByGroup() {
+    const gid      = cfg.groupId;
+    const filtered = gid ? data.allQuizzes.filter(q => q.groupId === gid) : data.allQuizzes;
+    const prev     = cfg.quizId;
+
+    quizSelect.innerHTML = filtered.length
+      ? '<option value="">— اختر اختبار —</option>'
+      : `<option value="">${gid ? 'لا توجد اختبارات لهذه المجموعة' : 'لا توجد اختبارات'}</option>`;
+
+    filtered.forEach(q => {
+      const o = document.createElement('option');
+      o.value = q.id;
+      o.textContent = q.title + (q.questionsCount ? ` (${q.questionsCount} سؤال)` : '');
+      quizSelect.appendChild(o);
+    });
+
+    cfg.quizId = filtered.find(q => q.id === prev) ? prev : '';
+    quizSelect.value = cfg.quizId;
+  }
+
+  function getFilteredStudents() {
+    return cfg.groupId
+      ? data.allStudents.filter(s => s.groupId === cfg.groupId)
+      : data.allStudents;
+  }
+
+  function renderStudentSelects() {
+    const students = getFilteredStudents();
+    [pvpStudent1El, pvpStudent2El].forEach(sel => {
+      const prev = sel.value;
+      sel.innerHTML = '<option value="">— اختر —</option>';
+      students.forEach(s => {
+        const o = document.createElement('option');
+        o.value = s.id; o.textContent = s.name;
+        sel.appendChild(o);
       });
-    }
+      sel.value = prev;
+    });
   }
 
-  function levelColor(level){
-    switch(level){
-      case 'beginner': return '#22c55e';
-      case 'intermediate': return '#f59e0b';
-      case 'advanced': return '#ef4444';
-      default: return '#64748b';
-    }
+  // ═══════════════════════════════════════════
+  // Team distribution
+  // ═══════════════════════════════════════════
+  function distributeTeams() {
+    if (!cfg.groupId) { toast('اختر مجموعة أولاً', 'warning'); return; }
+    const students = shuffle(getFilteredStudents());
+    if (!students.length) { toast('لا يوجد طلاب في هذه المجموعة', 'warning'); return; }
+
+    const n       = cfg.teamsCount;
+    const presets = shuffle([...TEAM_PRESETS]).slice(0, n);
+    game.teams    = Array.from({ length: n }, (_, i) => ({
+      id: uid(),
+      name: presets[i].name,
+      icon: presets[i].icon,
+      color: presets[i].color,
+      members: [], score: 0,    }));
+    students.forEach((s, i) => game.teams[i % n].members.push(s));
+
+    renderTeamsPreview();
+    toast('تم توزيع الفرق ✓', 'success');
   }
 
-  function renderTeamsSummary(){
-    if (!teamsSummaryEl) return;
-    if (!setup.teams || !setup.teams.length){
-      teamsSummaryEl.classList.add('hidden');
-      teamsSummaryEl.setAttribute('aria-hidden','true');
-      teamsSummaryEl.innerHTML='';
-      return;
-    }
-    teamsSummaryEl.classList.remove('hidden');
-    teamsSummaryEl.setAttribute('aria-hidden','false');
-    teamsSummaryEl.innerHTML = setup.teams.map(t => {
-      const members = (t.members||[]).map(m => `
-        <div class="member"><span class="level-dot" style="background:${levelColor(m.level)}"></span><span>${m.name}</span></div>
-      `).join('');
-      return `
-        <div class="team-card">
-          <div class="team-title">
-            <span class="team-color" style="width:10px;height:10px;border-radius:50%;background:${t.color}"></span>
-            <span>${t.name}</span>
-            <span style="opacity:.7">(${t.members.length})</span>
-          </div>
-          <div class="members">${members || '<div class="member" style="opacity:.7">— لا يوجد مشاركون —</div>'}</div>
+  function renderTeamsPreview() {
+    if (!teamsPreviewEl) return;
+    teamsPreviewEl.innerHTML = game.teams.map(t => `
+      <div class="cmp-team-card" style="border-color:${t.color}30;background:${t.color}08">
+        <div class="cmp-team-card-title" style="color:${t.color}">
+          <span class="cmp-team-icon">${t.icon || ''}</span>
+          ${t.name}
+          <span style="opacity:.55;font-size:12px;margin-right:4px">(${t.members.length})</span>
+          ${t.members.length === 0 ? '<span class="cmp-team-empty-warn">⚠️ فارغ</span>' : ''}
         </div>
-      `;
-    }).join('');
+        <div class="cmp-team-members">
+          ${t.members.map(m => `<span class="cmp-member-chip">${m.name}</span>`).join('')}
+        </div>
+      </div>
+    `).join('');
   }
 
-  function setActiveResponder(id){
-    runtime.activeResponderId = id || null;
-    renderLeaderboard();
-    renderModalRoster();
-  }
+  // ═══════════════════════════════════════════
+  // Game start
+  // ═══════════════════════════════════════════
+  async function startGame() {
+    if (!cfg.quizId) { toast('اختر اختبار أولاً', 'warning'); return; }
 
-  function openLiveModal(){
-    if (!liveModal) return;
-    liveModal.classList.remove('hidden');
-    liveModal.setAttribute('aria-hidden','false');
-    renderModalRoster();
-    renderLeaderboard();
-    renderModalQuestion();
-  }
-
-  function closeLiveModal(){
-    if (!liveModal) return;
-    liveModal.classList.add('hidden');
-    liveModal.setAttribute('aria-hidden','true');
-  }
-
-  function renderModalRoster(){
-    if (!modalTeamsRosterEl) return;
-    modalTeamsRosterEl.innerHTML = '';
-    if (setup.type === 'team'){
-      setup.teams.forEach(t => {
-        const isActive = runtime.activeResponderId === t.id;
-        const teamDiv = document.createElement('div');
-        teamDiv.className = 'live-team' + (isActive ? ' active' : '');
-        teamDiv.innerHTML = `
-          <div class="team-head"><span class="team-color" style="width:10px;height:10px;border-radius:50%;background:${t.color}"></span><span>${t.name}</span><span style="opacity:.6">(${t.members.length})</span></div>
-        `;
-        teamDiv.setAttribute('data-id', t.id);
-        teamDiv.title = 'تعيين/إزالة الفريق كمجاوب حالي';
-        teamDiv.addEventListener('click', () => {
-          setActiveResponder(runtime.activeResponderId===t.id ? null : t.id);
-        });
-        (t.members||[]).forEach(m => {
-          const mr = document.createElement('div');
-          mr.className = 'member';
-          mr.innerHTML = `<span class="level-dot" style="width:8px;height:8px;border-radius:50%;background:${levelColor(m.level)}"></span><span>${m.name}</span>`;
-          teamDiv.appendChild(mr);
-        });
-        modalTeamsRosterEl.appendChild(teamDiv);
-      });
+    if (cfg.mode === 'team') {
+      if (!game.teams.length) { toast('وزّع الفرق أولاً', 'warning'); return; }
+      const empty = game.teams.find(t => t.members.length === 0);
+      if (empty) { toast(`فريق "${empty.icon || ''} ${empty.name}" فارغ — وزّع الطلاب أولاً`, 'warning'); return; }
     } else {
-      // PvP participants list as a single team block
-      const box = document.createElement('div');
-      box.className = 'live-team';
-      box.innerHTML = `<div class="team-head"><span>المشاركون</span><span style="opacity:.6">(${runtime.participants.length})</span></div>`;
-      runtime.participants.forEach(p => {
-        const mr = document.createElement('div');
-        mr.className = 'member' + (runtime.activeResponderId===p.id ? ' active' : '');
-        mr.innerHTML = `<span class="level-dot" style="background:#60a5fa"></span><span>${p.name}</span>`;
-        box.appendChild(mr);
-      });
-      modalTeamsRosterEl.appendChild(box);
+      const id1 = pvpStudent1El.value;
+      const id2 = pvpStudent2El.value;
+      if (!id1 || !id2)   { toast('اختر الطالبَين أولاً', 'warning'); return; }
+      if (id1 === id2)    { toast('اختر طالبَين مختلفَين', 'warning'); return; }
+      const s1 = data.allStudents.find(s => s.id === id1);
+      const s2 = data.allStudents.find(s => s.id === id2);
+      game.pvpPlayers = [
+        { id: s1.id, name: s1.name, color: TEAM_COLORS[0], score: 0, jokerUsed: false },
+        { id: s2.id, name: s2.name, color: TEAM_COLORS[1], score: 0, jokerUsed: false },
+      ];
     }
+
+    startBtn.disabled    = true;
+    startBtn.textContent = '⏳ جاري التحميل…';
+
+    const quiz = await fetchFullQuiz(cfg.quizId);
+
+    startBtn.disabled    = false;
+    startBtn.textContent = '▶ ابدأ المسابقة';
+
+    if (!quiz) { toast('تعذّر تحميل الاختبار', 'warning'); return; }
+
+    const total       = Math.max(1, Math.min(50, cfg.questionsCount));
+    game.questions    = shuffle([...quiz.questions]).slice(0, total);
+    game.currentIndex = 0;
+    game.turnIndex    = 0;
+    game.paused       = false;
+    game.jokerEntityId = null;
+
+    // reset scores
+    getEntities().forEach(e => { e.score = 0; });
+
+    if (cfg.mode === 'team') await showPreMatchScreen();
+    showScreen('game');
+    await showReadyOverlay();
+    showQuestion();
   }
 
-  function renderModalQuestion(){
-    if (!modalQuestionIndexEl || !modalQuestionTextEl || !modalOptionsEl) return;
-    const q = runtime.questions[runtime.currentIndex];
-    modalQuestionIndexEl.textContent = `السؤال ${runtime.currentIndex+1} / ${runtime.questions.length}`;
-    modalQuestionTextEl.textContent = q?.text || '—';
-    modalOptionsEl.innerHTML = '';
-    (q.options||[]).forEach((opt, idx) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'option';
-      btn.textContent = opt;
-      btn.addEventListener('click', () => onAnswer(idx));
-      modalOptionsEl.appendChild(btn);
+  // ═══════════════════════════════════════════
+  // Ready overlay (قبل أول سؤال بس)
+  // ═══════════════════════════════════════════
+  function showReadyOverlay() {
+    return new Promise(resolve => {
+      const overlay = document.getElementById('cmpReadyOverlay');
+      const teamEl  = document.getElementById('cmpReadyTeam');
+      const startBtn = document.getElementById('cmpReadyStartBtn');
+      if (!overlay || !teamEl || !startBtn) { resolve(); return; }
+
+      const entity = getCurrentEntity();
+      teamEl.textContent = entity?.name || '—';
+      overlay.style.setProperty('--turn-color', entity?.color || 'var(--primary)');
+      startBtn.style.background = entity?.color || '';
+      overlay.classList.remove('hidden');
+
+      const handler = () => {
+        startBtn.removeEventListener('click', handler);
+        startBtn.classList.add('hidden');
+        const countEl = document.getElementById('cmpReadyCount');
+        if (!countEl) { overlay.classList.add('hidden'); resolve(); return; }
+
+        let n = 3;
+        countEl.textContent = n;
+        countEl.classList.remove('hidden');
+        playSound('tick');
+
+        const iv = setInterval(() => {
+          n--;
+          if (n <= 0) {
+            clearInterval(iv);
+            overlay.classList.add('hidden');
+            startBtn.classList.remove('hidden');
+            countEl.classList.add('hidden');
+            resolve();
+          } else {
+            countEl.textContent = n;
+            playSound('tick');
+          }
+        }, 900);
+      };
+      startBtn.addEventListener('click', handler);
     });
   }
 
-  function showQuestion(){
-    const q = runtime.questions[runtime.currentIndex];
-    const idxText = `السؤال ${runtime.currentIndex+1} / ${runtime.questions.length}`;
-    questionIndexEl.textContent = idxText;
-    questionTextEl.textContent = q?.text || '—';
+  // ═══════════════════════════════════════════
+  // Question display
+  // ═══════════════════════════════════════════
+  function showQuestion() {
+    const q = game.questions[game.currentIndex];
+    game.stealMode        = false;
+    game.questionRevealed = false;
+
+    questionCounterEl.textContent = `السؤال ${game.currentIndex + 1} / ${game.questions.length}`;
+    // progress dots
+    const dotsEl = document.getElementById('cmpProgressDots');
+    if (dotsEl) {
+      dotsEl.innerHTML = game.questions.map((_, i) => {
+        const cls = i < game.currentIndex ? 'done' : i === game.currentIndex ? 'current' : '';
+        return `<span class="cmp-dot ${cls}"></span>`;
+      }).join('');
+    }
+    questionTextEl.textContent    = q.text;
+
+    const LETTERS = ['أ', 'ب', 'ج', 'د'];
     optionsEl.innerHTML = '';
-    (q.options||[]).forEach((opt, idx) => {
+    q.options.forEach((opt, idx) => {
       const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'option';
-      btn.textContent = opt;
-      btn.addEventListener('click', () => onAnswer(idx));
+      btn.className = 'cmp-option';
+      btn.innerHTML = `<span class="cmp-option-letter">${LETTERS[idx] || idx+1}</span><span class="cmp-option-text">${opt}</span>`;
+      btn.addEventListener('click', () => onOptionClick(idx));
       optionsEl.appendChild(btn);
     });
-    // Mirror to modal
-    if (modalQuestionIndexEl) modalQuestionIndexEl.textContent = idxText;
-    if (modalQuestionTextEl) modalQuestionTextEl.textContent = q?.text || '—';
-    if (modalOptionsEl){
-      modalOptionsEl.innerHTML = '';
-      (q.options||[]).forEach((opt, idx) => {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'option';
-        btn.textContent = opt;
-        btn.addEventListener('click', () => onAnswer(idx));
-        modalOptionsEl.appendChild(btn);
-      });
-    }
 
-    runtime.answered = false;
+    hideContinueBtn();
+    if (judgeHintEl) judgeHintEl.textContent = `اضغط على إجابة ${getCurrentEntity()?.name || 'الفريق'} 👆`;
+
+    // بادج الدور
+    updateTurnBadge();
+
+    // الليدربورد
+    renderScoreboard();
+
     startTimer();
   }
 
-  function startTimer(){
+  function updateTurnBadge() {
+    const entity = getCurrentEntity();
+    if (!entity || !turnBadgeEl) return;
+    if (turnDotEl) turnDotEl.style.background = entity.color;
+    turnNameEl.textContent = entity.name;
+    turnBadgeEl.style.setProperty('--turn-color', entity.color);
+    turnBadgeEl.classList.add('active');
+  }
+
+  function revealOptions(chosenIdx) {
+    const correct = game.questions[game.currentIndex].correctAnswer;
+    optionsEl.querySelectorAll('.cmp-option').forEach((btn, idx) => {
+      if (idx === correct)      btn.classList.add('correct');
+      else if (idx === chosenIdx) btn.classList.add('wrong');
+      btn.disabled = true;
+    });
+  }
+
+  // ═══════════════════════════════════════════
+  // الضغط على خيار = الحكم مباشرة
+  // ═══════════════════════════════════════════
+  function onOptionClick(chosenIdx) {
+    if (game.questionRevealed) return;
+    game.questionRevealed = true;
     stopTimer();
-    runtime.timerTotal = Math.max(10, Math.min(60, Number(questionDurationInput.value||20)));
-    runtime.timerLeft = runtime.timerTotal;
-    timerLabelEl.textContent = String(runtime.timerLeft);
-    timerFillEl.style.width = '100%';
-    // Mirror to modal
-    if (modalTimerLabelEl) modalTimerLabelEl.textContent = String(runtime.timerLeft);
-    if (modalTimerFillEl) modalTimerFillEl.style.width = '100%';
 
-    const startedAt = Date.now();
+    const correct = game.questions[game.currentIndex].correctAnswer;
+    revealOptions(chosenIdx);
 
-    runtime.timerTick = setInterval(() => {
-      if (runtime.paused) return;
-      const elapsed = Math.floor((Date.now() - startedAt)/1000);
-      runtime.timerLeft = Math.max(0, runtime.timerTotal - elapsed);
-      timerLabelEl.textContent = String(runtime.timerLeft);
-      if (modalTimerLabelEl) modalTimerLabelEl.textContent = String(runtime.timerLeft);
-      const pct = (runtime.timerLeft / runtime.timerTotal) * 100;
-      timerFillEl.style.width = pct + '%';
-      if (modalTimerFillEl) modalTimerFillEl.style.width = pct + '%';
-      if (runtime.timerLeft <= 0){
-        stopTimer();
-        onTimeUp();
+    if (chosenIdx === correct) {
+      const entity     = getCurrentEntity();
+      const speedBonus = Math.round((game.timerLeft / game.timerTotal) * 5);
+      const pts = 10 + speedBonus;
+      addScore(entity.id, pts);
+      toast(`✓ ${entity.name} صح! +${pts} نقطة`, 'success');
+      playSound('correct');
+      celebrate();
+    } else {
+      const entity = getCurrentEntity();
+      toast(`✗ ${entity.name} غلط!`, 'error');
+      playSound('wrong');
+    }
+    showContinueBtn();
+  }
+
+function addScore(id, pts) {
+    const entity = getEntities().find(e => e.id === id);
+    if (entity) entity.score += pts;
+    renderScoreboard();
+  }
+
+  function nextQuestion() {
+    game.turnIndex++;   // الدور الجاي تلقائي
+
+    if (game.currentIndex < game.questions.length - 1) {
+      game.currentIndex++;
+      showQuestion();
+    } else {
+      endGame();
+    }
+  }
+
+  function endGame() {
+    stopTimer();
+    showScreen('results');
+    renderResults();
+  }
+
+  // ═══════════════════════════════════════════
+  // Scoreboard (شريط أفقي)
+  // ═══════════════════════════════════════════
+  function renderScoreboard() {
+    if (!scoreboardEl) return;
+    const entities = getEntities();
+    const current  = getCurrentEntity();
+    const topScore = Math.max(...entities.map(e => e.score));
+
+    // احفظ النقاط القديمة قبل إعادة الرسم
+    const prevScores = {};
+    scoreboardEl.querySelectorAll('.cmp-score-chip[data-id]').forEach(chip => {
+      prevScores[chip.dataset.id] = chip.querySelector('.cmp-chip-score')?.textContent;
+    });
+
+    scoreboardEl.innerHTML = entities.map(e => {
+      const isActive  = e.id === current?.id;
+      const isLeading = e.score > 0 && e.score === topScore;
+      return `
+        <div class="cmp-score-chip ${isActive ? 'active' : ''}" style="--chip-color:${e.color}" data-id="${e.id}">
+          ${isLeading ? `<span class="cmp-chip-crown">👑</span>` : ''}
+          <span class="cmp-chip-name" style="color:${isActive ? e.color : ''}">${e.name}</span>
+          ${isActive ? `<span class="cmp-chip-label">يجاوب الآن</span>` : ''}
+          <span class="cmp-chip-score">${e.score}</span>
+        </div>
+      `;
+    }).join('');
+
+    // animation لما النقاط تتغير
+    scoreboardEl.querySelectorAll('.cmp-score-chip[data-id]').forEach(chip => {
+      const id  = chip.dataset.id;
+      const cur = chip.querySelector('.cmp-chip-score')?.textContent;
+      if (prevScores[id] !== undefined && prevScores[id] !== cur) {
+        chip.classList.add('score-updated');
+        chip.addEventListener('animationend', () => chip.classList.remove('score-updated'), { once: true });
       }
+    });
+
+  }
+
+  // ═══════════════════════════════════════════
+  // Timer
+  // ═══════════════════════════════════════════
+  let _timerGen = 0; // generation counter — يمنع أي interval قديم يأثر على العداد
+
+  function startTimer() {
+    stopTimer();
+    _timerGen++;
+    const gen = _timerGen;
+
+    game.timerTotal     = cfg.questionDuration;
+    game.timerLeft      = cfg.questionDuration;
+    game.timerStartedAt = Date.now();
+    game.paused         = false;
+
+    // snap الشريط لـ 100% بدون animation
+    if (timerFillEl) {
+      timerFillEl.style.transition = 'none';
+      timerFillEl.style.transform  = 'scaleX(1)';
+      timerFillEl.style.background = '#f59e0b';
+      timerFillEl.getBoundingClientRect();
+      timerFillEl.style.transition = '';
+    }
+    if (timerLabelEl) timerLabelEl.textContent = `${game.timerTotal} ث`;
+
+    game.timerTick = setInterval(() => {
+      if (gen !== _timerGen) return; // interval قديم، تجاهل
+      if (game.paused) return;
+      const elapsed  = Math.floor((Date.now() - game.timerStartedAt) / 1000);
+      game.timerLeft = Math.max(0, game.timerTotal - elapsed);
+      updateTimerDisplay();
+      if (game.timerLeft <= 0) { stopTimer(); onTimeUp(); }
     }, 200);
   }
 
-  function stopTimer(){
-    if (runtime.timerTick){ clearInterval(runtime.timerTick); runtime.timerTick = null; }
-  }
-
-  function onTimeUp(){
-    showToast('انتهى الوقت!');
-    // Reveal correct answer visually
-    revealCorrect();
-    optionsEl.querySelectorAll('.option').forEach(b=>b.classList.add('disabled'));
-  }
-
-  function revealCorrect(){
-    const q = runtime.questions[runtime.currentIndex];
-    const correct = q.correctAnswer;
-    const buttons = Array.from(optionsEl.querySelectorAll('.option'));
-    buttons.forEach((b, idx) => {
-      if (idx === correct) b.classList.add('correct'); else b.classList.add('wrong');
-      b.classList.add('disabled');
-    });
-    // Mirror in modal
-    if (modalOptionsEl){
-      const mButtons = Array.from(modalOptionsEl.querySelectorAll('.option'));
-      mButtons.forEach((b, idx) => {
-        if (idx === correct) b.classList.add('correct'); else b.classList.add('wrong');
-        b.classList.add('disabled');
-      });
+  function stopTimer() {
+    _timerGen++; // أبطل أي interval قديم حتى لو clearInterval تأخر
+    if (game.timerTick) { clearInterval(game.timerTick); game.timerTick = null; }
+    if (timerFillEl) {
+      // خذ القيمة المرسومة فعلاً (وسط أي transition) وليس القيمة المستهدفة
+      const live = window.getComputedStyle(timerFillEl).transform;
+      timerFillEl.style.transition = 'none';
+      timerFillEl.getBoundingClientRect(); // force reflow — يجعل transition:none يأخذ أثره فوراً
+      timerFillEl.style.transform  = live;
     }
+    timerFillEl?.parentElement?.classList.remove('urgent');
   }
 
-  // Award points to a participant or team
-  function addScore(targetId, basePoints){
-    const speedBonus = 5; // per requirements
-    const total = basePoints + speedBonus;
-
-    if (setup.type==='team'){
-      const team = setup.teams.find(t => t.id === targetId);
-      if (team){ team.score = (team.score||0) + total; }
-    } else {
-      const p = runtime.participants.find(p => p.id === targetId);
-      if (p){ p.score = (p.score||0) + total; }
+  function updateTimerDisplay() {
+    const scale = game.timerLeft / game.timerTotal;
+    if (timerLabelEl) timerLabelEl.textContent = `${game.timerLeft} ث`;
+    if (timerFillEl) {
+      timerFillEl.style.transform  = `scaleX(${scale})`;
+      timerFillEl.style.background = scale > 0.5 ? '#f59e0b' : scale > 0.25 ? '#f97316' : '#ef4444';
     }
-    renderLeaderboard();
+    // urgent mode: نبضة + صوت تيك عند آخر 10 ثواني
+    const track = timerFillEl?.parentElement;
+    if (track) track.classList.toggle('urgent', game.timerLeft <= 10 && game.timerLeft > 0);
+    if (game.timerLeft <= 10 && game.timerLeft > 0) playSound('tick');
   }
 
-  function onAnswer(chosenIndex){
-    if (runtime.answered) return; // prevent double
-    runtime.answered = true;
-    stopTimer();
-
-    const q = runtime.questions[runtime.currentIndex];
-    const correct = q.correctAnswer;
-
-    // Visual
-    const buttons = Array.from(optionsEl.querySelectorAll('.option'));
-    buttons.forEach((b, idx) => {
-      const isCorrect = idx === correct;
-      b.classList.toggle('correct', isCorrect);
-      b.classList.toggle('wrong', !isCorrect);
-      b.classList.add('disabled');
-    });
-
-    // Award
-    if (chosenIndex === correct){
-      // Use active responder if set; else fallback to round-robin attribution
-      let targetId = runtime.activeResponderId;
-      if (!targetId){
-        targetId = (setup.type==='team')
-          ? setup.teams[runtime.currentIndex % setup.teams.length].id
-          : (runtime.participants[runtime.currentIndex % runtime.participants.length]?.id);
-      }
-      if (targetId) addScore(targetId, 10);
-    }
+  function onTimeUp() {
+    if (game.questionRevealed) return;
+    game.questionRevealed = true;
+    playSound('timeup');
+    toast('⏰ انتهى الوقت!', 'warning');
+    revealOptions(-1);
+    showContinueBtn();
   }
 
-  function nextQuestion(){
-    if (runtime.currentIndex < runtime.questions.length - 1){
-      runtime.currentIndex++;
-      showQuestion();
-    } else {
-      endCompetition(true);
-    }
+  function showContinueBtn() {
+    if (judgeHintEl) judgeHintEl.classList.add('hidden');
+    if (continueBtn) continueBtn.classList.remove('hidden');
   }
 
-  function endCompetition(auto=false){
-    stopTimer();
-    optionsEl.querySelectorAll('.option').forEach(b=>b.classList.add('disabled'));
-    // Show celebration for the winner
-    const winner = getWinners()[0];
-    if (winner){
-      celebrateEl.classList.remove('hidden');
-      setTimeout(()=> celebrateEl.classList.add('hidden'), 2000);
-      showToast(`الفائز: ${winner.name} 🎉`, 'success');
-    }
-    if (!auto) showToast('تم إنهاء المسابقة','info');
+  function hideContinueBtn() {
+    if (continueBtn) continueBtn.classList.add('hidden');
+    if (judgeHintEl) judgeHintEl.classList.remove('hidden');
   }
 
-  function getWinners(){
-    if (setup.type==='team'){
-      return [...setup.teams].sort((a,b)=> (b.score||0)-(a.score||0));
-    }
-    return [...runtime.participants].sort((a,b)=> (b.score||0)-(a.score||0));
+  function setPaused(flag) {
+    game.paused = flag;
+    if (!flag && game.timerLeft > 0)
+      game.timerStartedAt = Date.now() - (game.timerTotal - game.timerLeft) * 1000;
+    pauseBtn.classList.toggle('hidden', flag);
+    resumeBtn.classList.toggle('hidden', !flag);
   }
 
-  // ====== Event Bindings ======
-  typeSelect?.addEventListener('change', () => {
-    setup.type = typeSelect.value;
-    const isTeam = setup.type === 'team';
-    if (teamSetup) {
-      teamSetup.classList.toggle('hidden', !isTeam);
-      teamSetup.setAttribute('aria-hidden', String(!isTeam));
-    }
-  });
+  // ═══════════════════════════════════════════
+  // Results
+  // ═══════════════════════════════════════════
+  function renderResults() {
+    const sorted = [...getEntities()].sort((a, b) => b.score - a.score);
+    const medals = ['🥇','🥈','🥉'];
 
-  groupSelect?.addEventListener('change', () => {
-    setup.selectedGroupId = groupSelect.value;
-    renderStudents();
-  });
+    podiumEl.innerHTML = sorted.map((e, i) => `
+      <div class="cmp-result-card" style="border-color:${e.color}40;background:${e.color}10">
+        <div class="cmp-result-medal">${medals[i] || (i + 1)}</div>
+        <div class="cmp-result-name" style="color:${e.color}">${e.name}</div>
+        <div class="cmp-result-score">${e.score} نقطة</div>
+        ${cfg.mode === 'team' && e.members
+          ? `<div class="cmp-result-members">${e.members.map(m => m.name).join('، ')}</div>`
+          : ''}
+      </div>
+    `).join('');
 
-  // Refresh actions for groups/quizzes
-  document.getElementById('refreshGroups')?.addEventListener('click', async (e) => {
-    e.preventDefault();
-    await loadGroups();
-    renderStudents();
-    showToast('تم تحديث المجموعات');
-  });
-  document.getElementById('refreshQuizzes')?.addEventListener('click', async (e) => {
-    e.preventDefault();
-    await loadQuizzes();
-    showToast('تم تحديث قائمة الاختبارات');
-  });
+    if (sorted[0]) celebrate();
 
-  // level filter removed
-
-  // selectRandomBtn?.addEventListener('click', (e) => { e.preventDefault(); selectRandomParticipants(); });
-  clearSelectionBtn?.addEventListener('click', (e) => { e.preventDefault(); setup.selectedStudentIds.clear(); renderStudents(); });
-  selectAllBtn?.addEventListener('click', (e) => {
-    e.preventDefault();
-    // حدد كل الطلاب المعروضين بعد الفلترة الحالية
-    const list = getFilteredStudents();
-    list.forEach(s => setup.selectedStudentIds.add(s.id));
-    renderStudents();
-  });
-  toggleParticipantsBtn?.addEventListener('click', (e) => {
-    e.preventDefault();
-    const body = document.querySelector('.participants-body');
-    const chev = toggleParticipantsBtn.querySelector('.chevron');
-    const isHidden = body?.style.display === 'none';
-    if (body) body.style.display = isHidden ? '' : 'none';
-    if (chev) chev.style.transform = isHidden ? 'rotate(135deg)' : 'rotate(-45deg)';
-  });
-  applyBulkLevelBtn?.addEventListener('click', (e)=>{
-    e.preventDefault();
-    const lvl = bulkLevelSelect?.value || '';
-    if (!lvl){ showToast('اختر مستوى أولاً'); return; }
-    const ids = Array.from(setup.selectedStudentIds);
-    if (!ids.length){ showToast('اختر طلابًا أولاً'); return; }
-    allStudents.forEach(s => { if (ids.includes(s.id)) s.level = lvl; });
-    // أعِد الرسم لعكس المستويات الجديدة
-    renderStudents();
-  });
-  saveLevelsInlineBtn?.addEventListener('click', async (e)=>{
-    e.preventDefault();
-    // احفظ المستويات الحالية (inline) في التخزين/الـ API
-    let persisted = false;
     try {
-      if (hasAPI && window.api && typeof window.api.saveStudents === 'function'){
-        await window.api.saveStudents(allStudents);
-        persisted = true;
+      const result = {
+        date: new Date().toISOString(), mode: cfg.mode,
+        questionsCount: game.questions.length,
+        winners: sorted.slice(0, 3).map(e => ({ name: e.name, score: e.score }))
+      };
+      const prev = JSON.parse(localStorage.getItem('cm_competition_results') || '[]');
+      localStorage.setItem('cm_competition_results', JSON.stringify([result, ...prev].slice(0, 20)));
+    } catch { }
+  }
+
+  // ═══════════════════════════════════════════
+  // Screen switching
+  // ═══════════════════════════════════════════
+  function showScreen(name) {
+    setupScreen.classList.toggle('hidden',    name !== 'setup');
+    prematchScreen?.classList.toggle('hidden', name !== 'prematch');
+    gameScreen.classList.toggle('hidden',     name !== 'game');
+    resultsScreen.classList.toggle('hidden',  name !== 'results');
+    document.body.classList.toggle('cmp-game-active', name === 'game');
+  }
+
+  function showPreMatchScreen() {
+    return new Promise(resolve => {
+      const teamsEl    = document.getElementById('prematchTeams');
+      const subtitleEl = document.getElementById('prematchSubtitle');
+      const startBtn   = document.getElementById('cmpPrematchStartBtn');
+      if (!teamsEl) { resolve(); return; }
+
+      const quiz = data.allQuizzes.find(q => q.id === cfg.quizId);
+      if (subtitleEl) subtitleEl.textContent = quiz?.title || '';
+
+      // build cards — all hidden initially
+      teamsEl.innerHTML = game.teams.map(t => `
+        <div class="cmp-prematch-team-card" style="--team-color:${t.color}">
+          <div class="cmp-pm-glow"></div>
+          <div class="cmp-pm-icon pm-part">${t.icon || '🏆'}</div>
+          <div class="cmp-pm-name pm-part">${t.name}</div>
+          <div class="cmp-pm-divider pm-part"></div>
+          <div class="cmp-pm-chips pm-part">
+            ${t.members.map(m => `<span class="cmp-pm-chip pm-chip">${m.name}</span>`).join('')}
+          </div>
+        </div>
+      `).join('');
+
+      startBtn?.classList.add('hidden');
+      showScreen('prematch');
+
+      const cards = teamsEl.querySelectorAll('.cmp-prematch-team-card');
+      let delay = 200;
+
+      cards.forEach(card => {
+        setTimeout(() => card.classList.add('pm-card-in'), delay);
+        delay += 300;
+
+        card.querySelectorAll('.pm-part').forEach(part => {
+          if (part.classList.contains('cmp-pm-chips')) {
+            setTimeout(() => part.classList.add('pm-part-in'), delay);
+            delay += 100;
+            part.querySelectorAll('.pm-chip').forEach(chip => {
+              setTimeout(() => chip.classList.add('pm-chip-in'), delay);
+              delay += 90;
+            });
+            delay += 100;
+          } else {
+            setTimeout(() => part.classList.add('pm-part-in'), delay);
+            delay += 160;
+          }
+        });
+
+        delay += 350;
+      });
+
+      setTimeout(() => startBtn?.classList.remove('hidden'), delay);
+
+      const handler = () => {
+        startBtn.removeEventListener('click', handler);
+        resolve();
+      };
+      startBtn?.addEventListener('click', handler);
+    });
+  }
+
+  // ═══════════════════════════════════════════
+  // Event bindings
+  // ═══════════════════════════════════════════
+  modeTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      modeTabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      cfg.mode = tab.dataset.mode;
+      teamSetupCol.classList.toggle('hidden', cfg.mode !== 'team');
+      pvpSetupCol.classList.toggle('hidden',  cfg.mode !== 'pvp');
+    });
+  });
+
+  timeBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      timeBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      cfg.questionDuration = Number(btn.dataset.sec);
+    });
+  });
+
+  countBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      countBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      cfg.teamsCount = Number(btn.dataset.n);
+      updateSetupHints();
+    });
+  });
+
+  quizSelect.addEventListener('change', () => {
+    cfg.quizId = quizSelect.value;
+    const quiz = data.allQuizzes.find(q => q.id === cfg.quizId);
+    if (quiz?.questionsCount) {
+      const max = quiz.questionsCount;
+      if (questionsCountEl) {
+        questionsCountEl.max   = max;
+        if (Number(questionsCountEl.value) > max) {
+          questionsCountEl.value = max;
+          cfg.questionsCount     = max;
+        }
+        questionsCountEl.title = `الاختبار يحتوي ${max} سؤال`;
       }
-    } catch(_){}
-    if (!persisted){
-      try { localStorage.setItem('cm_students_v1', JSON.stringify(allStudents)); persisted = true; } catch(_){ }
     }
-    showToast(persisted ? 'تم حفظ مستويات الطلاب' : 'تم حفظ المستويات مؤقتًا فقط');
+  });
+  groupSelect.addEventListener('change', () => {
+    cfg.groupId = groupSelect.value;
+    renderStudentSelects();
+    filterQuizzesByGroup();
+    updateSetupHints();
   });
 
-  // ألغينا نافذة المستويات المنفصلة، لكن نبقي الدوال الاحتياطية معطلة
-  // (تم الاستبدال بالحفظ من زر حفظ المستويات داخل المشاركون)
+  function updateSetupHints() {
+    const countEl = document.getElementById('cmpStudentCount');
+    const distEl  = document.getElementById('cmpDistHint');
+    const students = getFilteredStudents();
+    const n        = cfg.teamsCount || 3;
 
-  function renderLevelsBox(){
-    const ids = Array.from(setup.selectedStudentIds);
-    const selected = getFilteredStudents().filter(s => ids.includes(s.id));
-    levelsList.innerHTML = '';
-    if (!selected.length){
-      levelsList.innerHTML = '<div class="page-competitions-note">لم يتم اختيار طلاب بعد.</div>';
-      return;
+    if (countEl) {
+      countEl.textContent = cfg.groupId
+        ? `${students.length} طالب في هذه المجموعة`
+        : students.length ? `${students.length} طالب (كل المجموعات)` : '';
     }
-    selected.forEach(s => {
-      const row = document.createElement('div');
-      row.className = 'level-item';
-      row.innerHTML = `
-        <span>${s.name}</span>
-        <select data-student-id="${s.id}">
-          <option value="">غير محدد</option>
-          <option value="beginner" ${s.level==='beginner'?'selected':''}>مبتدئ</option>
-          <option value="intermediate" ${s.level==='intermediate'?'selected':''}>متوسط</option>
-          <option value="advanced" ${s.level==='advanced'?'selected':''}>متقدم</option>
-        </select>
-      `;
-      levelsList.appendChild(row);
-    });
-  }
 
-  // Team names mode
-  document.querySelectorAll('input[name="teamNamesMode"]').forEach(r => {
-    r.addEventListener('change', () => {
-      const mode = getTeamNamesMode();
-      setup.teamNamesMode = mode;
-      customTeamNamesWrap.classList.toggle('hidden', mode!=='custom');
-      if (mode==='custom') ensureCustomTeamInputs();
-    });
-  });
-
-  teamsCountInput?.addEventListener('change', () => {
-    if (getTeamNamesMode()==='custom') ensureCustomTeamInputs();
-  });
-
-  distributeTeamsBtn?.addEventListener('click', (e)=>{ e.preventDefault(); buildTeams(); });
-
-  // Questions source
-  questionsSource?.addEventListener('change', () => {
-    setup.source = questionsSource.value;
-    if (quizSelectRow) quizSelectRow.classList.toggle('hidden', setup.source !== 'quiz');
-  });
-
-  quizSelect?.addEventListener('change', () => {
-    setup.selectedQuizId = quizSelect.value;
-  });
-
-  questionsCountInput?.addEventListener('change', () => {
-    setup.questionsCount = Number(questionsCountInput.value||10);
-  });
-
-  questionDurationInput?.addEventListener('change', () => {
-    setup.questionDuration = Number(questionDurationInput.value||20);
-  });
-
-  function setPaused(flag){
-    runtime.paused = flag;
-    pauseBtn?.classList.toggle('hidden', flag);
-    resumeBtn?.classList.toggle('hidden', !flag);
-    // Mirror modal buttons
-    if (modalPauseBtn && modalResumeBtn){
-      modalPauseBtn.classList.toggle('hidden', flag);
-      modalResumeBtn.classList.toggle('hidden', !flag);
+    if (distEl && students.length && cfg.groupId) {
+      const base  = Math.floor(students.length / n);
+      const extra = students.length % n;
+      if (extra === 0) {
+        distEl.textContent = `${base} أفراد لكل فريق`;
+      } else {
+        distEl.textContent = `${base + 1} أفراد في ${extra} فريق، و${base} في الباقين`;
+      }
+    } else if (distEl) {
+      distEl.textContent = cfg.groupId ? '' : '';
     }
   }
 
-  pauseBtn?.addEventListener('click', () => setPaused(true));
+  refreshGroupsBtn?.addEventListener('click', async () => {
+    await loadGroups(); await loadStudents();
+    renderStudentSelects(); filterQuizzesByGroup();
+    toast('تم التحديث');
+  });
+
+  questionsCountEl?.addEventListener('change', () => {
+    cfg.questionsCount = Number(questionsCountEl.value) || 10;
+  });
+
+  distributeBtn?.addEventListener('click', distributeTeams);
+
+  pvpRandomBtn?.addEventListener('click', () => {
+    const students = shuffle(getFilteredStudents());
+    if (students.length < 2) { toast('لا يوجد طلاب كافيون', 'warning'); return; }
+    pvpStudent1El.value = students[0].id;
+    pvpStudent2El.value = students[1].id;
+    toast(`${students[0].name} 🆚 ${students[1].name}`, 'success');
+  });
+
+  startBtn?.addEventListener('click', startGame);
+
+  pauseBtn?.addEventListener('click',  () => setPaused(true));
   resumeBtn?.addEventListener('click', () => setPaused(false));
-  nextBtn?.addEventListener('click', () => nextQuestion());
-  endBtn?.addEventListener('click', () => endCompetition(false));
 
-  // Modal controls mirror
-  closeLiveModalBtn?.addEventListener('click', () => closeLiveModal());
-  modalPauseBtn?.addEventListener('click', () => setPaused(true));
-  modalResumeBtn?.addEventListener('click', () => setPaused(false));
-  modalNextBtn?.addEventListener('click', () => nextQuestion());
-  modalEndBtn?.addEventListener('click', () => endCompetition(false));
-
-  startBtn?.addEventListener('click', () => {
-    if (!stage || !questionTextEl || !optionsEl || !leaderboardEl) {
-      showToast('واجهة عرض المسابقة غير مكتملة في هذه الصفحة', 'warning');
-      return;
-    }
-
-    // Validation
-    const participants = getSelectedParticipants();
-    if (setup.type==='pvp' && participants.length < 2){
-      showToast('اختر على الأقل طالبين في وضع طالب ضد طالب', 'warning');
-      return;
-    }
-    if (setup.type==='team'){
-      if (!setup.teams.length){
-        showToast('يرجى توزيع الفرق أولاً', 'warning');
-        return;
-      }
-      if (setup.teams.some(t => !t.members.length)){
-        showToast('تأكد أن كل فريق لديه مشاركون', 'warning');
-        return;
-      }
-    }
-
-    runtime.questions = buildQuestions();
-    runtime.currentIndex = 0;
-    runtime.started = true;
-    setPaused(false);
-
-    // Build participants model for PvP
-    if (setup.type==='pvp'){
-      runtime.participants = participants.map(s => ({ id: s.id, name: s.name, score: 0 }));
-    } else {
-      // Reset team scores
-      setup.teams.forEach(t => t.score = 0);
-    }
-
-    // Show stage only (live modal opens in العرض المباشر فقط)
-    stage.classList.remove('hidden');
-    renderLeaderboard();
-    renderModalRoster();
-    // openLiveModal();
-    showQuestion();
+  // زر "تخطى" — يظهر الإجابة ويخلي المعلم يضغط "استمر" للانتقال
+  nextBtn?.addEventListener('click', () => {
+    if (game.questionRevealed) return;
+    game.questionRevealed = true;
+    stopTimer();
+    revealOptions(-1);
+    showContinueBtn();
   });
 
-  // ====== Init ======
-  (async function init(){
-    await Promise.all([loadGroups(), loadStudents(), loadQuizzes()]);
-    renderStudents();
-    // initial quiz UI
-    setup.source = questionsSource ? questionsSource.value : 'bank';
-    if (quizSelectRow) quizSelectRow.classList.toggle('hidden', setup.source !== 'quiz');
-    // prepare custom inputs if needed
-    if (getTeamNamesMode()==='custom') ensureCustomTeamInputs();
+  // زر "الفريق التالي" — ينتقل للسؤال الجاي بعد ما المعلم مستعد
+  continueBtn?.addEventListener('click', () => {
+    hideContinueBtn();
+    nextQuestion();
+  });
+
+  // زر ملء الشاشة
+  fullscreenBtn?.addEventListener('click', () => {
+    const gameEl = document.getElementById('gameScreen');
+    if (!document.fullscreenElement) {
+      (gameEl || document.documentElement).requestFullscreen?.();
+      fullscreenBtn.textContent = '✕';
+      fullscreenBtn.title = 'خروج من ملء الشاشة';
+    } else {
+      document.exitFullscreen?.();
+      fullscreenBtn.textContent = '⛶';
+      fullscreenBtn.title = 'ملء الشاشة';
+    }
+  });
+
+  document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement) {
+      if (fullscreenBtn) { fullscreenBtn.textContent = '⛶'; fullscreenBtn.title = 'ملء الشاشة'; }
+    }
+  });
+
+  endBtn?.addEventListener('click', endGame);
+
+  playAgainBtn?.addEventListener('click', () => {
+    game.jokerEntityId = null;
+    showScreen('setup');
+  });
+
+  // ═══════════════════════════════════════════
+  // Init
+  // ═══════════════════════════════════════════
+  (async function init() {
+    showScreen('setup');
+    await loadAll();
+    filterQuizzesByGroup();
   })();
+
 })();

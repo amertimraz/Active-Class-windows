@@ -12,7 +12,7 @@ class SettingsManager {
             showDeleteAllGroups: false,
             showAnimations: true,
             showNotifications: true,
-            gemini_api_key: ''
+            groq_api_key: ''
         };
         
         this.translations = {
@@ -159,9 +159,9 @@ class SettingsManager {
             this.showLoading(true);
             
             // Get values from UI that aren't auto-bound
-            const geminiInput = document.getElementById('geminiApiKey');
+            const geminiInput = document.getElementById('groqApiKey');
             if (geminiInput) {
-                this.settings.gemini_api_key = geminiInput.value;
+                this.settings.groq_api_key = geminiInput.value;
             }
 
             for (const [key, value] of Object.entries(this.settings)) {
@@ -197,7 +197,11 @@ class SettingsManager {
         
         const saveBtn = document.getElementById('saveSettings');
         if (saveBtn) saveBtn.addEventListener('click', () => this.saveSettings());
-        
+
+        // ── About / Update tab ──────────────────────────────────────────
+        this._initAboutTab();
+        // ── End About / Update tab ──────────────────────────────────────
+
         // Tab navigation
         document.querySelectorAll('.sm-nav-item').forEach(item => {
             item.addEventListener('click', (e) => {
@@ -258,9 +262,11 @@ class SettingsManager {
         const titles = {
             appearance: ['المظهر واللغة', 'تخصيص مظهر التطبيق ولغة الواجهة'],
             database:   ['قاعدة البيانات', 'النسخ الاحتياطي وإحصائيات البيانات'],
-            interface:  ['الذكاء الاصطناعي', 'إعداد مفتاح Gemini API'],
+            interface:  ['الذكاء الاصطناعي', 'إعداد مفتاح Groq API'],
+            license:    ['الترخيص', 'معلومات المستخدم والترخيص'],
             about:      ['حول البرنامج', 'معلومات عن Active Class'],
         };
+        if (tabName === 'license') this._fillLicenseTab();
         const t = titles[tabName];
         if (t) {
             const titleEl = document.getElementById('sm-current-title');
@@ -296,10 +302,10 @@ class SettingsManager {
                 languageSelect.value = this.settings.language;
             }
             
-            // Gemini API Key
-            const geminiInput = document.getElementById('geminiApiKey');
+            // Groq API Key
+            const geminiInput = document.getElementById('groqApiKey');
             if (geminiInput) {
-                geminiInput.value = this.settings.gemini_api_key || '';
+                geminiInput.value = this.settings.groq_api_key || '';
             }
         } catch (error) {
             console.error('Error updating UI:', error);
@@ -488,7 +494,52 @@ class SettingsManager {
     t(key) {
         return this.translations[this.settings.language]?.[key] || key;
     }
-    
+
+    _fillLicenseTab() {
+        try {
+            const lic = JSON.parse(localStorage.getItem('ac_license_v1') || 'null');
+            const reg = JSON.parse(localStorage.getItem('ac_registration_v1') || 'null');
+
+            const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || '—'; };
+
+            set('licInfoName',   lic?.name  || reg?.name);
+            set('licInfoPhone',  lic?.phone || reg?.phone);
+            set('licInfoKey',    lic?.key);
+
+            if (lic?.expiresAt) {
+                const expDate = new Date(lic.expiresAt);
+                set('licInfoExpiry', expDate.toLocaleDateString('ar-EG', { year:'numeric', month:'long', day:'numeric' }));
+                const days = Math.max(0, Math.ceil((expDate - new Date()) / 86400000));
+                set('licInfoDays', `${days} يوم`);
+
+                const total = lic.totalDays || 365;
+                const pct = Math.min(100, Math.round((days / total) * 100));
+                const barWrap = document.getElementById('licBarWrap');
+                const bar = document.getElementById('licDaysBar');
+                const pctEl = document.getElementById('licBarPct');
+                if (barWrap) barWrap.style.display = '';
+                if (pctEl) pctEl.textContent = pct + '%';
+                setTimeout(() => { if (bar) bar.style.width = pct + '%'; }, 100);
+
+                const color = days < 30 ? '#ef4444' : days < 90 ? '#f59e0b' : '#0d9488';
+                if (bar) bar.style.background = color;
+            }
+
+            // Machine ID
+            if (window.api?.getMachineId) {
+                window.api.getMachineId().then(mid => set('licInfoMid', mid)).catch(() => {});
+            } else {
+                set('licInfoMid', lic?.machineId);
+            }
+
+            // Update header user name
+            const nameEl = document.getElementById('headerUserName');
+            const name = lic?.name || reg?.name;
+            if (nameEl && name) nameEl.textContent = name;
+
+        } catch (e) { console.warn('_fillLicenseTab error', e); }
+    }
+
     async showModal() {
         const modal = document.getElementById('settingsModal');
         if (modal) {
@@ -569,6 +620,91 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Global function to open settings modal
+// ── About / Update helper ────────────────────────────────────────────────
+SettingsManager.prototype._initAboutTab = function () {
+    const verEl      = document.getElementById('aboutCurrentVersion');
+    const statusEl   = document.getElementById('updateStatus');
+    const statusText = document.getElementById('updateStatusText');
+    const checkBtn   = document.getElementById('checkUpdateBtn');
+    const dlBtn      = document.getElementById('downloadUpdateBtn');
+
+    const api = window.api;
+
+    // Show current version
+    if (verEl && api && api.getAppVersion) {
+        api.getAppVersion().then(v => { verEl.textContent = `الإصدار ${v}`; }).catch(() => {});
+    }
+
+    if (!checkBtn) return;
+
+    // Listen for update events pushed from main process
+    if (api && api.onUpdateMessage) {
+        api.onUpdateMessage((msg) => {
+            switch (msg.event) {
+                case 'checking':
+                    statusEl.className = 'sm-update-status is-checking';
+                    statusText.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="animation:spin .8s linear infinite"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> جارٍ التحقق…';
+                    checkBtn.disabled = true;
+                    dlBtn.style.display = 'none';
+                    break;
+
+                case 'up-to-date':
+                    statusEl.className = 'sm-update-status is-uptodate';
+                    statusText.textContent = `✓ أنت على أحدث إصدار (${msg.version})`;
+                    checkBtn.disabled = false;
+                    break;
+
+                case 'available':
+                    statusEl.className = 'sm-update-status is-available';
+                    statusText.textContent = `✦ يوجد تحديث جديد: ${msg.version}`;
+                    checkBtn.disabled = false;
+                    dlBtn.style.display = 'flex';
+                    dlBtn.textContent   = 'تثبيت التحديث';
+                    dlBtn.onclick = () => {
+                        dlBtn.disabled = true;
+                        dlBtn.textContent = 'جارٍ التحميل…';
+                        api.downloadUpdate();
+                    };
+                    break;
+
+                case 'progress':
+                    statusEl.className = 'sm-update-status is-checking';
+                    statusText.textContent = `جارٍ التحميل… ${msg.percent}%`;
+                    dlBtn.textContent = `${msg.percent}%`;
+                    break;
+
+                case 'downloaded':
+                    statusEl.className = 'sm-update-status is-uptodate';
+                    statusText.textContent = '✓ اكتمل التحميل — سيُعاد تشغيل البرنامج';
+                    dlBtn.style.display = 'flex';
+                    dlBtn.disabled = false;
+                    dlBtn.textContent = 'إعادة التشغيل والتثبيت';
+                    dlBtn.onclick = () => api.installUpdate();
+                    break;
+
+                case 'error':
+                    statusEl.className = 'sm-update-status is-error';
+                    statusText.textContent = `⚠ ${msg.message}`;
+                    checkBtn.disabled = false;
+                    break;
+            }
+        });
+    }
+
+    checkBtn.addEventListener('click', async () => {
+        if (!api || !api.checkForUpdates) {
+            statusText.textContent = 'ميزة التحديث غير متوفرة في هذا الوضع.';
+            return;
+        }
+        const res = await api.checkForUpdates();
+        if (res && res.devMode) {
+            statusEl.className = 'sm-update-status';
+            statusText.textContent = 'ميزة التحديث تعمل فقط في النسخة المثبّتة.';
+        }
+    });
+};
+// ── End About / Update helper ────────────────────────────────────────────
+
 window.openSettings = () => {
     if (window.settingsManager) {
         window.settingsManager.showModal();

@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>نتائج الاختبارات - إدارة الفصول الدراسية</title>
-  <link rel="stylesheet" href="../css/common.css">
   <link rel="stylesheet" href="quiz-results.css">
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
 <script nonce="ac">
@@ -52,6 +51,15 @@
         </div>
       </div>
       <div class="header-actions">
+        <span id="liveBadge" class="live-badge" style="display:none">
+          <span class="live-dot"></span> مباشر
+        </span>
+        <button id="clearResults" class="btn btn-danger">
+          🗑️ تصفير النتائج
+        </button>
+        <button id="shareResults" class="btn btn-secondary">
+          📤 مشاركة النتائج
+        </button>
         <button id="exportResults" class="btn btn-secondary">
           📊 تصدير النتائج
         </button>
@@ -147,6 +155,7 @@
         <table class="results-table">
           <thead>
             <tr>
+              <th class="rank-col">#</th>
               <th>الطالب</th>
               <th>الدرجة</th>
               <th>النسبة المئوية</th>
@@ -186,6 +195,22 @@
       </div>
     </div>
   </section>
+
+  <!-- Confirm Clear Modal -->
+  <div id="confirmClearModal" class="modal">
+    <div class="modal-content confirm-modal">
+      <div class="confirm-icon">🗑️</div>
+      <h2 class="confirm-title">تصفير نتائج الاختبار</h2>
+      <p class="confirm-body">
+        سيتم حذف <strong>جميع نتائج الطلاب</strong> لهذا الاختبار نهائياً من قاعدة البيانات.<br>
+        <span class="confirm-warning">هذا الإجراء لا يمكن التراجع عنه.</span>
+      </p>
+      <div class="confirm-actions">
+        <button id="confirmClearCancel" class="btn btn-outline">إلغاء</button>
+        <button id="confirmClearOk" class="btn btn-danger-solid">نعم، احذف الكل</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Student Detail Modal -->
   <div id="studentModal" class="modal">

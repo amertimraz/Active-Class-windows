@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' http://localhost:* https://script.google.com https://script.googleusercontent.com;" />
+<title>Active Class — لوحة إدارة التراخيص</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --teal:#0f766e;--teal-l:#14b8a6;--teal-pale:#f0fdfa;--teal-b:#99f6e4;
+  --red:#ef4444;--red-pale:#fef2f2;--red-b:#fecaca;
+  --green:#10b981;--green-pale:#f0fdf4;--green-b:#86efac;
+  --amber:#f59e0b;--amber-pale:#fffbeb;--amber-b:#fde68a;
+  --sl-50:#f8fafc;--sl-100:#f1f5f9;--sl-200:#e2e8f0;--sl-300:#cbd5e1;
+  --sl-400:#94a3b8;--sl-500:#64748b;--sl-600:#475569;--sl-700:#334155;--sl-800:#1e293b;
+  --radius:12px;--radius-sm:8px;
+  --shadow:0 4px 16px rgba(15,23,42,.08);
+}
+body{font-family:'Cairo',sans-serif;background:var(--sl-50);color:var(--sl-800);min-height:100vh;}
+
+/* ── Header ── */
+.header{background:#fff;border-bottom:1px solid var(--sl-200);padding:0 28px;height:60px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow);position:sticky;top:0;z-index:50;}
+.header-logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#14b8a6,#0f766e);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#fff;flex-shrink:0;}
+.header-title{font-size:1rem;font-weight:800;color:var(--sl-800);}
+.header-sub{font-size:.78rem;color:var(--sl-400);font-weight:600;}
+.header-spacer{flex:1;}
+.header-stats{display:flex;gap:16px;}
+.hstat{text-align:center;}
+.hstat-num{font-size:1.1rem;font-weight:800;color:var(--teal);}
+.hstat-lbl{font-size:.68rem;color:var(--sl-400);font-weight:600;}
+
+/* ── Layout ── */
+.container{max-width:1100px;margin:0 auto;padding:28px 20px;}
+
+/* ── Card ── */
+.card{background:#fff;border:1px solid var(--sl-200);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:20px;}
+.card-head{padding:18px 20px 0;display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+.card-head-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.card-title{font-size:.95rem;font-weight:800;color:var(--sl-700);}
+.card-sub{font-size:.75rem;color:var(--sl-400);font-weight:600;}
+.card-body{padding:0 20px 20px;}
+
+/* ── Form grid ── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.form-grid-3{grid-template-columns:1fr 1fr 1fr;}
+.field{display:flex;flex-direction:column;gap:5px;}
+.field-label{font-size:.75rem;font-weight:700;color:var(--sl-500);}
+.field-input,.field-select{
+  padding:9px 12px;border-radius:var(--radius-sm);border:1.5px solid var(--sl-200);
+  background:#fff;font-family:'Cairo',sans-serif;font-size:.88rem;font-weight:600;color:var(--sl-800);
+  outline:none;transition:border-color .15s,box-shadow .15s;
+}
+.field-input:focus,.field-select:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(15,118,110,.1);}
+.field-input.error{border-color:var(--red);}
+.field-input::placeholder{color:var(--sl-300);font-weight:500;}
+.field-full{grid-column:1/-1;}
+
+/* ── Secret key ── */
+.secret-row{display:flex;gap:8px;align-items:flex-end;}
+.secret-row .field-input{font-family:'Courier New',monospace;letter-spacing:.04em;flex:1;}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border:none;border-radius:var(--radius-sm);font-family:'Cairo',sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;transition:filter .15s,transform .15s,box-shadow .15s;}
+.btn:hover{filter:brightness(.94);transform:translateY(-1px);}
+.btn-primary{background:linear-gradient(135deg,#0f766e,#0ea5e9);color:#fff;box-shadow:0 4px 14px rgba(15,118,110,.25);}
+.btn-primary:hover{filter:brightness(1.06);}
+.btn-danger{background:var(--red-pale);color:var(--red);border:1px solid var(--red-b);}
+.btn-ghost{background:var(--sl-100);color:var(--sl-600);border:1px solid var(--sl-200);}
+.btn-whatsapp{background:linear-gradient(135deg,#25d366,#128c7e);color:#fff;}
+.btn-sm{padding:5px 12px;font-size:.78rem;}
+.btn-icon{width:30px;height:30px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:6px;}
+
+/* ── Generated key box ── */
+.gen-box{background:var(--teal-pale);border:1.5px solid var(--teal-b);border-radius:var(--radius-sm);padding:14px 18px;margin-top:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.gen-key{font-family:'Courier New',monospace;font-size:1.1rem;font-weight:800;color:var(--teal);letter-spacing:.12em;direction:ltr;}
+.gen-actions{display:flex;gap:8px;flex-shrink:0;}
+
+/* ── Toolbar ── */
+.toolbar{padding:14px 20px;border-bottom:1px solid var(--sl-200);display:flex;align-items:center;gap:10px;}
+.search-input{flex:1;max-width:260px;padding:8px 12px;border-radius:var(--radius-sm);border:1.5px solid var(--sl-200);font-family:'Cairo',sans-serif;font-size:.85rem;outline:none;transition:border-color .15s;}
+.search-input:focus{border-color:var(--teal);}
+.filter-select{padding:8px 12px;border-radius:var(--radius-sm);border:1.5px solid var(--sl-200);font-family:'Cairo',sans-serif;font-size:.82rem;outline:none;background:#fff;cursor:pointer;}
+
+/* ── Table ── */
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;}
+thead th{padding:10px 16px;font-size:.72rem;font-weight:700;color:var(--sl-400);text-align:right;background:var(--sl-50);border-bottom:1px solid var(--sl-200);white-space:nowrap;}
+tbody td{padding:12px 16px;font-size:.83rem;border-bottom:1px solid var(--sl-100);vertical-align:middle;}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover{background:var(--sl-50);}
+.td-key{font-family:'Courier New',monospace;font-size:.75rem;color:var(--sl-500);letter-spacing:.04em;direction:ltr;white-space:nowrap;}
+.td-name{font-weight:700;color:var(--sl-800);}
+.td-phone{color:var(--sl-500);font-size:.8rem;direction:ltr;}
+.td-mid{font-family:'Courier New',monospace;font-size:.7rem;color:var(--sl-400);direction:ltr;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.td-actions{display:flex;gap:6px;align-items:center;}
+
+/* ── Badge ── */
+.badge{display:inline-flex;align-items:center;gap:4px;border-radius:99px;padding:3px 9px;font-size:.7rem;font-weight:700;white-space:nowrap;}
+.badge-green{background:var(--green-pale);border:1px solid var(--green-b);color:#065f46;}
+.badge-red{background:var(--red-pale);border:1px solid var(--red-b);color:#991b1b;}
+.badge-amber{background:var(--amber-pale);border:1px solid var(--amber-b);color:#92400e;}
+.badge-dot{width:5px;height:5px;border-radius:50%;display:inline-block;}
+.badge-dot-green{background:var(--green);}
+.badge-dot-red{background:var(--red);}
+.badge-dot-amber{background:var(--amber);}
+
+/* ── Days bar ── */
+.mini-bar{height:4px;background:var(--sl-200);border-radius:99px;width:80px;overflow:hidden;}
+.mini-fill{height:100%;border-radius:99px;background:linear-gradient(to left,#14b8a6,#0f766e);}
+.mini-fill-red{background:linear-gradient(to left,#f87171,#ef4444);}
+.mini-fill-amber{background:linear-gradient(to left,#fbbf24,#f59e0b);}
+
+/* ── Empty state ── */
+.empty{padding:48px;text-align:center;color:var(--sl-400);}
+.empty-icon{font-size:2.5rem;margin-bottom:12px;}
+.empty-text{font-size:.9rem;font-weight:600;}
+
+/* ── Toast ── */
+.toast-wrap{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:999;display:flex;flex-direction:column;gap:8px;align-items:center;}
+.toast{background:var(--sl-800);color:#fff;border-radius:99px;padding:9px 20px;font-size:.82rem;font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,.2);animation:toast-in .25s ease;white-space:nowrap;}
+.toast.success{background:var(--green);}
+.toast.error{background:var(--red);}
+@keyframes toast-in{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+.hidden{display:none!important;}
+
+/* ── Modal ── */
+.overlay{position:fixed;inset:0;background:rgba(15,23,42,.4);z-index:200;display:flex;align-items:center;justify-content:center;}
+.modal{background:#fff;border-radius:var(--radius);box-shadow:0 24px 60px rgba(0,0,0,.18);width:100%;max-width:380px;padding:28px;animation:modal-in .2s ease;}
+@keyframes modal-in{from{opacity:0;transform:scale(.95);}to{opacity:1;transform:scale(1);}}
+.modal-title{font-size:1rem;font-weight:800;color:var(--sl-800);margin-bottom:6px;}
+.modal-sub{font-size:.82rem;color:var(--sl-500);margin-bottom:20px;line-height:1.5;}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;}
+
+/* ── Section divider ── */
+.section-label{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--sl-400);margin-bottom:10px;}
+
+@media(max-width:640px){
+  .form-grid{grid-template-columns:1fr;}
+  .form-grid-3{grid-template-columns:1fr 1fr;}
+  .header-stats{display:none;}
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <div class="header-logo">AC</div>
+  <div>
+    <div class="header-title">لوحة إدارة التراخيص</div>
+    <div class="header-sub">Active Class — Admin Panel</div>
+  </div>
+  <div class="header-spacer"></div>
+  <div class="header-stats">
+    <div class="hstat"><div class="hstat-num" id="statTotal">0</div><div class="hstat-lbl">إجمالي</div></div>
+    <div class="hstat"><div class="hstat-num" id="statActive" style="color:var(--green);">0</div><div class="hstat-lbl">نشط</div></div>
+    <div class="hstat"><div class="hstat-num" id="statExpired" style="color:var(--red);">0</div><div class="hstat-lbl">منتهي</div></div>
+    <div class="hstat"><div class="hstat-num" id="statSoon" style="color:var(--amber);">0</div><div class="hstat-lbl">قريب الانتهاء</div></div>
+  </div>
+  <button class="btn btn-ghost btn-sm" onclick="exportJSON()" style="margin-right:8px;">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    تصدير JSON
+  </button>
+</header>
+
+<div class="container">
+
+  <!-- Trial Stats + Config -->
+  <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;margin-bottom:0">
+
+    <!-- Trial Stats -->
+    <div class="card" style="margin-bottom:0">
+      <div class="card-head">
+        <div class="card-head-icon" style="background:#f5f3ff;border:1px solid #ddd6fe;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div>
+          <div class="card-title">مستخدمو النسخة التجريبية</div>
+          <div class="card-sub">إجمالي من فعّلوا التجربة</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" style="margin-right:auto" onclick="loadTrialStats()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.89"/></svg>
+          تحديث
+        </button>
+      </div>
+      <div class="card-body" style="padding-top:8px">
+        <div style="text-align:center;padding:20px 10px">
+          <div id="trialCount" style="font-size:3rem;font-weight:900;color:#7c3aed;line-height:1">—</div>
+          <div style="font-size:.8rem;color:var(--sl-400);margin-top:4px">مستخدم تجريبي</div>
+        </div>
+        <div id="trialEntries" style="display:flex;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto"></div>
+      </div>
+    </div>
+
+    <!-- Trial Config -->
+    <div class="card" style="margin-bottom:0">
+      <div class="card-head">
+        <div class="card-head-icon" style="background:#fef3c7;border:1px solid #fcd34d;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        </div>
+        <div>
+          <div class="card-title">إعدادات النسخة التجريبية</div>
+          <div class="card-sub">تحكم في مدة وميزات التجربة المجانية</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="field">
+            <label class="field-label">مدة التجربة (أيام)</label>
+            <input id="trialDays" class="field-input" type="number" min="1" max="90" value="7">
+          </div>
+          <div class="field">
+            <label class="field-label">الحد الأقصى للمجموعات</label>
+            <input id="trialMaxGroups" class="field-input" type="number" min="1" value="1">
+          </div>
+          <div class="field">
+            <label class="field-label">الحد الأقصى للطلاب</label>
+            <input id="trialMaxStudents" class="field-input" type="number" min="1" value="10">
+          </div>
+          <div class="field">
+            <label class="field-label">الحد الأقصى للاختبارات</label>
+            <input id="trialMaxQuizzes" class="field-input" type="number" min="1" value="2">
+          </div>
+          <div class="field">
+            <label class="field-label">عدد الألعاب المتاحة</label>
+            <input id="trialAllowedGames" class="field-input" type="number" min="1" max="11" value="3">
+          </div>
+          <div class="field" style="align-self:flex-end;display:flex;flex-direction:column;gap:8px">
+            <label style="display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--sl-600);cursor:pointer">
+              <input type="checkbox" id="trialCompetitions"> المسابقات
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--sl-600);cursor:pointer">
+              <input type="checkbox" id="trialContent"> المحتوى التعليمي
+            </label>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:4px">
+          <button class="btn btn-primary" onclick="saveTrialConfig()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            حفظ الإعدادات
+          </button>
+          <span id="trialConfigStatus" style="font-size:.78rem;color:var(--sl-400)"></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Settings -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-head-icon" style="background:#f1f5f9;border:1px solid var(--sl-200);">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--sl-500)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+      </div>
+      <div><div class="card-title">إعدادات الاتصال</div><div class="card-sub">رابط Google Apps Script + كلمة السر</div></div>
+      <button class="btn btn-ghost btn-sm" style="margin-right:auto;" onclick="toggleSettings()">▼ إظهار / إخفاء</button>
+    </div>
+    <div class="card-body" id="settingsBody" style="display:none;">
+      <div class="form-grid" style="margin-bottom:12px;">
+        <div class="field field-full">
+          <label class="field-label">رابط الـ Web App (بعد النشر من Google Apps Script)</label>
+          <input id="cfgUrl" class="field-input" type="url" placeholder="https://script.google.com/macros/s/xxxxxxxx/exec" dir="ltr"/>
+        </div>
+        <div class="field">
+          <label class="field-label">كلمة السر (SECRET) — نفس اللي في الكود</label>
+          <input id="cfgSecret" class="field-input" type="text" placeholder="ACTIVECLASSADMIN2025" dir="ltr"/>
+        </div>
+        <div class="field" style="align-self:flex-end;">
+          <button class="btn btn-primary" onclick="saveSettings()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            حفظ الإعدادات
+          </button>
+        </div>
+      </div>
+      <div id="apiStatus" style="font-size:.78rem;color:var(--sl-400);padding:8px 0;"></div>
+    </div>
+  </div>
+
+  <!-- Pending Requests -->
+  <div class="card" id="requestsCard">
+    <div class="card-head">
+      <div class="card-head-icon" style="background:var(--amber-pale);border:1px solid var(--amber-b);">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+      </div>
+      <div>
+        <div class="card-title">طلبات التفعيل الواردة <span id="reqBadge" style="background:var(--amber);color:#fff;border-radius:99px;padding:1px 8px;font-size:.7rem;margin-right:6px;"></span></div>
+        <div class="card-sub">الطلبات القادمة من البرنامج عند العملاء</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" style="margin-right:auto;" id="btnSync" onclick="syncRequests()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.89"/></svg>
+        مزامنة
+      </button>
+    </div>
+    <div class="card-body" id="requestsBody">
+      <div style="text-align:center;padding:20px;color:var(--sl-400);font-size:.82rem;">
+        اضغط "مزامنة" لجلب الطلبات من Google Sheets
+      </div>
+    </div>
+  </div>
+
+  <!-- Issue new license -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-head-icon" style="background:var(--teal-pale);border:1px solid var(--teal-b);">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="2" stroke-linecap="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+      </div>
+      <div>
+        <div class="card-title">إصدار ترخيص جديد</div>
+        <div class="card-sub">أدخل بيانات العميل لتوليد مفتاح تفعيل</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="form-grid form-grid-3" style="margin-bottom:12px;">
+        <div class="field">
+          <label class="field-label">الاسم الكامل *</label>
+          <input id="fName" class="field-input" type="text" placeholder="أحمد محمد علي"/>
+        </div>
+        <div class="field">
+          <label class="field-label">رقم الموبايل *</label>
+          <input id="fPhone" class="field-input" type="tel" placeholder="01012345678" dir="ltr"/>
+        </div>
+        <div class="field">
+          <label class="field-label">مدة الترخيص</label>
+          <select id="fDuration" class="field-select">
+            <option value="30">شهر (30 يوم)</option>
+            <option value="90">3 أشهر (90 يوم)</option>
+            <option value="180">6 أشهر (180 يوم)</option>
+            <option value="365" selected>سنة (365 يوم)</option>
+            <option value="730">سنتين (730 يوم)</option>
+            <option value="custom">مخصص...</option>
+          </select>
+        </div>
+        <div class="field" id="fCustomWrap" style="display:none;">
+          <label class="field-label">عدد الأيام</label>
+          <input id="fCustomDays" class="field-input" type="number" min="1" max="3650" placeholder="180"/>
+        </div>
+        <div class="field field-full">
+          <label class="field-label">معرّف الجهاز (Machine ID) — اختياري</label>
+          <div class="secret-row">
+            <input id="fMachineId" class="field-input" type="text" placeholder="يُنسخ من شاشة التفعيل في البرنامج" dir="ltr"/>
+            <button class="btn btn-ghost btn-sm" onclick="document.getElementById('fMachineId').value=''">مسح</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="fError" style="font-size:.8rem;color:var(--red);margin-bottom:10px;display:none;"></div>
+
+      <button class="btn btn-primary" onclick="generateLicense()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+        توليد مفتاح التفعيل
+      </button>
+
+      <!-- Generated key -->
+      <div id="genBox" class="gen-box" style="display:none;">
+        <div>
+          <div style="font-size:.7rem;font-weight:700;color:var(--teal);margin-bottom:4px;">✅ المفتاح جاهز — أرسله للعميل</div>
+          <div class="gen-key" id="genKey">—</div>
+        </div>
+        <div class="gen-actions">
+          <button class="btn btn-ghost btn-sm" onclick="copyGenKey()" id="btnCopyGen">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            نسخ
+          </button>
+          <button class="btn btn-whatsapp btn-sm" onclick="sendWhatsapp()" id="btnWaSend">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+            إرسال واتساب
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Licenses table -->
+  <div class="card">
+    <div class="toolbar">
+      <input class="search-input" type="text" id="searchInput" placeholder="بحث بالاسم أو الموبايل أو المفتاح..." oninput="renderTable()"/>
+      <select class="filter-select" id="filterStatus" onchange="renderTable()">
+        <option value="all">كل الحالات</option>
+        <option value="active">نشط</option>
+        <option value="soon">قريب الانتهاء</option>
+        <option value="expired">منتهي</option>
+      </select>
+      <div style="flex:1;"></div>
+      <span style="font-size:.78rem;color:var(--sl-400);font-weight:600;" id="tableCount"></span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>الاسم</th>
+            <th>الموبايل</th>
+            <th>مفتاح التفعيل</th>
+            <th>الخطة</th>
+            <th>تاريخ الانتهاء</th>
+            <th>المتبقي</th>
+            <th>الحالة</th>
+            <th>معرّف الجهاز</th>
+            <th>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+      <div id="emptyState" class="empty hidden">
+        <div class="empty-icon">🔑</div>
+        <div class="empty-text">لا توجد تراخيص بعد</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Toast container -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- Edit License Modal -->
+<div class="overlay hidden" id="editModal">
+  <div class="modal" style="max-width:480px;width:100%">
+    <div class="modal-title">✏️ تعديل الترخيص</div>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-top:12px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <label style="font-size:.8rem;color:var(--sl-500);display:flex;flex-direction:column;gap:4px">
+          الاسم
+          <input id="editName" class="input" type="text" placeholder="اسم العميل">
+        </label>
+        <label style="font-size:.8rem;color:var(--sl-500);display:flex;flex-direction:column;gap:4px">
+          رقم الموبايل
+          <input id="editPhone" class="input" type="text" placeholder="01xxxxxxxxx" dir="ltr">
+        </label>
+      </div>
+      <label style="font-size:.8rem;color:var(--sl-500);display:flex;flex-direction:column;gap:4px">
+        معرّف الجهاز (Machine ID)
+        <input id="editMachineId" class="input" type="text" placeholder="اتركه فارغاً للسماح لأي جهاز" dir="ltr" style="font-family:monospace;font-size:.8rem">
+      </label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <label style="font-size:.8rem;color:var(--sl-500);display:flex;flex-direction:column;gap:4px">
+          الخطة
+          <input id="editPlan" class="input" type="text" placeholder="Pro سنوي">
+        </label>
+        <label style="font-size:.8rem;color:var(--sl-500);display:flex;flex-direction:column;gap:4px">
+          تاريخ الانتهاء
+          <input id="editExpiry" class="input" type="date">
+        </label>
+      </div>
+      <label style="font-size:.8rem;color:var(--sl-500);display:flex;flex-direction:column;gap:4px">
+        عدد الأيام الإجمالي (لشريط التقدم)
+        <input id="editTotalDays" class="input" type="number" min="1" placeholder="365">
+      </label>
+    </div>
+    <div class="modal-actions" style="margin-top:16px">
+      <button class="btn btn-ghost" onclick="closeEditModal()">إلغاء</button>
+      <button class="btn btn-primary" onclick="saveEdit()">💾 حفظ التعديلات</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm revoke modal -->
+<div class="overlay hidden" id="revokeModal">
+  <div class="modal">
+    <div class="modal-title">تأكيد إلغاء الترخيص</div>
+    <div class="modal-sub" id="revokeModalSub">هل أنت متأكد من إلغاء ترخيص <strong id="revokeTarget"></strong>؟ لن يتمكن من الدخول للتطبيق.</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeRevokeModal()">إلغاء</button>
+      <button class="btn btn-danger" onclick="confirmRevoke()">نعم، إلغاء الترخيص</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ── Admin password protection ─────────────────────────────────────────────
+(function() {
+  const ADMIN_PASS = 'admin2025'; // ← غيّرها
+  const ok = sessionStorage.getItem('ac_admin_auth');
+  if (!ok) {
+    const entered = prompt('🔐 كلمة سر الأدمن:');
+    if (entered !== ADMIN_PASS) {
+      document.body.innerHTML = '<div style="font-family:Cairo,sans-serif;text-align:center;padding:80px;font-size:1.2rem;color:#ef4444;">⛔ غير مصرح بالدخول</div>';
+      throw new Error('unauthorized');
+    }
+    sessionStorage.setItem('ac_admin_auth', '1');
+  }
+})();
+
+// ── Config ────────────────────────────────────────────────────────────────
+const ADMIN_WA   = '201096066818';
+const LS_KEY     = 'ac_admin_licenses';
+const LS_SETTINGS = 'ac_admin_settings';
+
+// يُملأ بعد نشر Apps Script
+let SCRIPT_URL = '';
+let SECRET     = 'ACTIVECLASSADMIN2025';
+
+function loadSettings() {
+  try {
+    const s = JSON.parse(localStorage.getItem(LS_SETTINGS) || '{}');
+    if (s.url)    { SCRIPT_URL = s.url;    document.getElementById('cfgUrl').value    = s.url; }
+    if (s.secret) { SECRET     = s.secret; document.getElementById('cfgSecret').value = s.secret; }
+  } catch {}
+}
+function saveSettings() {
+  SCRIPT_URL = document.getElementById('cfgUrl').value.trim();
+  SECRET     = document.getElementById('cfgSecret').value.trim() || SECRET;
+  localStorage.setItem(LS_SETTINGS, JSON.stringify({ url: SCRIPT_URL, secret: SECRET }));
+  toast('تم حفظ الإعدادات ✅', 'success');
+}
+
+// ── API helpers ────────────────────────────────────────────────────────────
+async function apiGet(action) {
+  if (!SCRIPT_URL) throw new Error('لم يتم إعداد رابط الـ API بعد');
+  const url = `${SCRIPT_URL}?action=${action}&secret=${encodeURIComponent(SECRET)}`;
+  const r = await fetch(url);
+  return r.json();
+}
+async function apiPost(body) {
+  if (!SCRIPT_URL) throw new Error('لم يتم إعداد رابط الـ API بعد');
+  const r = await fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  return r.json();
+}
+const SOON_DAYS  = 14; // أقل من كذا يوم = "قريب الانتهاء"
+
+// ── Data ──────────────────────────────────────────────────────────────────
+let licenses = [];
+let revokeId = null;
+let lastGenerated = null;
+
+function load() {
+  try { licenses = JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch { licenses = []; }
+}
+function save() {
+  localStorage.setItem(LS_KEY, JSON.stringify(licenses));
+}
+load();
+
+// ── SHA-256 (pure JS — works on file:// with no server) ──────────────────
+function sha256(str) {
+  function rightRotate(value, amount) { return (value >>> amount) | (value << (32 - amount)); }
+  const mathPow = Math.pow;
+  const maxWord = mathPow(2, 32);
+  let result = '';
+  const words = [];
+  const asciiBitLength = str.length * 8;
+  let hash = [], k = [], primeCounter = 0;
+  const isComposite = {};
+  for (let candidate = 2; primeCounter < 64; candidate++) {
+    if (!isComposite[candidate]) {
+      for (let i = candidate * candidate; i < 313; i += candidate) isComposite[i] = true;
+      hash[primeCounter] = (mathPow(candidate, .5) * maxWord) | 0;
+      k[primeCounter++]  = (mathPow(candidate, 1/3) * maxWord) | 0;
+    }
+  }
+  str += '\x80';
+  while (str.length % 64 - 56) str += '\x00';
+  for (let i = 0; i < str.length; i++) {
+    const j = str.charCodeAt(i);
+    if (j >> 8) return '';
+    words[i >> 2] |= j << ((3 - i) % 4) * 8;
+  }
+  words[words.length] = ((asciiBitLength / maxWord) | 0);
+  words[words.length] = (asciiBitLength | 0);
+  for (let j = 0; j < words.length;) {
+    const w = words.slice(j, j += 16);
+    const oldHash = hash.slice(0);
+    for (let i = 0; i < 64; i++) {
+      const w15 = w[i - 15], w2 = w[i - 2];
+      const a = hash[0], e = hash[4];
+      const temp1 = hash[7]
+        + (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25))
+        + ((e & hash[5]) ^ (~e & hash[6])) + k[i]
+        + (w[i] = (i < 16) ? w[i] : (
+            w[i - 16]
+            + (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3))
+            + w[i - 7]
+            + (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))
+          ) | 0);
+      const temp2 = (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22))
+        + ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
+      hash = [(temp1 + temp2) | 0, a, hash[1], hash[2], (hash[3] + temp1) | 0, e, hash[5], hash[6]];
+    }
+    for (let i = 0; i < 8; i++) hash[i] = (hash[i] + oldHash[i]) | 0;
+  }
+  for (let i = 0; i < 8; i++) {
+    for (let j = 3; j + 1; j--) {
+      const b = (hash[i] >> (j * 8)) & 255;
+      result += ((b < 16) ? '0' : '') + b.toString(16);
+    }
+  }
+  return result.toUpperCase();
+}
+
+// ── Key generation ────────────────────────────────────────────────────────
+// Format: ACTCLS-XXXXX-XXXXX-XXXXX
+function generateKeyFromData(name, phone, machineId, expiresAt) {
+  const raw  = [name.trim(), phone.trim(), machineId.trim(), expiresAt, SECRET].join('|');
+  const hex  = sha256(raw);
+  const body = hex.slice(0, 15);
+  const seg  = (s, e) => body.slice(s, e);
+  return `ACTCLS-${seg(0,5)}-${seg(5,10)}-${seg(10,15)}`;
+}
+
+// ── Duration ──────────────────────────────────────────────────────────────
+function getDays() {
+  const sel = document.getElementById('fDuration').value;
+  if (sel === 'custom') {
+    const v = parseInt(document.getElementById('fCustomDays').value);
+    return (v > 0 && v <= 3650) ? v : null;
+  }
+  return parseInt(sel);
+}
+
+function getPlanLabel(days) {
+  if (days <= 30)  return 'شهري';
+  if (days <= 90)  return 'ربع سنوي';
+  if (days <= 180) return 'نصف سنوي';
+  if (days <= 365) return 'Pro سنوي';
+  return 'Pro سنتين';
+}
+
+// ── Generate ──────────────────────────────────────────────────────────────
+function generateLicense() {
+  const name      = document.getElementById('fName').value.trim();
+  const phone     = document.getElementById('fPhone').value.trim();
+  const machineId = document.getElementById('fMachineId').value.trim();
+  const days      = getDays();
+  const errEl     = document.getElementById('fError');
+
+  errEl.style.display = 'none';
+  document.getElementById('fName').classList.remove('error');
+  document.getElementById('fPhone').classList.remove('error');
+
+  if (!name) {
+    document.getElementById('fName').classList.add('error');
+    errEl.textContent = 'من فضلك أدخل اسم العميل';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (!phone || phone.replace(/\D/g,'').length < 10) {
+    document.getElementById('fPhone').classList.add('error');
+    errEl.textContent = 'من فضلك أدخل رقم موبايل صحيح';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (!days) {
+    errEl.textContent = 'من فضلك أدخل عدد أيام صحيح';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  const expiry = new Date();
+  expiry.setDate(expiry.getDate() + days);
+  const expiresAt = expiry.toISOString().split('T')[0];
+
+  const key = generateKeyFromData(name, phone, machineId || 'ANY', expiresAt);
+
+  // Save to list
+  const record = {
+    id:        crypto.randomUUID(),
+    key,
+    name,
+    phone,
+    machineId: machineId || '',
+    plan:      getPlanLabel(days),
+    totalDays: days,
+    issuedAt:  new Date().toISOString().split('T')[0],
+    expiresAt,
+    revoked:   false,
+  };
+  licenses.unshift(record);
+  save();
+  renderAll();
+
+  // Show generated key
+  document.getElementById('genKey').textContent = key;
+  document.getElementById('genBox').style.display = 'flex';
+  lastGenerated = record;
+
+  // Clear form
+  document.getElementById('fName').value      = '';
+  document.getElementById('fPhone').value     = '';
+  document.getElementById('fMachineId').value = '';
+  document.getElementById('fDuration').value  = '365';
+
+  toast('تم توليد المفتاح بنجاح ✅', 'success');
+  document.getElementById('genBox').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  // حفظ على Google Sheets في الخلفية
+  if (SCRIPT_URL && lastGenerated) {
+    const r = lastGenerated;
+    apiPost({ action:'issue', secret:SECRET, key:r.key, name:r.name, phone:r.phone,
+      machineId:r.machineId, plan:r.plan, totalDays:r.totalDays,
+      issuedAt:r.issuedAt, expiresAt:r.expiresAt })
+      .catch(() => toast('تحذير: لم يُحفظ على السيرفر', 'error'));
+  }
+}
+
+// ── Copy generated key ────────────────────────────────────────────────────
+function copyGenKey() {
+  const key = document.getElementById('genKey').textContent;
+  navigator.clipboard.writeText(key).then(() => {
+    document.getElementById('btnCopyGen').textContent = '✅ تم النسخ';
+    setTimeout(() => { document.getElementById('btnCopyGen').innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> نسخ`; }, 2000);
+    toast('تم نسخ المفتاح');
+  });
+}
+
+// ── Send WhatsApp ─────────────────────────────────────────────────────────
+function sendWhatsapp() {
+  if (!lastGenerated) return;
+  const r = lastGenerated;
+  const msg = encodeURIComponent(
+    `🎉 *تفعيل Active Class*\n\n` +
+    `أهلاً ${r.name}،\n` +
+    `تم تفعيل نسختك من البرنامج بنجاح!\n\n` +
+    `🔑 كود التفعيل:\n${r.key}\n\n` +
+    `📋 تفاصيل الترخيص:\n` +
+    `• الخطة: ${r.plan}\n` +
+    `• تاريخ الانتهاء: ${formatDate(r.expiresAt)}\n\n` +
+    `لأي استفسار تواصل معنا على نفس الرقم 🙏`
+  );
+  // Format phone for WhatsApp (remove leading 0, add country code if needed)
+  let phone = r.phone.replace(/\D/g,'');
+  if (phone.startsWith('0')) phone = '2' + phone;
+  window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
+}
+
+// ── Copy key from table ───────────────────────────────────────────────────
+function copyKey(key) {
+  navigator.clipboard.writeText(key).then(() => toast('تم نسخ المفتاح'));
+}
+
+// ── Revoke ────────────────────────────────────────────────────────────────
+function openRevokeModal(id) {
+  const r = licenses.find(l => l.id === id);
+  if (!r) return;
+  revokeId = id;
+  document.getElementById('revokeTarget').textContent = r.name;
+  document.getElementById('revokeModal').classList.remove('hidden');
+}
+// ── Edit License ─────────────────────────────────────────────────────────
+let editId = null;
+
+function openEditModal(id) {
+  const r = licenses.find(l => l.id === id);
+  if (!r) return;
+  editId = id;
+  document.getElementById('editName').value      = r.name      || '';
+  document.getElementById('editPhone').value     = r.phone     || '';
+  document.getElementById('editMachineId').value = r.machineId || '';
+  document.getElementById('editPlan').value      = r.plan      || '';
+  document.getElementById('editExpiry').value    = r.expiresAt ? r.expiresAt.split('T')[0] : '';
+  document.getElementById('editTotalDays').value = r.totalDays || 365;
+  document.getElementById('editModal').classList.remove('hidden');
+}
+
+function closeEditModal() {
+  editId = null;
+  document.getElementById('editModal').classList.add('hidden');
+}
+
+function saveEdit() {
+  const r = licenses.find(l => l.id === editId);
+  if (!r) return;
+
+  const newName      = document.getElementById('editName').value.trim();
+  const newPhone     = document.getElementById('editPhone').value.trim();
+  const newMachineId = document.getElementById('editMachineId').value.trim();
+  const newPlan      = document.getElementById('editPlan').value.trim();
+  const newExpiry    = document.getElementById('editExpiry').value;
+  const newTotalDays = parseInt(document.getElementById('editTotalDays').value) || 365;
+
+  if (!newName || !newExpiry) {
+    toast('الاسم وتاريخ الانتهاء مطلوبان', 'error');
+    return;
+  }
+
+  r.name      = newName;
+  r.phone     = newPhone;
+  r.machineId = newMachineId;
+  r.plan      = newPlan || 'Pro';
+  r.expiresAt = newExpiry;
+  r.totalDays = newTotalDays;
+
+  save();
+  renderAll();
+  closeEditModal();
+  toast('✅ تم حفظ التعديلات');
+
+  // sync to Google Sheets if API configured
+  if (SCRIPT_URL) {
+    apiPost({ action:'issue', secret:SECRET, key:r.key, name:r.name, phone:r.phone,
+              machineId:r.machineId, plan:r.plan, totalDays:r.totalDays,
+              issuedAt:r.issuedAt, expiresAt:r.expiresAt }).catch(()=>{});
+  }
+}
+
+function closeRevokeModal() {
+  revokeId = null;
+  document.getElementById('revokeModal').classList.add('hidden');
+}
+function confirmRevoke() {
+  const r = licenses.find(l => l.id === revokeId);
+  if (r) {
+    r.revoked = true; save(); renderAll(); toast('تم إلغاء الترخيص', 'error');
+    if (SCRIPT_URL) apiPost({ action:'revoke', secret:SECRET, key:r.key }).catch(()=>{});
+  }
+  closeRevokeModal();
+}
+function restoreLicense(id) {
+  const r = licenses.find(l => l.id === id);
+  if (r) {
+    r.revoked = false; save(); renderAll(); toast('تم استعادة الترخيص ✅', 'success');
+    if (SCRIPT_URL) apiPost({ action:'restore', secret:SECRET, key:r.key }).catch(()=>{});
+  }
+}
+function deleteLicense(id) {
+  if (!confirm('حذف نهائي؟ لن تستطيع التراجع.')) return;
+  licenses = licenses.filter(l => l.id !== id);
+  save(); renderAll(); toast('تم الحذف');
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function daysLeft(expiresAt) {
+  return Math.ceil((new Date(expiresAt) - new Date()) / 86400000);
+}
+function formatDate(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('ar-EG', { year:'numeric', month:'short', day:'numeric' });
+}
+function getStatus(r) {
+  if (r.revoked) return 'revoked';
+  const d = daysLeft(r.expiresAt);
+  if (d <= 0)         return 'expired';
+  if (d <= SOON_DAYS) return 'soon';
+  return 'active';
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────
+function updateStats() {
+  const all     = licenses.length;
+  const active  = licenses.filter(l => getStatus(l) === 'active').length;
+  const expired = licenses.filter(l => ['expired','revoked'].includes(getStatus(l))).length;
+  const soon    = licenses.filter(l => getStatus(l) === 'soon').length;
+  document.getElementById('statTotal').textContent   = all;
+  document.getElementById('statActive').textContent  = active;
+  document.getElementById('statExpired').textContent = expired;
+  document.getElementById('statSoon').textContent    = soon;
+}
+
+// ── Render table ──────────────────────────────────────────────────────────
+function renderTable() {
+  const q      = document.getElementById('searchInput').value.trim().toLowerCase();
+  const filter = document.getElementById('filterStatus').value;
+  const tbody  = document.getElementById('tableBody');
+  const empty  = document.getElementById('emptyState');
+
+  let rows = licenses.filter(l => {
+    const status = getStatus(l);
+    if (filter !== 'all' && status !== filter) return false;
+    if (q) {
+      const hay = [l.name, l.phone, l.key, l.machineId].join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  document.getElementById('tableCount').textContent = `${rows.length} ترخيص`;
+
+  if (!rows.length) {
+    tbody.innerHTML = '';
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+
+  tbody.innerHTML = rows.map((r, i) => {
+    const status = getStatus(r);
+    const days   = daysLeft(r.expiresAt);
+    const pct    = Math.max(0, Math.min(100, Math.round((days / (r.totalDays || 365)) * 100)));
+
+    const badgeHtml = {
+      active:  `<span class="badge badge-green"><span class="badge-dot badge-dot-green"></span>نشط</span>`,
+      soon:    `<span class="badge badge-amber"><span class="badge-dot badge-dot-amber"></span>قريب الانتهاء</span>`,
+      expired: `<span class="badge badge-red"><span class="badge-dot badge-dot-red"></span>منتهي</span>`,
+      revoked: `<span class="badge badge-red">ملغي</span>`,
+    }[status];
+
+    const fillClass = status === 'active' ? '' : status === 'soon' ? 'mini-fill-amber' : 'mini-fill-red';
+
+    const daysText = r.revoked ? '—'
+      : days <= 0 ? 'انتهى'
+      : `${days} يوم`;
+
+    const editBtn = `<button class="btn btn-ghost btn-sm btn-icon" title="تعديل" onclick="openEditModal('${r.id}')">
+           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+         </button>`;
+
+    const actionsHtml = r.revoked
+      ? `${editBtn}
+         <button class="btn btn-ghost btn-sm btn-icon" title="استعادة" onclick="restoreLicense('${r.id}')">♻️</button>
+         <button class="btn btn-ghost btn-sm btn-icon" title="حذف نهائي" onclick="deleteLicense('${r.id}')">🗑️</button>`
+      : `${editBtn}
+         <button class="btn btn-ghost btn-sm btn-icon" title="نسخ المفتاح" onclick="copyKey('${r.key}')">
+           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+         </button>
+         <button class="btn btn-danger btn-sm btn-icon" title="إلغاء الترخيص" onclick="openRevokeModal('${r.id}')">
+           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+         </button>
+         <button class="btn btn-ghost btn-sm btn-icon" title="حذف نهائي" onclick="deleteLicense('${r.id}')">🗑️</button>`;
+
+    return `<tr>
+      <td style="color:var(--sl-400);font-size:.75rem;">${i+1}</td>
+      <td class="td-name">${escHtml(r.name)}</td>
+      <td class="td-phone" dir="ltr">${escHtml(r.phone)}</td>
+      <td class="td-key">${r.key}</td>
+      <td style="font-size:.8rem;color:var(--sl-600);font-weight:600;">${r.plan}</td>
+      <td style="font-size:.8rem;color:var(--sl-600);">${formatDate(r.expiresAt)}</td>
+      <td>
+        <div style="font-size:.78rem;font-weight:700;color:var(--sl-600);margin-bottom:3px;">${daysText}</div>
+        ${!r.revoked && days > 0 ? `<div class="mini-bar"><div class="mini-fill ${fillClass}" style="width:${pct}%"></div></div>` : ''}
+      </td>
+      <td>${badgeHtml}</td>
+      <td class="td-mid" title="${escHtml(r.machineId)}">${r.machineId || '—'}</td>
+      <td><div class="td-actions">${actionsHtml}</div></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderAll() { updateStats(); renderTable(); }
+
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Export ────────────────────────────────────────────────────────────────
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(licenses, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `ac-licenses-${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  toast('تم التصدير');
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────
+function toast(msg, type = '') {
+  const wrap = document.getElementById('toastWrap');
+  const el   = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(() => el.remove(), 2800);
+}
+
+// ── Settings UI ───────────────────────────────────────────────────────────
+function toggleSettings() {
+  const body = document.getElementById('settingsBody');
+  body.style.display = body.style.display === 'none' ? 'block' : 'none';
+}
+
+// ── Sync requests from Google Sheets ─────────────────────────────────────
+async function syncRequests() {
+  const btn = document.getElementById('btnSync');
+  btn.disabled = true;
+  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="animation:spin .65s linear infinite"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.89"/></svg> جاري الجلب...';
+
+  if (!SCRIPT_URL) {
+    document.getElementById('requestsBody').innerHTML =
+      `<div style="text-align:center;padding:20px;color:var(--red);font-size:.82rem;">⚠️ أدخل رابط الـ API في الإعدادات أولاً</div>`;
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.89"/></svg> مزامنة`;
+    return;
+  }
+
+  try {
+    const result = await apiGet('requests');
+    if (!result.ok) throw new Error(result.message);
+
+    const pending = result.data.filter(r => r.status === 'pending');
+    const badge   = document.getElementById('reqBadge');
+    badge.textContent = pending.length ? pending.length : '';
+
+    // حفظ الطلبات في variable عالمي للوصول بـ index
+    window._pendingRequests = pending;
+
+    if (!pending.length) {
+      document.getElementById('requestsBody').innerHTML =
+        `<div style="text-align:center;padding:20px;color:var(--sl-400);font-size:.82rem;">✅ لا توجد طلبات جديدة</div>`;
+    } else {
+      document.getElementById('requestsBody').innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          ${pending.map((r, i) => `
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--amber-pale);border:1px solid var(--amber-b);border-radius:var(--radius-sm);">
+              <div style="flex:1;min-width:0;">
+                <div style="font-weight:800;color:var(--sl-800);font-size:.9rem;">${escHtml(r.name)}</div>
+                <div style="font-size:.78rem;color:var(--sl-500);direction:ltr;">${escHtml(r.phone)}</div>
+                <div style="font-family:'Courier New',monospace;font-size:.7rem;color:var(--sl-400);margin-top:2px;">${escHtml(r.machineId||'—')}</div>
+              </div>
+              <div style="font-size:.7rem;color:var(--sl-400);">${new Date(r.requestedAt).toLocaleDateString('ar-EG')}</div>
+              <button class="btn btn-primary btn-sm" onclick="fillFromRequest(${i})">
+                إصدار ترخيص ←
+              </button>
+            </div>
+          `).join('')}
+        </div>`;
+    }
+
+    // Also sync licenses from server
+    const licResult = await apiGet('licenses');
+    if (licResult.ok && licResult.data.length) {
+      // Merge server licenses into local (server is source of truth)
+      licResult.data.forEach(sl => {
+        const exists = licenses.find(l => l.key === sl.key);
+        if (!exists) {
+          licenses.unshift({
+            id:        sl.id,
+            key:       sl.key,
+            name:      sl.name,
+            phone:     sl.phone,
+            machineId: sl.machineId || '',
+            plan:      sl.plan,
+            totalDays: Number(sl.totalDays) || 365,
+            issuedAt:  String(sl.issuedAt||'').split('T')[0],
+            expiresAt: String(sl.expiresAt||'').split('T')[0],
+            revoked:   !!sl.revoked,
+          });
+        } else {
+          exists.revoked = !!sl.revoked;
+        }
+      });
+      save();
+      renderAll();
+    }
+
+    toast(`تم جلب ${pending.length} طلب جديد`, 'success');
+  } catch (err) {
+    document.getElementById('requestsBody').innerHTML =
+      `<div style="text-align:center;padding:20px;color:var(--red);font-size:.82rem;">❌ ${escHtml(err.message)}</div>`;
+    toast('فشل الاتصال بالـ API', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.89"/></svg> مزامنة`;
+  }
+}
+
+// ── Trial Config & Stats ──────────────────────────────────────────────────
+async function loadTrialConfig() {
+  try {
+    const r = await fetch('/api/trial-config');
+    if (!r.ok) return;
+    const cfg = await r.json();
+    document.getElementById('trialDays').value         = cfg.daysLimit      ?? 7;
+    document.getElementById('trialMaxGroups').value    = cfg.maxGroups      ?? 1;
+    document.getElementById('trialMaxStudents').value  = cfg.maxStudents    ?? 10;
+    document.getElementById('trialMaxQuizzes').value   = cfg.maxQuizzes     ?? 2;
+    document.getElementById('trialAllowedGames').value = cfg.allowedGames   ?? 3;
+    document.getElementById('trialCompetitions').checked = !!cfg.competitions;
+    document.getElementById('trialContent').checked      = !!cfg.content;
+  } catch {}
+}
+
+async function saveTrialConfig() {
+  const cfg = {
+    daysLimit:    parseInt(document.getElementById('trialDays').value)         || 7,
+    maxGroups:    parseInt(document.getElementById('trialMaxGroups').value)    || 1,
+    maxStudents:  parseInt(document.getElementById('trialMaxStudents').value)  || 10,
+    maxQuizzes:   parseInt(document.getElementById('trialMaxQuizzes').value)   || 2,
+    allowedGames: parseInt(document.getElementById('trialAllowedGames').value) || 3,
+    competitions: document.getElementById('trialCompetitions').checked,
+    content:      document.getElementById('trialContent').checked,
+  };
+  const status = document.getElementById('trialConfigStatus');
+  try {
+    const r = await fetch('/api/trial-config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(cfg),
+    });
+    const res = await r.json();
+    if (res.ok) {
+      status.textContent = '✅ تم الحفظ';
+      status.style.color = 'var(--teal)';
+    } else throw new Error();
+  } catch {
+    status.textContent = '❌ فشل الحفظ';
+    status.style.color = 'var(--red)';
+  }
+  setTimeout(() => { status.textContent = ''; }, 3000);
+}
+
+async function loadTrialStats() {
+  try {
+    const r = await fetch('/api/trial-stats');
+    if (!r.ok) return;
+    const { count, entries } = await r.json();
+    document.getElementById('trialCount').textContent = count;
+
+    const container = document.getElementById('trialEntries');
+    if (!entries.length) {
+      container.innerHTML = `<div style="text-align:center;font-size:.78rem;color:var(--sl-400);padding:8px">لا توجد تجارب مسجّلة بعد</div>`;
+      return;
+    }
+    container.innerHTML = entries.slice(-10).reverse().map(e => `
+      <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--sl-50);border-radius:8px;font-size:.75rem">
+        <span style="font-family:monospace;color:var(--sl-400);font-size:.68rem;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(e.machineId)}">${escHtml(e.machineId || '—')}</span>
+        <span style="color:var(--sl-500);white-space:nowrap">${new Date(e.activatedAt).toLocaleDateString('ar-EG')}</span>
+      </div>`).join('');
+  } catch {}
+}
+
+// Auto-load on page init
+(async function() {
+  await loadTrialConfig();
+  await loadTrialStats();
+})();
+
+function fillFromRequest(idx) {
+  const r = (window._pendingRequests || [])[idx];
+  if (!r) return;
+  document.getElementById('fName').value      = r.name;
+  document.getElementById('fPhone').value     = r.phone;
+  document.getElementById('fMachineId').value = r.machineId || '';
+  document.getElementById('fDuration').value  = '365';
+  document.getElementById('fCustomWrap').style.display = 'none';
+  document.querySelector('.card:nth-child(4)').scrollIntoView({ behavior:'smooth' });
+  document.getElementById('fName').focus();
+}
+
+
+// ── Custom duration toggle ────────────────────────────────────────────────
+document.getElementById('fDuration').addEventListener('change', function() {
+  document.getElementById('fCustomWrap').style.display = this.value === 'custom' ? 'flex' : 'none';
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────
+loadSettings();
+renderAll();
+</script>
+</body>
+</html>

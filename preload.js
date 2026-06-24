@@ -36,9 +36,18 @@ contextBridge.exposeInMainWorld('api', {
   deleteQuestion: (questionId) => ipcRenderer.invoke('delete-question', questionId),
   
   // Quiz submissions operations
-  loadQuizSubmissions: () => ipcRenderer.invoke('load-quiz-submissions'),
+  loadQuizSubmissions: (quizId) => ipcRenderer.invoke('load-quiz-submissions', quizId),
   saveQuizSubmissions: (submissions) => ipcRenderer.invoke('save-quiz-submissions', submissions),
-  
+  clearQuizResults: (quizId) => ipcRenderer.invoke('clear-quiz-results', quizId),
+  importQuestions: (quizId, questions) => ipcRenderer.invoke('import-questions', quizId, questions),
+
+  // License operations
+  getMachineId:     ()           => ipcRenderer.invoke('get-machine-id'),
+  activateLicense:  (key, mid, name, phone) => ipcRenderer.invoke('activate-license', key, mid, name, phone),
+  verifyLicense:    (key, mid)   => ipcRenderer.invoke('verify-license', key, mid),
+  licenseVerified:  ()           => ipcRenderer.invoke('license-verified'),
+  getLicenseStatus: ()           => ipcRenderer.invoke('get-license-status'),
+
   // Window operations
   openToolWindow: (toolName) => ipcRenderer.invoke('open-tool-window', toolName),
   openNumbersWindow: () => ipcRenderer.invoke('open-numbers-window'),
@@ -63,5 +72,16 @@ contextBridge.exposeInMainWorld('api', {
   getMillionSession: (sessionId) => ipcRenderer.invoke('million:getSession', sessionId),
   
   // Security
-  getApiKey: () => ipcRenderer.invoke('get-api-key')
+  getApiKey: () => ipcRenderer.invoke('get-api-key'),
+
+  // Trial
+  startTrial:      () => ipcRenderer.invoke('start-trial'),
+  getTrialStatus:  () => ipcRenderer.invoke('get-trial-status'),
+
+  // Auto-update
+  getAppVersion:   () => ipcRenderer.invoke('get-app-version'),
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  downloadUpdate:  () => ipcRenderer.invoke('download-update'),
+  installUpdate:   () => ipcRenderer.invoke('install-update'),
+  onUpdateMessage: (cb) => ipcRenderer.on('update-message', (_e, data) => cb(data))
 });

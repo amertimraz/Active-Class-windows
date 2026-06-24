@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Active Class — تفعيل البرنامج</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --teal:         #0f766e;
+      --teal-mid:     #0d9488;
+      --teal-light:   #14b8a6;
+      --teal-pale:    #f0fdfa;
+      --teal-border:  #99f6e4;
+      --sky:          #0ea5e9;
+      --red:          #ef4444;
+      --green:        #10b981;
+      --green-pale:   #f0fdf4;
+      --green-border: #86efac;
+      --amber:        #f59e0b;
+      --sl-50:  #f8fafc;
+      --sl-100: #f1f5f9;
+      --sl-200: #e2e8f0;
+      --sl-300: #cbd5e1;
+      --sl-400: #94a3b8;
+      --sl-500: #64748b;
+      --sl-600: #475569;
+      --sl-700: #334155;
+      --sl-800: #1e293b;
+      --card-bg: rgba(255,255,255,0.82);
+      --radius:    18px;
+      --radius-sm: 10px;
+      --shadow: 0 24px 56px rgba(15,23,42,.11), 0 2px 8px rgba(15,23,42,.06);
+    }
+
+    html, body {
+      height: 100%; overflow: hidden;
+      font-family: 'Cairo', sans-serif;
+      background: linear-gradient(135deg, #e0f2fe 0%, #f0fdfa 50%, #ede9fe 100%);
+      color: var(--sl-800);
+      -webkit-app-region: no-drag;
+    }
+
+    /* ── Orbs ── */
+    .orb { position:fixed;border-radius:50%;pointer-events:none;filter:blur(90px);opacity:.22;animation:drift 14s ease-in-out infinite alternate; }
+    @keyframes drift { from{transform:translate(0,0) scale(1);} to{transform:translate(30px,20px) scale(1.08);} }
+    .orb-1{width:400px;height:400px;background:#5eead4;top:-140px;right:-100px;animation-duration:15s;}
+    .orb-2{width:300px;height:300px;background:#7dd3fc;bottom:20px;left:-70px;animation-duration:11s;animation-delay:-6s;}
+    .orb-3{width:220px;height:220px;background:#c4b5fd;top:45%;right:30%;animation-duration:17s;animation-delay:-4s;}
+
+    /* ── Title bar ── */
+    .titlebar {
+      position:fixed;top:0;left:0;right:0;height:44px;z-index:100;
+      display:flex;align-items:center;justify-content:space-between;padding:0 16px;
+      background:rgba(255,255,255,.85);
+      backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+      border-bottom:1px solid rgba(226,232,240,.7);
+      -webkit-app-region:drag;
+    }
+    .tb-controls{display:flex;gap:6px;-webkit-app-region:no-drag;}
+    .wc{width:14px;height:14px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:filter .15s,transform .15s;}
+    .wc:hover{filter:brightness(.82);transform:scale(1.1);}
+    .wc svg{width:7px;height:7px;opacity:0;transition:opacity .15s;}
+    .wc:hover svg{opacity:1;}
+    .wc-red{background:#fc605b;} .wc-yellow{background:#fdbc40;} .wc-green{background:#34c749;}
+    .tb-logo{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:8px;pointer-events:none;}
+    .logo-badge{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,#14b8a6,#0f766e);display:flex;align-items:center;justify-content:center;}
+    .logo-badge span{color:#fff;font-size:11px;font-weight:900;}
+    .logo-name{font-size:13px;font-weight:700;color:var(--sl-700);}
+    .tb-spacer{width:64px;}
+
+    /* ── Page ── */
+    .page{height:100vh;display:flex;align-items:center;justify-content:center;padding:52px 16px 16px;}
+
+    /* ── Card ── */
+    .card{
+      background:var(--card-bg);
+      backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);
+      border:1px solid rgba(255,255,255,.7);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      width:100%;max-width:440px;
+      padding:32px;
+      animation:card-in .5s cubic-bezier(.4,0,.2,1) both;
+    }
+    @keyframes card-in{from{opacity:0;transform:translateY(20px) scale(.97);}to{opacity:1;transform:none;}}
+
+    /* ── Step indicator ── */
+    .steps{display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:28px;}
+    .step-item{display:flex;flex-direction:column;align-items:center;gap:5px;flex:1;}
+    .step-circle{
+      width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+      font-size:.8rem;font-weight:800;transition:all .3s;border:2px solid var(--sl-200);
+      background:var(--sl-100);color:var(--sl-400);
+    }
+    .step-circle.active{background:linear-gradient(135deg,#14b8a6,#0f766e);color:#fff;border-color:transparent;box-shadow:0 4px 14px rgba(15,118,110,.3);}
+    .step-circle.done{background:var(--green);color:#fff;border-color:transparent;}
+    .step-label{font-size:.7rem;font-weight:700;color:var(--sl-400);white-space:nowrap;}
+    .step-label.active{color:var(--teal);}
+    .step-label.done{color:var(--green);}
+    .step-line{height:2px;flex:1;background:var(--sl-200);margin-bottom:18px;transition:background .3s;}
+    .step-line.done{background:var(--green);}
+
+    /* ── Section head ── */
+    .section-head{margin-bottom:22px;text-align:center;}
+    .section-icon{
+      width:52px;height:52px;border-radius:50%;margin:0 auto 12px;
+      display:flex;align-items:center;justify-content:center;
+    }
+    .icon-teal{background:linear-gradient(135deg,#14b8a6,#0f766e);box-shadow:0 6px 18px rgba(15,118,110,.28);}
+    .icon-green{background:linear-gradient(135deg,#10b981,#0f766e);box-shadow:0 6px 18px rgba(16,185,129,.28);}
+    .icon-red{background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:0 6px 18px rgba(239,68,68,.28);}
+    .section-icon svg{width:24px;height:24px;}
+    .section-title{font-size:1.15rem;font-weight:800;color:var(--sl-800);margin-bottom:5px;}
+    .section-sub{font-size:.83rem;color:var(--sl-500);line-height:1.6;}
+
+    /* ── Form fields ── */
+    .field{margin-bottom:14px;}
+    .field-label{display:block;font-size:.78rem;font-weight:700;color:var(--sl-600);margin-bottom:6px;}
+    .field-input{
+      width:100%;padding:11px 14px;border-radius:var(--radius-sm);
+      border:2px solid var(--sl-200);background:rgba(255,255,255,.9);
+      font-family:'Cairo',sans-serif;font-size:.92rem;font-weight:600;color:var(--sl-800);
+      outline:none;transition:border-color .18s,box-shadow .18s;
+    }
+    .field-input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(15,118,110,.12);}
+    .field-input.error{border-color:var(--red);box-shadow:0 0 0 3px rgba(239,68,68,.1);}
+    .field-input::placeholder{color:var(--sl-300);font-weight:500;}
+
+    /* ── Key input ── */
+    .key-input{
+      width:100%;padding:12px 16px;border-radius:var(--radius-sm);
+      border:2px solid var(--sl-200);background:rgba(255,255,255,.9);
+      font-family:'Courier New',monospace;font-size:1.05rem;font-weight:700;
+      letter-spacing:.1em;text-align:center;color:var(--sl-800);
+      outline:none;direction:ltr;transition:border-color .18s,box-shadow .18s;
+    }
+    .key-input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(15,118,110,.12);}
+    .key-input.error{border-color:var(--red);box-shadow:0 0 0 3px rgba(239,68,68,.1);}
+    .key-input.success{border-color:var(--green);box-shadow:0 0 0 3px rgba(16,185,129,.12);}
+    .key-input::placeholder{color:var(--sl-300);font-size:.88rem;letter-spacing:normal;}
+
+    /* ── Segments ── */
+    .segments{display:flex;align-items:center;justify-content:center;gap:2px;margin-bottom:8px;direction:ltr;}
+    .seg{width:20px;height:32px;border-radius:5px;border:1.5px solid var(--sl-200);background:var(--sl-100);display:flex;align-items:center;justify-content:center;font-family:'Courier New',monospace;font-size:.88rem;font-weight:800;color:var(--sl-300);transition:all .12s;}
+    .seg.filled{background:var(--teal-pale);border-color:var(--teal-border);color:var(--teal);}
+    .seg-sep{color:var(--sl-300);font-weight:900;font-size:1rem;margin:0 2px;}
+
+    /* ── Message ── */
+    .msg{font-size:.82rem;font-weight:600;text-align:center;margin-top:8px;padding:7px 12px;border-radius:7px;}
+    .msg.error{color:#991b1b;background:#fef2f2;border:1px solid #fecaca;}
+    .msg.success{color:#065f46;background:var(--green-pale);border:1px solid var(--green-border);}
+    .msg.hidden{display:none;}
+
+    /* ── Info box ── */
+    .info-box{background:var(--sl-50);border:1px solid var(--sl-200);border-radius:var(--radius-sm);padding:12px 14px;margin:14px 0;}
+    .info-box-label{font-size:.7rem;font-weight:700;color:var(--sl-400);margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;}
+    .info-box-value{font-family:'Courier New',monospace;font-size:.78rem;color:var(--sl-600);word-break:break-all;}
+    .info-box-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;}
+    .info-box-row+.info-box-row{border-top:1px solid var(--sl-100);}
+    .info-box-key{font-size:.8rem;color:var(--sl-400);font-weight:600;}
+    .info-box-val{font-size:.85rem;color:var(--sl-700);font-weight:700;}
+    .info-box-val-teal{color:var(--teal);}
+
+    /* ── Waiting banner ── */
+    .waiting-banner{
+      background:linear-gradient(135deg,rgba(251,191,36,.1),rgba(245,158,11,.06));
+      border:1px solid rgba(251,191,36,.4);border-radius:var(--radius-sm);
+      padding:14px;text-align:center;margin-bottom:18px;
+    }
+    .waiting-banner-icon{font-size:1.6rem;margin-bottom:5px;}
+    .waiting-banner-title{font-size:.9rem;font-weight:800;color:#92400e;margin-bottom:3px;}
+    .waiting-banner-sub{font-size:.78rem;color:#b45309;line-height:1.55;}
+
+    /* ── Buttons ── */
+    .btn{
+      width:100%;padding:13px;border:none;border-radius:var(--radius-sm);
+      font-family:'Cairo',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;gap:8px;
+      transition:transform .18s,box-shadow .18s,filter .18s,opacity .18s;
+      margin-bottom:8px;
+    }
+    .btn:last-child{margin-bottom:0;}
+    .btn:disabled{opacity:.6;cursor:not-allowed;}
+    .btn-primary{background:linear-gradient(135deg,#0f766e,#0ea5e9);color:#fff;box-shadow:0 6px 20px rgba(15,118,110,.3);}
+    .btn-primary:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 10px 28px rgba(15,118,110,.4);filter:brightness(1.06);}
+    .btn-whatsapp{background:linear-gradient(135deg,#25d366,#128c7e);color:#fff;box-shadow:0 6px 20px rgba(37,211,102,.28);}
+    .btn-whatsapp:hover:not(:disabled){transform:translateY(-2px);filter:brightness(1.06);}
+    .btn-ghost{background:transparent;border:1.5px solid var(--sl-200);color:var(--sl-500);font-size:.85rem;padding:9px;box-shadow:none;}
+    .btn-ghost:hover{background:var(--sl-100);color:var(--sl-700);}
+
+    /* ── Spinner ── */
+    .spinner{width:17px;height:17px;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .65s linear infinite;flex-shrink:0;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+
+    /* ── Badge ── */
+    .badge{display:inline-flex;align-items:center;gap:5px;border-radius:99px;padding:3px 10px;font-size:.72rem;font-weight:700;}
+    .badge-green{background:var(--green-pale);border:1px solid var(--green-border);color:#065f46;}
+    .badge-red{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;}
+    .badge-dot{width:6px;height:6px;border-radius:50%;animation:pulse-dot 1.8s ease-in-out infinite;}
+    .badge-dot-green{background:var(--green);}
+    .badge-dot-red{background:var(--red);}
+    @keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(.7);}}
+
+    /* ── Success icon ── */
+    .icon-circle{width:68px;height:68px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;animation:check-pop .45s cubic-bezier(.34,1.56,.64,1) both;}
+    @keyframes check-pop{from{transform:scale(0) rotate(-20deg);opacity:0;}to{transform:scale(1) rotate(0);opacity:1;}}
+    .icon-circle svg{width:30px;height:30px;}
+
+    /* ── Days bar ── */
+    .days-meta{display:flex;justify-content:space-between;font-size:.75rem;color:var(--sl-400);font-weight:600;margin-bottom:6px;}
+    .days-track{height:6px;background:var(--sl-200);border-radius:99px;overflow:hidden;margin-bottom:20px;}
+    .days-fill{height:100%;background:linear-gradient(to left,#14b8a6,#0f766e);border-radius:99px;transition:width 1s cubic-bezier(.4,0,.2,1);}
+
+    /* ── Shake ── */
+    @keyframes shake{0%,100%{transform:translateX(0);}20%{transform:translateX(-7px);}40%{transform:translateX(7px);}60%{transform:translateX(-4px);}80%{transform:translateX(4px);}}
+    .shake{animation:shake .38s ease;}
+
+    .hidden{display:none!important;}
+  </style>
+</head>
+<body>
+
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+
+  <!-- Title bar -->
+  <header class="titlebar">
+    <div class="tb-controls">
+      <div class="wc wc-red" id="btnClose">
+        <svg viewBox="0 0 8 8" fill="none" stroke="#7f0000" stroke-width="1.8" stroke-linecap="round"><line x1="1.5" y1="1.5" x2="6.5" y2="6.5"/><line x1="6.5" y1="1.5" x2="1.5" y2="6.5"/></svg>
+      </div>
+      <div class="wc wc-yellow" id="btnMin">
+        <svg viewBox="0 0 8 2" fill="#7a4500" width="8" height="2"><rect width="8" height="2" rx="1"/></svg>
+      </div>
+      <div class="wc wc-green" id="btnMax">
+        <svg viewBox="0 0 8 8" fill="none" stroke="#1a4731" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx=".8"/></svg>
+      </div>
+    </div>
+    <div class="tb-logo">
+      <div class="logo-badge"><span>AC</span></div>
+      <span class="logo-name">Active Class</span>
+    </div>
+    <div class="tb-spacer"></div>
+  </header>
+
+  <div class="page">
+
+    <!-- ════════════════════════════════════
+         STEP 1 — Registration
+    ════════════════════════════════════ -->
+    <div id="stateRegister" class="card">
+      <div class="steps">
+        <div class="step-item">
+          <div class="step-circle active">١</div>
+          <div class="step-label active">التسجيل</div>
+        </div>
+        <div class="step-line"></div>
+        <div class="step-item">
+          <div class="step-circle">٢</div>
+          <div class="step-label">التفعيل</div>
+        </div>
+      </div>
+
+      <div class="section-head">
+        <div class="section-icon icon-teal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <h1 class="section-title">أهلاً بك في Active Class</h1>
+        <p class="section-sub">سجّل بياناتك وسنرسل لك كود التفعيل</p>
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="regName">الاسم الكامل</label>
+        <input id="regName" class="field-input" type="text" placeholder="مثال: أحمد محمد علي" autocomplete="name" />
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="regPhone">رقم الموبايل</label>
+        <input id="regPhone" class="field-input" type="tel" placeholder="01012345678" inputmode="tel" autocomplete="tel" />
+      </div>
+
+      <div id="regMsg" class="msg hidden"></div>
+
+      <div class="info-box" style="margin-top:4px;margin-bottom:18px;">
+        <div class="info-box-label">معرّف الجهاز (سيُرسل تلقائياً مع طلبك)</div>
+        <div class="info-box-value" id="machineIdDisplay">جاري التحميل...</div>
+      </div>
+
+      <button id="btnSendRequest" class="btn btn-primary">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        إرسال طلب التفعيل
+        <div id="btnSendSpinner" class="spinner hidden"></div>
+      </button>
+      <button id="btnAlreadyHaveKey" class="btn btn-ghost">لدي كود تفعيل بالفعل</button>
+
+      <!-- Trial separator -->
+      <div style="display:flex;align-items:center;gap:10px;margin:4px 0">
+        <div style="flex:1;height:1px;background:var(--sl-200)"></div>
+        <span style="font-size:.78rem;color:var(--sl-400)">أو</span>
+        <div style="flex:1;height:1px;background:var(--sl-200)"></div>
+      </div>
+
+      <button id="btnStartTrial" class="btn btn-ghost" style="border:1.5px dashed var(--teal-border);color:var(--teal);background:var(--teal-pale);font-weight:700">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        جرّب مجاناً لمدة 7 أيام
+      </button>
+      <p style="text-align:center;font-size:.72rem;color:var(--sl-400);margin-top:-6px">بدون كود — ميزات محدودة</p>
+    </div>
+
+    <!-- ════════════════════════════════════
+         STEP 2 — Enter License Key
+    ════════════════════════════════════ -->
+    <div id="stateActivate" class="card hidden">
+      <div class="steps">
+        <div class="step-item">
+          <div class="step-circle done">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="step-label done">التسجيل</div>
+        </div>
+        <div class="step-line done"></div>
+        <div class="step-item">
+          <div class="step-circle active">٢</div>
+          <div class="step-label active">التفعيل</div>
+        </div>
+      </div>
+
+      <div class="waiting-banner">
+        <div class="waiting-banner-icon">⏳</div>
+        <div class="waiting-banner-title">في انتظار كود التفعيل</div>
+        <div class="waiting-banner-sub" style="margin-bottom:12px;">تم استلام طلبك — تواصل مع الدعم لاستلام الكود</div>
+        <button id="btnWhatsappSupport" class="btn btn-whatsapp" style="width:auto;padding:9px 18px;font-size:.85rem;margin:0 auto;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+          تواصل مع الدعم
+          <span style="opacity:.75;font-size:.78rem;">01096066818</span>
+        </button>
+      </div>
+
+      <!-- Summary of registered data -->
+      <div class="info-box" style="margin-top:0;margin-bottom:16px;">
+        <div class="info-box-row"><span class="info-box-key">الاسم</span><span class="info-box-val" id="summaryName">—</span></div>
+        <div class="info-box-row"><span class="info-box-key">الموبايل</span><span class="info-box-val" id="summaryPhone">—</span></div>
+        <div class="info-box-row">
+          <span class="info-box-key">معرّف الجهاز</span>
+          <span class="info-box-val info-box-val-teal" id="summaryMachineId" style="font-family:'Courier New',monospace;font-size:.72rem;">—</span>
+        </div>
+      </div>
+
+      <div style="text-align:center;margin-bottom:10px;">
+        <div style="font-size:.82rem;font-weight:700;color:var(--sl-500);">أدخل كود التفعيل عند استلامه</div>
+      </div>
+
+      <div class="segments" id="keySegments"></div>
+      <input id="keyInput" class="key-input" type="text" maxlength="29"
+             placeholder="XXXXX-XXXXX-XXXXX-XXXXX"
+             autocomplete="off" autocorrect="off" spellcheck="false" inputmode="text" />
+      <div id="keyMsg" class="msg hidden"></div>
+
+      <div style="margin-top:14px;">
+        <button id="btnActivate" class="btn btn-primary">
+          <span id="btnActivateText">تفعيل الترخيص</span>
+          <div id="btnActivateSpinner" class="spinner hidden"></div>
+        </button>
+        <button id="btnBackToRegister" class="btn btn-ghost">تعديل البيانات</button>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════
+         STATE — Success
+    ════════════════════════════════════ -->
+    <div id="stateSuccess" class="card hidden" style="text-align:center;">
+      <div class="icon-circle" style="background:linear-gradient(135deg,#10b981,#0f766e);box-shadow:0 8px 24px rgba(16,185,129,.3);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div class="badge badge-green" style="margin:0 auto 10px;">
+        <span class="badge-dot badge-dot-green"></span>الترخيص نشط
+      </div>
+      <h2 class="section-title" style="margin-bottom:5px;">تم التفعيل بنجاح! 🎉</h2>
+      <p class="section-sub" style="margin-bottom:5px;">مرحباً <strong id="successName" style="color:var(--sl-700);">—</strong></p>
+      <p class="section-sub" style="margin-bottom:22px;">نسختك من Active Class جاهزة للاستخدام</p>
+
+      <div class="info-box" style="text-align:right;margin-top:0;">
+        <div class="info-box-row"><span class="info-box-key">نوع الترخيص</span><span class="info-box-val" id="successPlan">—</span></div>
+        <div class="info-box-row"><span class="info-box-key">ينتهي في</span><span class="info-box-val" id="successExpiry">—</span></div>
+        <div class="info-box-row"><span class="info-box-key">الأيام المتبقية</span><span class="info-box-val info-box-val-teal" id="successDays">—</span></div>
+      </div>
+
+      <div class="days-meta"><span>المدة المتبقية</span><span id="successDaysPct">—%</span></div>
+      <div class="days-track"><div class="days-fill" id="successDaysBar" style="width:0%"></div></div>
+
+      <button id="btnEnterApp" class="btn btn-primary">
+        ادخل التطبيق
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+
+    <!-- ════════════════════════════════════
+         STATE — Already Active
+    ════════════════════════════════════ -->
+    <div id="stateAlreadyActive" class="card hidden">
+      <div style="display:flex;align-items:center;gap:12px;padding-bottom:16px;border-bottom:1px solid var(--sl-200);margin-bottom:18px;">
+        <div style="width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#14b8a6,#0f766e);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:.75rem;font-weight:700;color:var(--sl-400);margin-bottom:2px;">مرحباً بعودتك</div>
+          <div style="font-size:1rem;font-weight:800;color:var(--sl-800);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" id="activeName">—</div>
+        </div>
+        <div class="badge badge-green">
+          <span class="badge-dot badge-dot-green"></span>نشط
+        </div>
+      </div>
+
+      <div class="info-box" style="margin-top:0;">
+        <div class="info-box-row"><span class="info-box-key">نوع الترخيص</span><span class="info-box-val" id="activePlan">—</span></div>
+        <div class="info-box-row"><span class="info-box-key">تاريخ الانتهاء</span><span class="info-box-val" id="activeExpiry">—</span></div>
+        <div class="info-box-row"><span class="info-box-key">الأيام المتبقية</span><span class="info-box-val info-box-val-teal" id="activeDaysLeft">—</span></div>
+      </div>
+
+      <div class="days-meta"><span>المدة المتبقية</span><span id="activeDaysPct">—%</span></div>
+      <div class="days-track"><div class="days-fill" id="activeDaysBar" style="width:0%"></div></div>
+
+      <button id="btnEnterApp2" class="btn btn-primary">
+        دخول التطبيق
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </button>
+      <button id="btnChangeKey" class="btn btn-ghost">استخدام مفتاح مختلف</button>
+    </div>
+
+    <!-- ════════════════════════════════════
+         STATE — Expired
+    ════════════════════════════════════ -->
+    <div id="stateExpired" class="card hidden" style="text-align:center;">
+      <div class="icon-circle" style="background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:0 8px 24px rgba(239,68,68,.28);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r=".8" fill="white" stroke="none"/></svg>
+      </div>
+      <div class="badge badge-red" style="margin:0 auto 10px;">
+        <span class="badge-dot badge-dot-red"></span>منتهي الصلاحية
+      </div>
+      <h2 class="section-title" style="margin-bottom:6px;">انتهى الترخيص</h2>
+      <p class="section-sub" style="margin-bottom:5px;">انتهت الصلاحية في <strong id="expiredDate" style="color:var(--sl-700);">—</strong></p>
+      <p class="section-sub" style="margin-bottom:22px;">تواصل مع الدعم للتجديد</p>
+      <button id="btnRenew" class="btn btn-whatsapp">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+        تجديد الترخيص عبر واتساب
+      </button>
+      <button id="btnExpiredChangeKey" class="btn btn-ghost">لدي كود تجديد</button>
+    </div>
+
+  </div>
+
+  <script src="/pages/activation.js"></script>
+</body>
+</html>

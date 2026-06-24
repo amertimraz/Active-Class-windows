@@ -5,13 +5,6 @@
   </div>
 
   <div class="games-modern-grid">
-    <!-- مهمة الفضاء -->
-    <a class="game-item-card game-blue" href="#/space-mission">
-      <div class="game-item-icon">🚀</div>
-      <h3 class="game-item-title">مهمة الفضاء</h3>
-      <p class="game-item-desc">لعبة تعليمية بجرافيك عالي! حلق بمركبتك عبر المجرة وأجب على الأسئلة لاستكشاف الكواكب</p>
-      <div class="game-item-action">ابدأ اللعب الآن</div>
-    </a>
 
     <!-- دينو العربي -->
     <a class="game-item-card game-green" href="#/dino-arabic">
@@ -95,6 +88,31 @@
     </a>
   </div>
 </div>
+
+<script>
+(function() {
+  const s = window.TRIAL_STATUS;
+  if (!s || !s.trial || s.licensed || s.expired) return;
+  const allowed = s.limits?.allowedGames ?? 3;
+  const cards = document.querySelectorAll('.game-item-card');
+  cards.forEach((card, i) => {
+    if (i < allowed) return;
+    card.style.position = 'relative';
+    card.style.pointerEvents = 'none';
+    card.style.opacity = '0.55';
+    card.style.filter = 'grayscale(60%)';
+    const lock = document.createElement('div');
+    lock.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,.35);border-radius:inherit;font-size:1.6rem;color:#fff';
+    lock.innerHTML = '🔒';
+    lock.title = 'متاح في النسخة الكاملة';
+    card.appendChild(lock);
+    card.addEventListener('click', e => {
+      e.preventDefault();
+      window.trialBlock && window.trialBlock('games');
+    }, true);
+  });
+})();
+</script>
 
 <style>
 .game-engine-card {

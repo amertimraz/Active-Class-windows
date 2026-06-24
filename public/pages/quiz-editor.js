@@ -1328,6 +1328,209 @@
     observer.observe(header);
   }
 
+  // ===== Download Excel Template =====
+  document.getElementById('downloadTemplateBtn')?.addEventListener('click', () => {
+    const headers = ['السؤال', 'الخيار أ', 'الخيار ب', 'الخيار ج', 'الخيار د', 'الإجابة الصحيحة (1-4)'];
+    const examples = [
+      ['ما هي عاصمة المملكة العربية السعودية؟', 'الرياض', 'جدة', 'مكة المكرمة', 'المدينة المنورة', 1],
+      ['كم عدد أيام الأسبوع؟', '5', '6', '7', '8', 3],
+      ['من هو مؤسس علم الجبر؟', 'الخوارزمي', 'ابن سينا', 'الكندي', 'الفارابي', 1],
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...examples]);
+
+    // Column widths
+    ws['!cols'] = [
+      { wch: 40 }, // السؤال
+      { wch: 20 }, // أ
+      { wch: 20 }, // ب
+      { wch: 20 }, // ج
+      { wch: 20 }, // د
+      { wch: 22 }, // الإجابة
+    ];
+
+    // Style header row (bold + background) — basic xlsx styling
+    const headerStyle = { font: { bold: true }, fill: { fgColor: { rgb: 'D9E1F2' } }, alignment: { horizontal: 'center' } };
+    headers.forEach((_, ci) => {
+      const cellRef = XLSX.utils.encode_cell({ r: 0, c: ci });
+      if (ws[cellRef]) ws[cellRef].s = headerStyle;
+    });
+
+    // Add a note row below examples
+    const noteRow = ['💡 اكتب أسئلتك من الصف الثاني فصاعداً. العمود F: رقم الإجابة الصحيحة من 1 إلى 4 (أو نص الخيار).'];
+    XLSX.utils.sheet_add_aoa(ws, [noteRow], { origin: -1 });
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'الأسئلة');
+
+    const quizName = currentQuiz?.name ? currentQuiz.name.replace(/[\\/:*?"<>|]/g, '_') : 'quiz';
+    XLSX.writeFile(wb, `قالب_أسئلة_${quizName}.xlsx`);
+  });
+
+  // ===== Import Questions from Excel / CSV =====
+  (function setupImport() {
+    const importBtn    = document.getElementById('importQuestionsBtn');
+    const fileInput    = document.getElementById('importQuestionsFile');
+    const previewModal = document.getElementById('importPreviewModal');
+    const previewClose = document.getElementById('importPreviewClose');
+    const cancelBtn    = document.getElementById('importCancelBtn');
+    const confirmBtn   = document.getElementById('importConfirmBtn');
+    const statsEl      = document.getElementById('importPreviewStats');
+    const errorsEl     = document.getElementById('importPreviewErrors');
+    const tableEl      = document.getElementById('importPreviewTable');
+
+    if (!importBtn || !fileInput) return;
+
+    let parsedQuestions = [];
+
+    importBtn.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      fileInput.value = '';
+
+      try {
+        const data = await file.arrayBuffer();
+        const wb   = XLSX.read(data, { type: 'array' });
+        const ws   = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+        // Skip header row if first cell is a recognizable label
+        const firstCell = String(rows[0]?.[0] || '').trim().replace(/^ال/, '').toLowerCase();
+        const startRow  = ['سؤال','question','س','q','#','s'].includes(firstCell) ? 1 : 0;
+
+        const errors    = [];
+        const questions = [];
+
+        for (let i = startRow; i < rows.length; i++) {
+          const row  = rows[i];
+          const text = String(row[0] || '').trim();
+
+          // Skip empty rows and note/comment rows (start with 💡 or non-question content)
+          if (!text || text.startsWith('💡') || text.startsWith('#') || text.startsWith('//')) continue;
+
+          const opts = [
+            String(row[1] || '').trim(),
+            String(row[2] || '').trim(),
+            String(row[3] || '').trim(),
+            String(row[4] || '').trim(),
+          ].filter(Boolean);
+
+          if (opts.length < 2) {
+            errors.push(`صف ${i + 1}: "${text.slice(0, 20)}..." — يجب أن يحتوي على خيارين على الأقل`);
+            continue;
+          }
+
+          // Col F (index 5): correct answer — 1-based number OR option text
+          let correctAnswer = 0;
+          const raw = String(row[5] || '').trim();
+          if (raw !== '') {
+            const num = Number(raw);
+            if (!isNaN(num) && num >= 1 && num <= opts.length) {
+              correctAnswer = num - 1;
+            } else {
+              const idx = opts.findIndex(o => o === raw);
+              if (idx !== -1) correctAnswer = idx;
+              else errors.push(`صف ${i + 1}: الإجابة "${raw}" غير مطابقة لأي خيار`);
+            }
+          }
+
+          questions.push({ text, options: opts, correctAnswer });
+        }
+
+        parsedQuestions = questions;
+        showPreview(questions, errors, file.name);
+      } catch (err) {
+        alert('خطأ في قراءة الملف: ' + err.message);
+      }
+    });
+
+    function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    function showPreview(qs, errors, fileName) {
+      statsEl.innerHTML = `
+        <span>📄 <strong>${esc(fileName)}</strong></span>
+        <span>✅ أسئلة صالحة: <strong>${qs.length}</strong></span>
+        ${errors.length ? `<span style="color:#ef4444;">⚠️ تحذيرات: <strong>${errors.length}</strong></span>` : ''}
+      `;
+
+      if (errors.length) {
+        errorsEl.style.display = 'block';
+        errorsEl.innerHTML = `<div style="padding:8px 12px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:.82rem;color:#b91c1c;">
+          ${errors.map(e => `<div>• ${e}</div>`).join('')}
+        </div>`;
+      } else {
+        errorsEl.style.display = 'none';
+      }
+
+      confirmBtn.disabled = qs.length === 0;
+
+      if (qs.length === 0) {
+        tableEl.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:24px;">لم يتم العثور على أسئلة صالحة</p>';
+      } else {
+        const tbody = qs.slice(0, 15).map((q, i) => `
+          <tr>
+            <td style="color:var(--text-muted);text-align:center;padding:6px 8px;width:36px;">${i + 1}</td>
+            <td style="padding:6px 8px;max-width:240px;">${esc(q.text)}</td>
+            <td style="padding:6px 8px;">
+              ${q.options.map((o, oi) => `
+                <span style="display:inline-block;padding:2px 7px;border-radius:4px;font-size:.78rem;margin:2px;
+                  background:${oi === q.correctAnswer ? '#dcfce7' : 'var(--card-bg,#f3f4f6)'};
+                  border:1px solid ${oi === q.correctAnswer ? '#86efac' : 'var(--border-color,#e5e7eb)'};
+                  color:${oi === q.correctAnswer ? '#166534' : 'inherit'};">
+                  ${esc(o)}${oi === q.correctAnswer ? ' ✓' : ''}
+                </span>`).join('')}
+            </td>
+          </tr>`).join('');
+
+        tableEl.innerHTML = `
+          <table style="width:100%;border-collapse:collapse;font-size:.85rem;">
+            <thead><tr style="background:var(--card-bg,#f3f4f6);border-bottom:2px solid var(--border-color,#e5e7eb);">
+              <th style="padding:8px;width:36px;">#</th>
+              <th style="padding:8px;text-align:right;">السؤال</th>
+              <th style="padding:8px;text-align:right;">الخيارات</th>
+            </tr></thead>
+            <tbody>${tbody}</tbody>
+          </table>
+          ${qs.length > 15 ? `<p style="text-align:center;color:var(--text-muted);font-size:.82rem;margin-top:8px;">... و ${qs.length - 15} سؤال آخر</p>` : ''}
+        `;
+      }
+
+      previewModal.style.display = 'flex';
+    }
+
+    function closeModal() {
+      previewModal.style.display = 'none';
+      parsedQuestions = [];
+    }
+
+    previewClose?.addEventListener('click', closeModal);
+    cancelBtn?.addEventListener('click', closeModal);
+
+    confirmBtn?.addEventListener('click', async () => {
+      if (!parsedQuestions.length || !currentQuiz?.id) return;
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = '⏳ جاري الاستيراد...';
+
+      try {
+        const res = await window.api.importQuestions(currentQuiz.id, parsedQuestions);
+        if (res?.ok) {
+          closeModal();
+          await loadQuiz();
+          showToast(`✅ تم استيراد ${res.inserted} سؤال بنجاح`, 'success');
+        } else {
+          alert('فشل الاستيراد: ' + (res?.message || 'خطأ غير معروف'));
+        }
+      } catch (err) {
+        alert('خطأ: ' + err.message);
+      } finally {
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = '✅ استيراد الأسئلة';
+      }
+    });
+  })();
+
   // Initialize when DOM is ready
   document.addEventListener('DOMContentLoaded', () => {
     loadQuiz();

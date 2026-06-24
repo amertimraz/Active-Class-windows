@@ -118,7 +118,6 @@
     '/numbers': () => fetchPageContent('/pages/numbers.html'),
     '/names': () => fetchPageContent('/pages/names.html'),
     // Games Routes
-    '/space-mission': () => fetchPageContent('/pages/space-mission.html'),
     '/dino-arabic': () => fetchPageContent('/pages/dino-arabic.html'),
     '/grammar-hunter': () => fetchPageContent('/pages/grammar-hunter.html'),
     '/ethics-path': () => fetchPageContent('/pages/ethics-path.html'),
@@ -210,17 +209,22 @@
         }
       }
 
-      // Auto-load JS for this page
+      // Auto-load JS for this page (skip if already loaded via <script src> in the HTML)
       const jsUrl = url.replace('.html', '.js');
-      const jsCheck = await fetch(jsUrl, { method: 'HEAD' }).catch(() => null);
-      const jsType = jsCheck ? (jsCheck.headers.get('content-type') || '') : '';
-      if (jsCheck && jsCheck.ok && jsType.includes('javascript')) {
-        const prevJs = document.getElementById('dynamic-page-js');
-        if (prevJs) prevJs.remove();
-        const script = document.createElement('script');
-        script.id = 'dynamic-page-js';
-        script.src = jsUrl + '?t=' + Date.now();
-        await new Promise(resolve => { script.onload = resolve; script.onerror = resolve; document.body.appendChild(script); });
+      const alreadyInHtml = Array.from(doc.querySelectorAll('script[src]')).some(s =>
+        s.getAttribute('src') === jsUrl || s.src.endsWith(jsUrl)
+      );
+      if (!alreadyInHtml) {
+        const jsCheck = await fetch(jsUrl, { method: 'HEAD' }).catch(() => null);
+        const jsType = jsCheck ? (jsCheck.headers.get('content-type') || '') : '';
+        if (jsCheck && jsCheck.ok && jsType.includes('javascript')) {
+          const prevJs = document.getElementById('dynamic-page-js');
+          if (prevJs) prevJs.remove();
+          const script = document.createElement('script');
+          script.id = 'dynamic-page-js';
+          script.src = jsUrl + '?t=' + Date.now();
+          await new Promise(resolve => { script.onload = resolve; script.onerror = resolve; document.body.appendChild(script); });
+        }
       }
 
     } catch (error) {
@@ -248,7 +252,7 @@
             <h1 class="hv2-headline">حوّل فصلك إلى<br><span>تجربة لا تُنسى</span></h1>
             <p class="hv2-sub">ألعاب تعليمية، اختبارات تفاعلية، وذكاء اصطناعي —<br>كل ما تحتاجه في مكان واحد.</p>
             <div class="hv2-ctas">
-              <a href="#/quizzes" class="hv2-btn-primary">ابدأ أول اختبار ←</a>
+              <a href="#/quizzes" class="hv2-btn-primary" id="homeCtaBtn">ابدأ أول اختبار ←</a>
               <a href="#/games" class="hv2-btn-secondary">استكشف الألعاب</a>
             </div>
           </div>
@@ -277,23 +281,16 @@
               <span class="hv2-stat-lbl">لعبة تعليمية</span>
             </div>
           </div>
-          <div class="hv2-stats-progress">
-            <span class="hv2-stats-progress-label">تقدّم الطلاب</span>
-            <div class="hv2-stats-progress-track">
-              <div class="hv2-stats-progress-fill"></div>
-            </div>
-            <span class="hv2-stats-progress-pct">68%</span>
-          </div>
         </div>
 
         <!-- ── Feature Cards ── -->
         <div class="hv2-features">
-          ${featureCardV2('#/quizzes',    '#f97316', 'M9 11l3 3L22 4 M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11', 'الاختبارات',         'أنشئ اختبارات تفاعلية لحظية وتابع نتائج طلابك فوراً.',  'إنشاء اختبار',   '#fff7ed', '#f97316')}
-          ${featureCardV2('#/groups',     '#3b82f6', 'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75', 'المجموعات والطلاب', 'أدر مجموعاتك واعرف أداء كل طالب بنظرة واحدة.',         'إدارة المجموعات', '#eff6ff', '#3b82f6')}
+          ${featureCardV2('#/quizzes',    '#f97316', 'M9 11l3 3L22 4 M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11', 'الاختبارات',         'أنشئ اختبارات تفاعلية لحظية وتابع نتائج طلابك فوراً.',  'إنشاء اختبار',   '#fff7ed', '#f97316', true)}
+          ${featureCardV2('#/groups',     '#3b82f6', 'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75', 'المجموعات والطلاب', 'أدر مجموعاتك واعرف أداء كل طالب بنظرة واحدة.',         'إدارة المجموعات', '#eff6ff', '#3b82f6', true)}
           ${featureCardV2('#/games',      '#ec4899', 'M8 21h8m-4-4v4M7 4H4v6a8 8 0 0 0 16 0V4h-3 M4 4a16 16 0 0 0 16 0',                                 'الألعاب التعليمية',  '11 لعبة تفاعلية تحوّل المراجعة إلى تنافس ممتع.',       'ابدأ لعبة',       '#fdf2f8', '#ec4899')}
           ${featureCardV2('#/content',    '#14b8a6', 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20 M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z', 'المحتوى التعليمي',  'ارفع دروسك وعرضها بشكل احترافي داخل الفصل.',          'تصفح المحتوى',    '#f0fdfa', '#14b8a6')}
-          ${featureCardV2('#/ai-generator','#8b5cf6','M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5z',                                         'الذكاء الاصطناعي',  'حوّل أي PDF لدرس تفاعلي مع أسئلة جاهزة في ثوانٍ.',    'جرّب الآن',       '#f5f3ff', '#8b5cf6')}
-          ${featureCardV2('#/competitions','#eab308','M8 21h8m-4-4v4M7 4H4v6a8 8 0 0 0 16 0V4h-3 M4 4a16 16 0 0 0 16 0',                                  'تتبع التقدم',        'راقب أداء طلابك وتقاريرهم عبر الزمن.',                 'عرض التقارير',    '#fefce8', '#eab308')}
+          <!-- ai-generator hidden temporarily -->
+          ${featureCardV2('#/competitions','#eab308','M8 21h8m-4-4v4M7 4H4v6a8 8 0 0 0 16 0V4h-3 M4 4a16 16 0 0 0 16 0',                                  'المسابقات',          'نظّم مسابقات بين الطلاب وتابع النتائج فورياً.',        'ابدأ مسابقة',     '#fefce8', '#eab308')}
         </div>
 
       </section>
@@ -339,12 +336,12 @@
     `;
   }
 
-  function featureCardV2(href, accentColor, svgPath, title, desc, btnText, bgColor, iconColor) {
+  function featureCardV2(href, accentColor, svgPath, title, desc, btnText, bgColor, iconColor, featured = false) {
     return `
-      <a href="${href}" class="fv2-card" style="--fv2-accent:${accentColor};--fv2-bg:${bgColor};--fv2-icon:${iconColor};">
+      <a href="${href}" class="fv2-card${featured ? ' fv2-featured' : ''}" style="--fv2-accent:${accentColor};--fv2-bg:${bgColor};--fv2-icon:${iconColor};">
         <div class="fv2-top-stripe"></div>
         <div class="fv2-icon-wrap">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="${featured ? 32 : 28}" height="${featured ? 32 : 28}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             ${svgPath.split(' M').map((p,i)=>`<path d="${i===0?p:'M'+p}"/>`).join('')}
           </svg>
         </div>
@@ -401,19 +398,8 @@
       return;
     }
 
-    let students = [];
     let groups = [];
     let quizzes = [];
-
-    try {
-      if (window.api && window.api.loadStudents) {
-        students = await window.api.loadStudents();
-      } else {
-        students = getLocalList(LS_STUDENTS);
-      }
-    } catch {
-      students = getLocalList(LS_STUDENTS);
-    }
 
     try {
       if (window.api && window.api.loadGroups) {
@@ -435,32 +421,56 @@
       quizzes = getLocalList(LS_QUIZZES);
     }
 
-    let gamesCount = 0;
-    try {
-      const response = await fetch('/pages/games.html');
-      if (response.ok) {
-        const html = await response.text();
-        const doc = new DOMParser().parseFromString(html, 'text/html');
-        const cards = doc.querySelectorAll('.grid .card');
-        gamesCount = cards.length;
-      }
-    } catch {
-      gamesCount = 0;
-    }
-
-    const studentCount = Array.isArray(students) ? students.length : 0;
+    /* count only students that belong to current groups */
+    const studentCount = Array.isArray(groups)
+      ? groups.reduce((sum, g) => sum + (g.studentCount ?? g.studentsCount ?? 0), 0)
+      : 0;
     const groupCount = Array.isArray(groups) ? groups.length : 0;
     const quizCount = Array.isArray(quizzes) ? quizzes.length : 0;
 
     studentsEl.textContent = studentCount;
     groupsEl.textContent = groupCount;
     quizzesEl.textContent = quizCount;
+
+    const ctaBtn = document.getElementById('homeCtaBtn');
+    if (ctaBtn && quizCount > 0) {
+      ctaBtn.textContent = 'عرض الاختبارات ←';
+    }
   }
 
   // Attach quick tools events
   document.addEventListener('DOMContentLoaded', () => {
     const container = document.querySelector('.header-quick-tools') || document.querySelector('.quick-tools');
     if (!container) return;
+
+    // Grouped quick-tools dropdown: toggle open/close + close on outside click
+    const qtToggle = document.getElementById('qtToggle');
+    const qtMenu   = document.getElementById('qtMenu');
+    if (qtToggle && qtMenu) {
+      const placeMenu = () => {
+        const r = qtToggle.getBoundingClientRect();
+        qtMenu.style.top   = `${r.bottom + 6}px`;
+        qtMenu.style.left  = 'auto';
+        qtMenu.style.right = `${Math.max(8, window.innerWidth - r.right)}px`;   /* align to button's right edge (RTL) */
+      };
+      const setOpen = (open) => {
+        if (open) placeMenu();
+        qtMenu.hidden = !open;
+        qtToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      };
+      qtToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        setOpen(qtMenu.hidden);
+      });
+      document.addEventListener('click', (e) => {
+        if (!container.contains(e.target)) setOpen(false);
+      });
+      // close after picking a tool
+      qtMenu.addEventListener('click', (e) => {
+        if (e.target.closest('[data-qt]')) setOpen(false);
+      });
+    }
+
     container.addEventListener('click', async (e) => {
       const btn = e.target.closest('[data-qt]');
       if (!btn) return;
@@ -1111,7 +1121,7 @@
     }
 
     // Clean up game-page state on every navigation
-    const gameRoutes = ['/space-mission', '/dino-arabic', '/grammar-hunter', '/ethics-path', '/million',
+    const gameRoutes = ['/dino-arabic', '/grammar-hunter', '/ethics-path', '/million',
       '/basketball-quiz', '/hero-attack', '/dino-english', '/duck-race', '/game-geography-map',
       '/game-engine', '/game-engine/word-match', '/game-engine/edu-platformer'];
     const isGameRoute = gameRoutes.includes(hash);

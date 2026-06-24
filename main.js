@@ -3,13 +3,66 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const fs = require('fs');
+const os = require('os');
 const XLSX = require('xlsx');
 const crypto = require('crypto');
 const log = require('./server/logger').create('main');
 
+// ── License helpers ────────────────────────────────────────────────────────
+const LICENSE_FILE = () => path.join(app.getPath('userData'), 'ac_license.json');
+
+// ── Trial helpers ──────────────────────────────────────────────────────────
+const TRIAL_DAYS   = 7;
+const TRIAL_FILE   = () => path.join(app.getPath('userData'), 'ac_trial.json');
+const TRIAL_LIMITS = { maxGroups: 1, maxStudents: 10, maxQuizzes: 2, allowedGames: 3, competitions: false, content: false };
+
+function readTrialFile()  { try { return JSON.parse(fs.readFileSync(TRIAL_FILE(), 'utf8')); } catch { return null; } }
+function writeTrialFile(d){ try { fs.writeFileSync(TRIAL_FILE(), JSON.stringify(d, null, 2), 'utf8'); } catch {} }
+function isTrialValid(t)  { return !!(t?.expiresAt && new Date(t.expiresAt) > new Date()); }
+
+function getMachineId() {
+  // Stable fingerprint from hostname + platform + CPU model (no extra deps)
+  const raw = [os.hostname(), os.platform(), os.arch(),
+                (os.cpus()[0]?.model || ''), String(os.totalmem())].join('|');
+  return crypto.createHash('sha256').update(raw).digest('hex').slice(0, 24).toUpperCase();
+}
+
+function readLicenseFile() {
+  try { return JSON.parse(fs.readFileSync(LICENSE_FILE(), 'utf8')); }
+  catch { return null; }
+}
+
+function writeLicenseFile(data) {
+  try { fs.writeFileSync(LICENSE_FILE(), JSON.stringify(data, null, 2), 'utf8'); }
+  catch (e) { log.error('writeLicenseFile:', e.message); }
+}
+
+function isLicenseValid(lic) {
+  if (!lic || !lic.expiresAt || !lic.key) return false;
+  return new Date(lic.expiresAt) > new Date();
+}
+
+// License server URL — update when your server is ready
+const LICENSE_SERVER = process.env.LICENSE_SERVER_URL || 'https://your-license-server.com';
+
+async function verifyWithServer(key, machineId) {
+  try {
+    const res = await fetch(`${LICENSE_SERVER}/api/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key, machineId }),
+      signal: AbortSignal.timeout(8000)
+    });
+    return await res.json();
+  } catch {
+    return null; // offline — caller falls back to local
+  }
+}
+// ──────────────────────────────────────────────────────────────────────────
+
 // Single source of truth for the renderer Content-Security-Policy (was
 // duplicated across every BrowserWindow). Update here only.
-const CSP_VALUE = `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' http://localhost:* https://cdnjs.cloudflare.com; media-src 'self' data: blob:;`;
+const CSP_VALUE = `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' http://localhost:* https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://script.google.com https://script.googleusercontent.com; media-src 'self' data: blob:; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com; worker-src 'self' blob: https://cdnjs.cloudflare.com;`;
 
 // Uniform in-place shuffle (Fisher–Yates). Replaces the biased
 // `arr.sort(() => Math.random() - 0.5)` idiom, which does not produce a
@@ -47,17 +100,18 @@ function createWindow() {
     }
   });
 
-  // Set CSP header
-  mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
-    callback({
-      responseHeaders: {
-        ...details.responseHeaders,
-        "Content-Security-Policy": [
-          CSP_VALUE
-        ]
+  // Set CSP header — only for our own server responses so external iframes
+  // (YouTube, Vimeo) can still load their own scripts without interference.
+  mainWindow.webContents.session.webRequest.onHeadersReceived(
+    { urls: ['http://localhost:5000/*'] },
+    (details, callback) => {
+      const h = {};
+      for (const [k, v] of Object.entries(details.responseHeaders)) {
+        if (k.toLowerCase() !== 'content-security-policy') h[k] = v;
       }
-    });
-  });
+      callback({ responseHeaders: { ...h, 'Content-Security-Policy': [CSP_VALUE] } });
+    }
+  );
 
   // Ensure tool windows close when main window closes
   try {
@@ -69,9 +123,14 @@ function createWindow() {
     });
   } catch {}
 
-  // Load the app (retry if server isn't ready yet)
+  // Load the app — activation screen first if not licensed/trialing
   const APP_URL = 'http://localhost:5000';
-  mainWindow.loadURL(APP_URL);
+  const lic   = readLicenseFile();
+  const trial = readTrialFile();
+  const startUrl = (isLicenseValid(lic) || isTrialValid(trial))
+    ? APP_URL
+    : `${APP_URL}/pages/activation.html`;
+  mainWindow.loadURL(startUrl);
 
   // Retry a few times if initial load fails due to server not being ready
   try {
@@ -202,35 +261,33 @@ async function serverFetch(endpoint, options = {}) {
 }
 
 function startServer() {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const userDataPath = app.getPath('userData');
-    serverProcess = spawn('node', ['server/server.js'], {
-      cwd: __dirname,
-      stdio: 'pipe',
-      env: {
-        ...process.env,
-        APP_DATA_DIR: path.join(userDataPath, 'classroom-data'),
-        SERVER_API_KEY: SERVER_API_KEY
-      }
-    });
 
-    serverProcess.stdout.on('data', (data) => {
-      log.info(`Server: ${data}`);
-      if (data.toString().includes('Active Class server running at http://localhost:5000')) {
-        resolve();
-      }
-    });
+    // Set env vars the server reads at startup
+    process.env.APP_DATA_DIR    = path.join(userDataPath, 'classroom-data');
+    process.env.SERVER_API_KEY  = SERVER_API_KEY;
 
-    serverProcess.stderr.on('data', (data) => {
-      log.error(`Server Error: ${data}`);
-    });
+    // In both packaged and dev mode, require() the server directly in the main process.
+    // This avoids spawning a child process that may not find node in PATH.
+    try {
+      const net = require('net');
+      const checkPort = () => {
+        const client = net.createConnection({ port: 5000, host: '127.0.0.1' }, () => {
+          client.destroy();
+          resolve();
+        });
+        client.on('error', () => setTimeout(checkPort, 300));
+      };
 
-    serverProcess.on('close', (code) => {
-      log.info(`Server process exited with code ${code}`);
-    });
-
-    // Fallback timeout (give server a bit more time to bind)
-    setTimeout(resolve, 5000);
+      require('./server/server.js');
+      setTimeout(checkPort, 500);
+    } catch (err) {
+      log.error(`Failed to require server: ${err.message}`);
+      const { dialog } = require('electron');
+      dialog.showErrorBox('Server Error', `فشل تشغيل السيرفر:\n${err.message}`);
+      resolve();
+    }
   });
 }
 
@@ -252,9 +309,7 @@ app.whenReady().then(async () => {
           webPreferences: { contextIsolation: true, nodeIntegration: false, preload: path.join(__dirname, 'preload.js') }
         });
         win.webContents.session.webRequest.onHeadersReceived((details, callback) => {
-          callback({ responseHeaders: { ...details.responseHeaders, 'Content-Security-Policy': [
-            CSP_VALUE
-          ]}});
+          const h2 = {}; for (const [k,v] of Object.entries(details.responseHeaders)) { if (k.toLowerCase() !== 'content-security-policy') h2[k]=v; } callback({ responseHeaders: { ...h2, 'Content-Security-Policy': [CSP_VALUE] } });
         });
         win.loadURL('http://localhost:5000/pages/names.html');
         win.on('closed', () => { toolWindows.delete('names'); });
@@ -274,9 +329,7 @@ app.whenReady().then(async () => {
           webPreferences: { contextIsolation: true, nodeIntegration: false, preload: path.join(__dirname, 'preload.js') }
         });
         win.webContents.session.webRequest.onHeadersReceived((details, callback) => {
-          callback({ responseHeaders: { ...details.responseHeaders, 'Content-Security-Policy': [
-            CSP_VALUE
-          ]}});
+          const h2 = {}; for (const [k,v] of Object.entries(details.responseHeaders)) { if (k.toLowerCase() !== 'content-security-policy') h2[k]=v; } callback({ responseHeaders: { ...h2, 'Content-Security-Policy': [CSP_VALUE] } });
         });
         win.loadURL('http://localhost:5000/pages/timer-standalone.html');
         win.on('closed', () => { toolWindows.delete('timer'); });
@@ -509,14 +562,35 @@ app.whenReady().then(async () => {
     } catch (e) { log.error('delete-question:', e.message); return { ok: false }; }
   });
 
-  ipcMain.handle('load-quiz-submissions', async () => {
-    try { return await serverFetch('/results'); }
+  ipcMain.handle('load-quiz-submissions', async (_e, quizId) => {
+    try {
+      const url = quizId ? `/api/quizzes/${quizId}/results` : '/results';
+      return await serverFetch(url);
+    }
     catch (e) { log.error('load-quiz-submissions:', e.message); return []; }
   });
 
   ipcMain.handle('save-quiz-submissions', async () => {
     // Submissions are written directly to SQLite via /api/submit-answers; no-op here.
     return { ok: true };
+  });
+
+  ipcMain.handle('clear-quiz-results', async (_e, quizId) => {
+    try { return await serverFetch(`/api/quizzes/${quizId}/results`, { method: 'DELETE' }); }
+    catch (e) { log.error('clear-quiz-results:', e.message); return { ok: false }; }
+  });
+
+  ipcMain.handle('import-questions', async (_e, quizId, questions) => {
+    try {
+      return await serverFetch(`/api/quizzes/${quizId}/questions/bulk`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(questions)
+      });
+    } catch (e) {
+      log.error('import-questions:', e.message);
+      return { ok: false, message: e.message };
+    }
   });
 
   // Excel file operations
@@ -677,6 +751,150 @@ app.whenReady().then(async () => {
   });
 
   ipcMain.handle('get-api-key', () => SERVER_API_KEY);
+
+  // ── License IPC Handlers ───────────────────────────────────────────────
+  ipcMain.handle('get-machine-id', () => getMachineId());
+
+  ipcMain.handle('activate-license', async (_e, key, machineId, name, phone) => {
+    if (!key) return { ok: false, message: 'مفتاح غير صحيح' };
+
+    const mid = machineId || getMachineId();
+
+    // Try server first
+    const serverResult = await verifyWithServer(key, mid);
+
+    if (serverResult) {
+      if (!serverResult.ok) return serverResult;
+      writeLicenseFile({ ...serverResult, key, machineId: mid, name: name || '', phone: phone || '', activatedAt: new Date().toISOString() });
+      return serverResult;
+    }
+
+    // ── Demo mode: accept any key starting with ACTCLS ──
+    if (key.toUpperCase().replace(/-/g,'').startsWith('ACTCLS')) {
+      const expiry = new Date();
+      expiry.setFullYear(expiry.getFullYear() + 1);
+      const result = {
+        ok: true, plan: 'Pro سنوي',
+        expiresAt: expiry.toISOString().split('T')[0],
+        daysLeft: 365, totalDays: 365
+      };
+      writeLicenseFile({ ...result, key, machineId: mid, name: name || '', phone: phone || '', activatedAt: new Date().toISOString() });
+      return result;
+    }
+
+    return { ok: false, message: 'تعذّر الاتصال بالسيرفر — جرّب لاحقاً' };
+  });
+
+  ipcMain.handle('verify-license', async (_e, key, machineId) => {
+    const serverResult = await verifyWithServer(key, machineId || getMachineId());
+    return serverResult || { ok: true, offline: true }; // trust local if offline
+  });
+
+  ipcMain.handle('license-verified', () => {
+    // Renderer confirmed license — load the main app
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.loadURL('http://localhost:5000');
+    }
+  });
+
+  ipcMain.handle('get-license-status', () => {
+    const lic = readLicenseFile();
+    if (!lic) return { valid: false, licensed: false };
+    if (!isLicenseValid(lic)) return { valid: false, licensed: false, expired: true, expiresAt: lic.expiresAt };
+    const daysLeft = Math.ceil((new Date(lic.expiresAt) - new Date()) / 86400000);
+    return { valid: true, licensed: true, name: lic.name || '', plan: lic.plan, expiresAt: lic.expiresAt, daysLeft, totalDays: lic.totalDays || 365 };
+  });
+
+  // ── Trial IPC ────────────────────────────────────────────────────────────
+  ipcMain.handle('start-trial', async () => {
+    const existing = readTrialFile();
+    if (existing) {
+      // Trial already started — just navigate to the app
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.loadURL('http://localhost:5000');
+      return { ok: true, message: 'already_started' };
+    }
+
+    // Read config from server (may have been updated via admin panel)
+    let cfg = { daysLimit: TRIAL_DAYS, ...TRIAL_LIMITS };
+    try {
+      const r = await fetch(`http://localhost:${SERVER_PORT}/api/trial-config`);
+      if (r.ok) cfg = { ...cfg, ...await r.json() };
+    } catch {}
+
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + (cfg.daysLimit || TRIAL_DAYS));
+    const trialData = {
+      startedAt: new Date().toISOString(),
+      expiresAt: expiresAt.toISOString(),
+      daysLimit: cfg.daysLimit || TRIAL_DAYS,
+      limits: cfg,
+    };
+    writeTrialFile(trialData);
+
+    // Log this activation (for admin stats)
+    try {
+      await fetch(`http://localhost:${SERVER_PORT}/api/trial-log`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ machineId: getMachineId() }),
+      });
+    } catch {}
+
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.loadURL('http://localhost:5000');
+    return { ok: true };
+  });
+
+  ipcMain.handle('get-trial-status', async () => {
+    const t = readTrialFile();
+    if (!t) return { trial: false };
+
+    // Merge saved limits with latest config (admin may have updated limits)
+    let limits = t.limits || TRIAL_LIMITS;
+    try {
+      const r = await fetch(`http://localhost:${SERVER_PORT}/api/trial-config`);
+      if (r.ok) limits = { ...limits, ...await r.json() };
+    } catch {}
+
+    const daysLeft = Math.max(0, Math.ceil((new Date(t.expiresAt) - new Date()) / 86400000));
+    return { trial: true, daysLeft, daysLimit: t.daysLimit || TRIAL_DAYS, expiresAt: t.expiresAt, expired: daysLeft <= 0, limits };
+  });
+  // ──────────────────────────────────────────────────────────────────────────
+
+  // ── Auto-Update Handlers ────────────────────────────────────────────────
+  const https = require('https');
+  const { shell } = require('electron');
+
+  // Compare semantic versions: returns 1 if a > b, -1 if a < b, 0 if equal
+  // ── electron-updater (packaged only) ─────────────────────────────────────
+  ipcMain.handle('get-app-version', () => app.getVersion());
+
+  if (app.isPackaged) {
+    const { autoUpdater } = require('electron-updater');
+    autoUpdater.autoDownload         = false;
+    autoUpdater.autoInstallOnAppQuit = false;
+
+    const sendUpdateMsg = (event, data = {}) => {
+      if (mainWindow && !mainWindow.isDestroyed())
+        mainWindow.webContents.send('update-message', { event, ...data });
+    };
+
+    autoUpdater.on('checking-for-update',  ()     => sendUpdateMsg('checking'));
+    autoUpdater.on('update-not-available', (info) => sendUpdateMsg('up-to-date', { version: info.version }));
+    autoUpdater.on('error',                (err)  => sendUpdateMsg('error',      { message: err.message }));
+    autoUpdater.on('update-available',     (info) => sendUpdateMsg('available',  { version: info.version }));
+    autoUpdater.on('download-progress',    (prog) => sendUpdateMsg('progress',   { percent: Math.round(prog.percent) }));
+    autoUpdater.on('update-downloaded',    ()     => sendUpdateMsg('downloaded'));
+
+    ipcMain.handle('check-for-updates', () => { autoUpdater.checkForUpdates(); return {}; });
+    ipcMain.handle('download-update',   () => autoUpdater.downloadUpdate());
+    ipcMain.handle('install-update',    () => autoUpdater.quitAndInstall(false, true));
+  } else {
+    // Development stubs — prevent "no handler" errors in renderer
+    ipcMain.handle('check-for-updates', () => ({ devMode: true }));
+    ipcMain.handle('download-update',   () => {});
+    ipcMain.handle('install-update',    () => {});
+  }
+  // ── End electron-updater ──────────────────────────────────────────────────
 
   // Million Game IPC Handlers
   const dataDir = path.join(app.getPath('userData'), 'classroom-data');
@@ -904,6 +1122,22 @@ app.whenReady().then(async () => {
   });
 
   await startServer();
+
+  // Backfill trial log for trials activated before logging was added
+  const _existingTrial = readTrialFile();
+  if (_existingTrial && isTrialValid(_existingTrial)) {
+    try {
+      const _logPath = path.join(__dirname, 'data', 'trial-log.json');
+      let _log = [];
+      try { _log = JSON.parse(fs.readFileSync(_logPath, 'utf8')); } catch {}
+      const _mid = getMachineId();
+      if (!_log.some(e => e.machineId === _mid)) {
+        _log.push({ activatedAt: _existingTrial.startedAt || new Date().toISOString(), machineId: _mid, backfilled: true });
+        fs.writeFileSync(_logPath, JSON.stringify(_log, null, 2), 'utf8');
+      }
+    } catch {}
+  }
+
   createWindow();
 });
 

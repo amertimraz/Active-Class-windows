@@ -307,6 +307,24 @@ console.log('Quiz view script loading...');
   }
 
   // ===== Quiz Data Management =====
+
+  // Student mode: hide settings rows, keep only the start button
+  function minimizeStartSettings() {
+    const overlay = document.getElementById('startOverlay');
+    if (!overlay) return;
+    // Hide all setting rows
+    overlay.querySelectorAll('.start-row').forEach(row => {
+      // Keep student picker row visible (it may be needed)
+      if (row.id !== 'studentPickerRow') row.style.display = 'none';
+    });
+    // Change title to student-friendly text
+    const h2 = overlay.querySelector('h2');
+    if (h2) h2.textContent = '🎯 جاهز للبدء؟';
+    // Hide the "تأكد من الإعدادات" hint
+    const ghost = document.getElementById('startGhost');
+    if (ghost) ghost.style.display = 'none';
+  }
+
   function loadQuizFromURL() {
     const urlParams = new URLSearchParams(window.location.search);
     const quizId = urlParams.get('id');
@@ -604,9 +622,9 @@ console.log('Quiz view script loading...');
           }
           
         } else {
-          console.error('No questions found in quiz data:', state.quiz);
-          console.log('Quiz questions property:', state.quiz.questions);
-          showToast('لا توجد أسئلة في هذا الاختبار', 'error');
+          const qCount = Array.isArray(state.quiz.questions) ? state.quiz.questions.length : 'N/A';
+          console.error('No questions found. quiz.name:', state.quiz.name, '| questions:', qCount, '| quizId:', quizId);
+          showToast(`الاختبار "${state.quiz.name || quizId}" لا يحتوي على أسئلة في قاعدة البيانات (${qCount})`, 'error');
           return;
         }
       } catch (questionsError) {
@@ -1729,10 +1747,15 @@ console.log('Quiz view script loading...');
       const studentId = sel ? sel.value || null : null;
       const studentName = sel ? (sel.options[sel.selectedIndex]?.text || null) : null;
 
+      const durationSeconds = state.startTime
+        ? Math.round((Date.now() - state.startTime) / 1000)
+        : 0;
+
       const payload = {
         testId: state.quiz?.id,
         studentId,
         studentName,
+        duration: durationSeconds,
         answers: Object.entries(state.answers).map(([idx, ans]) => ({
           questionId: state.questions?.[Number(idx)]?.id,
           answerIndex: typeof ans === 'number' ? ans : null
@@ -3250,7 +3273,22 @@ console.log('Quiz view script loading...');
         console.log('Quiz loaded from global variable:', window.quizData);
         return true;
       }
-      
+
+      // HTTP fetch fallback — works for mobile/LAN students with no window.api
+      if (quizId) {
+        try {
+          const resp = await fetch(`/api/quizzes/${quizId}`);
+          if (resp.ok) {
+            const quiz = await resp.json();
+            if (quiz && Array.isArray(quiz.questions) && quiz.questions.length > 0) {
+              state.quiz = quiz;
+              console.log('Quiz loaded via HTTP fetch:', quiz.questions.length, 'questions');
+              return true;
+            }
+          }
+        } catch (_) {}
+      }
+
       console.error('No quiz data found');
       showToast('لم يتم العثور على بيانات الاختبار', 'error');
       return false;
@@ -3266,16 +3304,45 @@ console.log('Quiz view script loading...');
   async function init() {
     try {
       console.log('Initializing quiz view...');
-      
+
       // Load quiz data first
       const quizLoaded = await loadQuizData();
       if (!quizLoaded) {
         return; // Stop initialization if quiz data couldn't be loaded
       }
-      
-      // Initialize quiz data
+
+      // Initialize quiz data (shows start overlay)
       await initializeQuiz();
-      
+
+      // If launched via QR/share link, hide settings so student only sees the start button
+      try {
+        const _p = new URLSearchParams(window.location.search);
+        if (_p.get('minutes') !== null || _p.get('timeUp') !== null || _p.get('showCorrect') !== null) {
+          minimizeStartSettings();
+        }
+      } catch (_) {}
+
+      // Populate student picker if quiz is linked to a group
+      try {
+        const groupId = state.quiz && state.quiz.groupId;
+        if (groupId) {
+          const pickerRow = document.getElementById('studentPickerRow');
+          const studentSel = document.getElementById('studentSelect');
+          if (pickerRow && studentSel) {
+            fetch('/api/students')
+              .then(r => r.ok ? r.json() : [])
+              .then(all => {
+                const grouped = all.filter(s => s.groupId === groupId || s.group_id === groupId);
+                const list = grouped.length > 0 ? grouped : all;
+                studentSel.innerHTML = '<option value="">— اختر اسمك —</option>' +
+                  list.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+                pickerRow.style.display = 'flex';
+              })
+              .catch(() => {});
+          }
+        }
+      } catch (_) {}
+
       // Setup event listeners
       setupEventListeners();
       // Also bind modal action buttons and ESC/backdrop handlers (CSP-safe)

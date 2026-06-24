@@ -240,7 +240,13 @@
         quizzes = loadLocal(LS_QUIZZES);
       }
 
-      submissions = loadLocal(LS_SUBMISSIONS);
+      // Load submissions from SQLite via IPC (no quizId = all results)
+      if (hasAPI && window.api.loadQuizSubmissions) {
+        try { submissions = await window.api.loadQuizSubmissions() || []; }
+        catch { submissions = loadLocal(LS_SUBMISSIONS); }
+      } else {
+        submissions = loadLocal(LS_SUBMISSIONS);
+      }
 
       populateGroupSelects();
       updateStats();
@@ -310,11 +316,12 @@
   }
 
   function countQuestions(quiz){
+    if (typeof quiz.questionsCount === 'number') return quiz.questionsCount;
     return quiz.questions ? quiz.questions.length : 0;
   }
 
   function countSubmissions(quizId){
-    return submissions.filter(s => s.quizId === quizId).length;
+    return submissions.filter(s => (s.testId || s.quizId) === quizId).length;
   }
 
   // ===== Stats =====
@@ -506,6 +513,9 @@
         showToast(window.I18n ? I18n.t('quizzes.toast.fill_required') : 'يرجى ملء جميع الحقول المطلوبة', 'warning');
         return;
       }
+
+      // Trial gate — only block when creating new quiz
+      if (mode !== 'edit' && window.trialBlock && window.trialBlock('quizzes', quizzes.length)) return;
 
       showLoading();
       try {
@@ -755,140 +765,13 @@
     if (qrShortLink) qrShortLink.textContent = '';
   }
 
-  // Ensure a quiz exists in SQLite and return its server ID
+  // Return the SQLite ID for this quiz so we can build a LAN QR URL.
+  // All quizzes in the list are loaded from SQLite via apiGetQuizzes → IPC → /api/quizzes,
+  // so their IDs are already valid SQLite UUIDs — no duplication needed.
   async function ensureQuizOnServer(quizId) {
     const quiz = quizzes.find(q => q.id === quizId);
     if (!quiz) throw new Error('quiz not found');
-
-    const localQuestions = Array.isArray(quiz.questions) ? quiz.questions : [];
-
-    // 1) Prefer a previously stored SQLite mapping
-    if (quiz.sqliteId) {
-      try {
-        const checkMapped = await authFetch(`/api/quizzes/${quiz.sqliteId}`);
-        if (checkMapped.ok) {
-          // If the mapped quiz exists but has no questions, upload them now
-          try {
-            const remote = await checkMapped.json();
-            const remoteCount = Array.isArray(remote?.questions) ? remote.questions.length : 0;
-            if (remoteCount === 0 && localQuestions.length > 0) {
-              for (let i = 0; i < localQuestions.length; i++) {
-                const qq = localQuestions[i] || {};
-                if (!qq.text || !String(qq.text).trim()) continue;
-                try {
-                  await authFetch(`/api/quizzes/${quiz.sqliteId}/questions`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      type: qq.type || 'mcq',
-                      text: qq.text,
-                      image: qq.image || null,
-                      options: Array.isArray(qq.options) ? qq.options : [],
-                      correctAnswer: (typeof qq.correctAnswer === 'number') ? qq.correctAnswer : null,
-                      difficulty: qq.difficulty || null,
-                      points: (typeof qq.points === 'number') ? qq.points : 1,
-                      explanation: qq.explanation || '',
-                      position: i + 1
-                    })
-                  });
-                } catch (_) { /* continue */ }
-              }
-            }
-          } catch (_) { /* ignore parse/upload errors */ }
-          return quiz.sqliteId;
-        }
-        // if server says not found but we have mapping, drop it and continue
-        if (checkMapped.status !== 404) throw new Error(`Check mapped failed with status ${checkMapped.status}`);
-      } catch (_) {
-        // ignore and continue
-      }
-    }
-
-    // 2) Check if the local ID already exists in SQLite
-    try {
-      const check = await authFetch(`/api/quizzes/${quizId}`);
-      if (check.ok) {
-        // If the quiz exists but has no questions, upload them now
-        try {
-          const remote = await check.json();
-          const remoteCount = Array.isArray(remote?.questions) ? remote.questions.length : 0;
-          if (remoteCount === 0 && localQuestions.length > 0) {
-            for (let i = 0; i < localQuestions.length; i++) {
-              const qq = localQuestions[i] || {};
-              if (!qq.text || !String(qq.text).trim()) continue;
-              try {
-                await authFetch(`/api/quizzes/${quizId}/questions`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    type: qq.type || 'mcq',
-                    text: qq.text,
-                    image: qq.image || null,
-                    options: Array.isArray(qq.options) ? qq.options : [],
-                    correctAnswer: (typeof qq.correctAnswer === 'number') ? qq.correctAnswer : null,
-                    difficulty: qq.difficulty || null,
-                    points: (typeof qq.points === 'number') ? qq.points : 1,
-                    explanation: qq.explanation || '',
-                    position: i + 1
-                  })
-                });
-              } catch (_) { /* continue */ }
-            }
-          }
-        } catch (_) { /* ignore parse/upload errors */ }
-
-        // persist mapping for next time
-        try { quiz.sqliteId = quizId; saveLocal(LS_QUIZZES, quizzes); } catch {}
-        return quizId;
-      }
-      if (check.status !== 404) throw new Error(`Check failed with status ${check.status}`);
-    } catch (_) {
-      // ignore and create
-    }
-
-    // 3) Create new quiz on server using local data, then upload its questions
-    const createRes = await authFetch('/api/quizzes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: quiz.name || 'Quiz',
-        description: quiz.description || '',
-        groupId: quiz.groupId || null,
-        duration: quiz.duration || null,
-        status: quiz.status || 'active',
-        settings: quiz.settings || {}
-      })
-    });
-    if (!createRes.ok) throw new Error('failed to create quiz on server');
-    const created = await createRes.json();
-    const serverId = created.id;
-
-    for (let i = 0; i < localQuestions.length; i++) {
-      const qq = localQuestions[i] || {};
-      // Skip invalid/empty questions to avoid server 400 (text is required)
-      if (!qq.text || !String(qq.text).trim()) continue;
-      try {
-        await authFetch(`/api/quizzes/${serverId}/questions`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: qq.type || 'mcq',
-            text: qq.text,
-            image: qq.image || null,
-            options: Array.isArray(qq.options) ? qq.options : [],
-            correctAnswer: (typeof qq.correctAnswer === 'number') ? qq.correctAnswer : null,
-            difficulty: qq.difficulty || null,
-            points: (typeof qq.points === 'number') ? qq.points : 1,
-            explanation: qq.explanation || '',
-            position: i + 1
-          })
-        });
-      } catch (_) { /* continue */ }
-    }
-
-    // Store mapping locally for convenience (non-blocking)
-    try { quiz.sqliteId = serverId; saveLocal(LS_QUIZZES, quizzes); } catch {}
-    return serverId;
+    return quizId;
   }
 
   // Build an HTTP share link that points to /quiz with a valid SQLite-backed quiz ID
@@ -904,7 +787,8 @@
       if (res.ok) {
         const data = await res.json();
         const ips = Array.isArray(data?.ips) ? data.ips : [];
-        const ip = ips.find(Boolean);
+        // Prefer real LAN ranges over VPN/virtual adapters
+        const ip = ips.find(a => /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(a)) || ips.find(Boolean);
         const port = data?.port || 5000;
         if (ip) {
           const protocol = /^https?:$/i.test(window.location.protocol) ? window.location.protocol : 'http:';
@@ -1252,11 +1136,30 @@
     window.location.href = `/pages/quiz-results.html?id=${quizId}`;
   };
 
-  window.previewQuiz = function(quizId) {
-    const quiz = quizzes.find(q => q.id === quizId);
+  window.previewQuiz = async function(quizId) {
+    let quiz = quizzes.find(q => q.id === quizId);
     if (!quiz) {
       showToast('الاختبار غير موجود', 'error');
       return;
+    }
+
+    /* if questions not loaded yet (list API only returns questionsCount), fetch full quiz */
+    if (!quiz.questions || !quiz.questions.length) {
+      try {
+        const res = await authFetch(`/api/quizzes/${quizId}`);
+        if (res.ok) {
+          const full = await res.json();
+          if (full && Array.isArray(full.questions) && full.questions.length > 0) {
+            quiz = full;
+          } else {
+            console.warn('[previewQuiz] API returned quiz with 0 questions. questionsCount from list:', quiz.questionsCount, 'quizId:', quizId);
+          }
+        } else {
+          console.warn('[previewQuiz] API returned status:', res.status, 'for quizId:', quizId);
+        }
+      } catch(e) {
+        console.error('[previewQuiz] authFetch failed:', e);
+      }
     }
 
     if (!quiz.questions || quiz.questions.length === 0) {

@@ -453,3 +453,89 @@
 [data-theme="dark"] .sm-theme-name { border-top-color: rgba(255,255,255,0.06); color: #e2e8f0; }
 [data-theme="dark"] .sm-stat-chip { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.07); }
 [data-theme="dark"] .sm-about-chip { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.07); }
+
+/* ── Update Box ── */
+.sm-update-box {
+  background: var(--bg-secondary, #f8fafc);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  margin: 0 0 1rem;
+}
+.sm-update-status {
+  font-size: .85rem;
+  color: var(--text-secondary, #64748b);
+  min-height: 1.4rem;
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+}
+.sm-update-status.is-checking  { color: #6366f1; }
+.sm-update-status.is-uptodate  { color: #22c55e; }
+.sm-update-status.is-available { color: #f59e0b; }
+.sm-update-status.is-error     { color: #ef4444; }
+.sm-btn-success {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .45rem;
+  background: #22c55e;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: .55rem 1.1rem;
+  font-size: .9rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background .2s;
+}
+.sm-btn-success:hover { background: #16a34a; }
+[data-theme="dark"] .sm-update-box { background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.07); }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── License Tab ─────────────────────────────────────── */
+.sm-lic-grid { display: flex; flex-direction: column; gap: 10px; }
+.sm-lic-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--sl-50, #f8fafc);
+  border: 1px solid var(--sl-100, #f1f5f9);
+  border-radius: 10px;
+}
+.sm-lic-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .82rem;
+  color: var(--sl-500, #64748b);
+  white-space: nowrap;
+}
+.sm-lic-val {
+  font-size: .85rem;
+  font-weight: 600;
+  color: var(--sl-800, #1e293b);
+  text-align: left;
+  direction: ltr;
+  word-break: break-all;
+}
+.sm-lic-key {
+  font-family: 'Courier New', monospace;
+  font-size: .8rem;
+  color: var(--teal-700, #0f766e);
+  letter-spacing: .04em;
+}
+.sm-lic-mid {
+  font-family: 'Courier New', monospace;
+  font-size: .72rem;
+  color: var(--sl-400, #94a3b8);
+}
+[data-theme="dark"] .sm-lic-row {
+  background: rgba(255,255,255,.04);
+  border-color: rgba(255,255,255,.07);
+}
+[data-theme="dark"] .sm-lic-val { color: var(--sl-200, #e2e8f0); }
+[data-theme="dark"] .sm-lic-label { color: var(--sl-400, #94a3b8); }

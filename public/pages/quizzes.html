@@ -42,44 +42,39 @@
 
     <!-- Tools Section -->
     <section class="tools-section">
-      <div class="modern-section-card">
-        <div class="add-quiz-section">
-          <h3 class="modern-section-title" data-i18n="quizzes.add_quiz">إضافة اختبار جديد</h3>
-          <form id="addQuizForm" class="add-quiz-form">
-            <div class="form-row" style="display:flex; gap:12px; flex-wrap:wrap;">
-              <input type="text" id="quizTitle" class="form-input" style="flex:2; min-width:200px;" placeholder="اسم الاختبار" data-i18n-placeholder="quizzes.quiz_title_placeholder" required>
-              <select id="quizGroup" class="form-select" style="flex:1; min-width:150px;" required>
-                <option value="" data-i18n="quizzes.quiz_group_placeholder">اختر المجموعة</option>
-              </select>
-              <button type="submit" class="btn btn-primary" data-i18n="quizzes.add_quiz_btn">
-                <span class="btn-icon">➕</span>
-                إضافة اختبار
-              </button>
-            </div>
-          </form>
+      <div class="modern-section-card quiz-toolbar">
+
+        <!-- Add quiz -->
+        <form id="addQuizForm" class="toolbar-group">
+          <span class="toolbar-group-label">اختبار جديد</span>
+          <input type="text" id="quizTitle" class="form-input toolbar-field" placeholder="اسم الاختبار" required>
+          <select id="quizGroup" class="form-select toolbar-field toolbar-field--sm" required>
+            <option value="">المجموعة</option>
+          </select>
+          <button type="submit" class="btn btn-primary toolbar-submit">إضافة</button>
+        </form>
+
+        <div class="toolbar-sep"></div>
+
+        <!-- Search & filter -->
+        <div class="toolbar-group">
+          <span class="toolbar-group-label">بحث وفلترة</span>
+          <input type="text" id="searchQuizzes" class="form-input toolbar-field" placeholder="🔍 ابحث...">
+          <select id="filterGroup" class="form-select toolbar-field toolbar-field--sm">
+            <option value="">المجموعات</option>
+          </select>
+          <select id="filterStatus" class="form-select toolbar-field toolbar-field--xs">
+            <option value="">الحالة</option>
+            <option value="active">نشط</option>
+            <option value="archived">مؤرشف</option>
+          </select>
         </div>
 
-        <div class="search-section" style="margin-top:2rem; border-top:1px solid var(--border); padding-top:1.5rem;">
-          <h3 class="modern-section-title" data-i18n="quizzes.search_filter">البحث والفلترة</h3>
-          <div class="search-controls">
-            <div class="search-row" style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:1rem;">
-              <input type="text" id="searchQuizzes" class="form-input" style="flex:2; min-width:200px;" placeholder="🔍 ابحث في الاختبارات..." data-i18n-placeholder="quizzes.search_placeholder">
-              <select id="filterGroup" class="form-select" style="flex:1; min-width:120px;">
-                <option value="" data-i18n="quizzes.all_groups">جميع المجموعات</option>
-              </select>
-              <select id="filterStatus" class="form-select" style="flex:1; min-width:120px;">
-                <option value="" data-i18n="quizzes.all_statuses">جميع الحالات</option>
-                <option value="active" data-i18n="quizzes.status.active">نشط</option>
-                <option value="archived" data-i18n="quizzes.status.archived">مؤرشف</option>
-              </select>
-            </div>
-          </div>
-        </div>
       </div>
     </section>
 
     <!-- Quizzes List Section -->
-    <section class="quizzes-section" style="margin-top:2rem;">
+    <section class="quizzes-section" style="margin-top:0.75rem;">
       <div class="modern-section-card">
         <div class="modern-section-title" style="justify-content:space-between;">
           <div style="display:flex; align-items:center; gap:8px;">
@@ -187,9 +182,14 @@
                <button id="qrDownloadBtn" type="button" class="btn btn-secondary" data-i18n="quizzes.qr.download">حفظ صورة QR</button>
             </div>
           </div>
+          <div style="margin-top:12px; padding:10px 12px; background:var(--warning-bg,#fef9c3); border:1px solid var(--warning-border,#fde68a); border-radius:10px; font-size:0.82rem; color:var(--text-muted); display:flex; align-items:flex-start; gap:8px;">
+            <span style="font-size:1rem; flex-shrink:0;">📶</span>
+            <span>يجب أن يكون جهاز الطالب متصلاً بنفس شبكة الـ Wi-Fi التي يعمل عليها هذا الجهاز حتى يتمكن من فتح الاختبار.</span>
+          </div>
         </form>
       </div>
     </div>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </div>

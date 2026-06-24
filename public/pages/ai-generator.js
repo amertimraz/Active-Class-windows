@@ -50,17 +50,6 @@
             return;
         }
 
-        // Check if API key is likely set by calling settings (optional, but good UX)
-        try {
-            const settingsRes = await fetch('/api/settings/gemini_api_key');
-            if (!settingsRes.ok) {
-                alert('يرجى إعداد مفتاح API الخاص بـ Gemini في صفحة الإعدادات أولاً.');
-                return;
-            }
-        } catch (e) {
-            console.warn('Could not check API key, proceeding anyway.');
-        }
-
         const formData = new FormData();
         formData.append('pdf', file);
 
@@ -69,12 +58,8 @@
         loadingState.classList.add('active');
 
         try {
-            const token = localStorage.getItem('teacherToken') || '';
-            const res = await fetch('/api/generate-ai-quiz', {
+            const res = await window.authFetch('/api/generate-ai-quiz', {
                 method: 'POST',
-                headers: {
-                    'x-api-key': token
-                },
                 body: formData
             });
 
@@ -99,10 +84,7 @@
 
     async function fetchLessons() {
         try {
-            const token = localStorage.getItem('teacherToken') || '';
-            const res = await fetch('/api/ai-lessons', {
-                headers: { 'x-api-key': token }
-            });
+            const res = await window.authFetch('/api/ai-lessons');
             
             if (!res.ok) {
                 throw new Error(`خطأ في خادم البيانات (${res.status})`);

@@ -89,6 +89,7 @@ db.exec(`
     score_correct INTEGER,
     score_total INTEGER,
     score_percent INTEGER,
+    duration INTEGER DEFAULT 0,
     ts DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -143,6 +144,15 @@ db.exec(`
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
   );
 `);
+
+// --- Schema migrations for existing DBs ---
+try {
+  const cols = _db.prepare("PRAGMA table_info(results)").all().map(c => c.name);
+  if (!cols.includes('duration')) {
+    _db.prepare("ALTER TABLE results ADD COLUMN duration INTEGER DEFAULT 0").run();
+    log.info('Migration: added duration column to results');
+  }
+} catch (e) { log.error('Migration error:', e.message); }
 
 // --- Migration: groups.json + students.json → SQLite ---
 function migrateGroupsAndStudents() {
