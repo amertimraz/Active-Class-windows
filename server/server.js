@@ -1361,7 +1361,9 @@ app.post('/api/backup', authenticateTeacher, async (req, res) => {
     // Use the active data directory (Electron sets APP_DATA_DIR); the old code
     // hard-coded ../data which pointed at the wrong file in the packaged app.
     const liveDbPath = path.join(dataDir, 'activeclass.db');
-    const backupFile = path.join(backupPath, `activeclass_backup_${Date.now()}.db`);
+    const _n = new Date();
+    const _stamp = `${_n.getFullYear()}-${String(_n.getMonth()+1).padStart(2,'0')}-${String(_n.getDate()).padStart(2,'0')}_${String(_n.getHours()).padStart(2,'0')}-${String(_n.getMinutes()).padStart(2,'0')}`;
+    const backupFile = path.join(backupPath, `activeclass_backup_${_stamp}.db`);
 
     await fs.copyFile(liveDbPath, backupFile);
     res.json({ success: true, backupFile });
@@ -1651,8 +1653,9 @@ app.get('/test-settings', (_req, res) => {
 });
 
 // ── Trial Config & Stats API ───────────────────────────────────────────────
-const TRIAL_CONFIG_FILE = path.join(dataDir, 'trial-config.json');
-const TRIAL_LOG_FILE    = path.join(dataDir, 'trial-log.json');
+const TRIAL_CONFIG_FILE   = path.join(dataDir, 'trial-config.json');
+const TRIAL_LOG_FILE      = path.join(dataDir, 'trial-log.json');
+const GAMES_VIS_FILE      = path.join(dataDir, 'games-visibility.json');
 
 const DEFAULT_TRIAL_CONFIG = {
   daysLimit:      7,
@@ -1672,6 +1675,24 @@ async function readTrialLog() {
   try { return JSON.parse(await fs.readFile(TRIAL_LOG_FILE, 'utf8')); }
   catch { return []; }
 }
+
+app.get('/api/app-info', (req, res) => {
+  try {
+    const pkg = JSON.parse(fsSync.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
+    res.json({ version: pkg.version, year: new Date().getFullYear() });
+  } catch { res.json({ version: '?', year: new Date().getFullYear() }); }
+});
+
+app.get('/api/games-visibility', async (req, res) => {
+  try { res.json(JSON.parse(await fs.readFile(GAMES_VIS_FILE, 'utf8'))); }
+  catch { res.json({}); }
+});
+app.post('/api/games-visibility', async (req, res) => {
+  try {
+    await fs.writeFile(GAMES_VIS_FILE, JSON.stringify(req.body, null, 2), 'utf8');
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
 
 app.get('/api/trial-config', async (req, res) => {
   res.json(await readTrialConfig());
@@ -1708,6 +1729,161 @@ app.post('/api/trial-log', async (req, res) => {
   } catch { res.json({ ok: false }); }
 });
 // ──────────────────────────────────────────────────────────────────────────
+
+// ── License System ────────────────────────────────────────────────────────
+const LICENSES_FILE  = path.join(dataDir, 'licenses.json');
+const ADMIN_CFG_FILE = path.join(dataDir, 'admin-config.json');
+
+function getAdminPass() {
+  try { return JSON.parse(fssync.readFileSync(ADMIN_CFG_FILE, 'utf8')).pass || 'admin2025'; }
+  catch { return 'admin2025'; }
+}
+
+function licenseAdminAuth(req, res, next) {
+  const pass = req.headers['x-admin-pass'] || '';
+  if (pass !== getAdminPass()) return res.status(401).json({ ok: false, message: 'غير مصرح' });
+  next();
+}
+
+async function readLicenses() {
+  try { return JSON.parse(await fs.readFile(LICENSES_FILE, 'utf8')); }
+  catch { return []; }
+}
+async function writeLicenses(data) {
+  await fs.mkdir(dataDir, { recursive: true }).catch(() => {});
+  await fs.writeFile(LICENSES_FILE, JSON.stringify(data, null, 2), 'utf8');
+}
+
+// Verify — called by the client app on activation/startup
+app.post('/api/license/verify', async (req, res) => {
+  const { key, machineId } = req.body || {};
+  if (!key || !machineId) return res.json({ ok: false, message: 'بيانات ناقصة' });
+  const licenses = await readLicenses();
+  const lic = licenses.find(l => l.key === key.toUpperCase().trim());
+  if (!lic)         return res.json({ ok: false, message: 'المفتاح غير صحيح' });
+  if (lic.revoked)  return res.json({ ok: false, message: 'الترخيص ملغي' });
+  if (new Date(lic.expiresAt) < new Date()) return res.json({ ok: false, message: 'الترخيص منتهي', expired: true });
+  // First activation: bind to machine
+  if (!lic.machineId) {
+    lic.machineId   = machineId;
+    lic.activatedAt = new Date().toISOString();
+    await writeLicenses(licenses);
+  } else if (lic.machineId !== machineId) {
+    return res.json({ ok: false, message: 'هذا المفتاح مفعّل على جهاز آخر — تواصل مع الدعم' });
+  }
+  const daysLeft = Math.ceil((new Date(lic.expiresAt) - new Date()) / 86400000);
+  res.json({ ok: true, name: lic.name, phone: lic.phone, plan: lic.plan || 'Pro', expiresAt: lic.expiresAt, daysLeft, totalDays: lic.totalDays || 365 });
+});
+
+// Create license — admin only
+app.post('/api/admin/license/create', licenseAdminAuth, async (req, res) => {
+  const { name, phone, plan, days } = req.body || {};
+  if (!name || !phone) return res.json({ ok: false, message: 'الاسم والهاتف مطلوبان' });
+  const last4 = phone.replace(/\D/g, '').slice(-4).padStart(4, '0');
+  const rand  = crypto.randomBytes(2).toString('hex').toUpperCase();
+  const key   = `AC-${rand}-${last4}`;
+  const numDays = parseInt(days) || 365;
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + numDays);
+  const record = {
+    id: crypto.randomUUID(), key, name, phone,
+    plan: plan || 'Pro سنوي', totalDays: numDays,
+    issuedAt: new Date().toISOString().split('T')[0],
+    expiresAt: expiresAt.toISOString().split('T')[0],
+    machineId: null, activatedAt: null, revoked: false,
+  };
+  const licenses = await readLicenses();
+  licenses.unshift(record);
+  await writeLicenses(licenses);
+  res.json({ ok: true, key, expiresAt: record.expiresAt, id: record.id });
+});
+
+// List — admin only
+app.get('/api/admin/license/list', licenseAdminAuth, async (req, res) => {
+  res.json({ ok: true, licenses: await readLicenses() });
+});
+
+// Revoke / Restore
+app.post('/api/admin/license/revoke', licenseAdminAuth, async (req, res) => {
+  const licenses = await readLicenses();
+  const lic = licenses.find(l => l.id === req.body.id);
+  if (!lic) return res.json({ ok: false });
+  lic.revoked = !req.body.restore;
+  await writeLicenses(licenses);
+  res.json({ ok: true });
+});
+
+// Reset machine binding (allow re-activation on new device)
+app.post('/api/admin/license/reset', licenseAdminAuth, async (req, res) => {
+  const licenses = await readLicenses();
+  const lic = licenses.find(l => l.id === req.body.id);
+  if (!lic) return res.json({ ok: false });
+  lic.machineId = null;
+  lic.activatedAt = null;
+  await writeLicenses(licenses);
+  res.json({ ok: true });
+});
+
+// Edit
+app.put('/api/admin/license/:id', licenseAdminAuth, async (req, res) => {
+  const licenses = await readLicenses();
+  const lic = licenses.find(l => l.id === req.params.id);
+  if (!lic) return res.json({ ok: false });
+  const { name, phone, plan, expiresAt, totalDays } = req.body || {};
+  if (name)      lic.name      = name;
+  if (phone)     lic.phone     = phone;
+  if (plan)      lic.plan      = plan;
+  if (expiresAt) lic.expiresAt = expiresAt;
+  if (totalDays) lic.totalDays = parseInt(totalDays);
+  await writeLicenses(licenses);
+  res.json({ ok: true });
+});
+
+// Delete
+app.delete('/api/admin/license/:id', licenseAdminAuth, async (req, res) => {
+  let licenses = await readLicenses();
+  licenses = licenses.filter(l => l.id !== req.params.id);
+  await writeLicenses(licenses);
+  res.json({ ok: true });
+});
+
+// Change admin password
+app.post('/api/admin/license/set-pass', licenseAdminAuth, async (req, res) => {
+  const { newPass } = req.body || {};
+  if (!newPass || newPass.length < 6) return res.json({ ok: false, message: 'كلمة السر قصيرة جداً' });
+  await fs.mkdir(dataDir, { recursive: true }).catch(() => {});
+  await fs.writeFile(ADMIN_CFG_FILE, JSON.stringify({ pass: newPass }, null, 2), 'utf8');
+  res.json({ ok: true });
+});
+// Submit registration request (called by client app on step 1)
+const REQUESTS_FILE = path.join(dataDir, 'license-requests.json');
+async function readRequests() {
+  try { return JSON.parse(await fs.readFile(REQUESTS_FILE, 'utf8')); }
+  catch { return []; }
+}
+app.post('/api/license/request', async (req, res) => {
+  const { name, phone, machineId } = req.body || {};
+  if (!name || !phone) return res.json({ ok: false });
+  const requests = await readRequests();
+  // avoid duplicates by machineId
+  const exists = requests.find(r => r.machineId === machineId && r.status === 'pending');
+  if (exists) { exists.name = name; exists.phone = phone; exists.updatedAt = new Date().toISOString(); }
+  else requests.unshift({ id: crypto.randomUUID(), name, phone, machineId: machineId || '', requestedAt: new Date().toISOString(), status: 'pending' });
+  await fs.mkdir(dataDir, { recursive: true }).catch(() => {});
+  await fs.writeFile(REQUESTS_FILE, JSON.stringify(requests, null, 2), 'utf8');
+  res.json({ ok: true });
+});
+app.get('/api/admin/license/requests', licenseAdminAuth, async (req, res) => {
+  res.json({ ok: true, requests: await readRequests() });
+});
+app.post('/api/admin/license/request-done', licenseAdminAuth, async (req, res) => {
+  const requests = await readRequests();
+  const r = requests.find(r => r.id === req.body.id);
+  if (r) r.status = 'done';
+  await fs.writeFile(REQUESTS_FILE, JSON.stringify(requests, null, 2), 'utf8');
+  res.json({ ok: true });
+});
+// ── End License System ─────────────────────────────────────────────────────
 
 // Bind host is configurable. Default is all interfaces (0.0.0.0) because LAN
 // access is a core feature (students join quizzes from their own devices via

@@ -250,37 +250,53 @@ tbody tr:hover{background:var(--sl-50);}
 
   </div>
 
-  <!-- Settings -->
-  <div class="card">
+  <!-- Games Visibility -->
+  <div class="card" id="gamesCard">
     <div class="card-head">
-      <div class="card-head-icon" style="background:#f1f5f9;border:1px solid var(--sl-200);">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--sl-500)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+      <div class="card-head-icon" style="background:#eff6ff;border:1px solid #bfdbfe;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M12 12h.01M8 12h.01M16 12h.01"/></svg>
       </div>
-      <div><div class="card-title">إعدادات الاتصال</div><div class="card-sub">رابط Google Apps Script + كلمة السر</div></div>
-      <button class="btn btn-ghost btn-sm" style="margin-right:auto;" onclick="toggleSettings()">▼ إظهار / إخفاء</button>
+      <div>
+        <div class="card-title">صلاحيات الألعاب الأونلاين</div>
+        <div class="card-sub">تحكم في الألعاب الظاهرة داخل التطبيق</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" style="margin-right:auto" onclick="loadGamesVis()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.89"/></svg>
+        تحديث
+      </button>
     </div>
-    <div class="card-body" id="settingsBody" style="display:none;">
-      <div class="form-grid" style="margin-bottom:12px;">
-        <div class="field field-full">
-          <label class="field-label">رابط الـ Web App (بعد النشر من Google Apps Script)</label>
-          <input id="cfgUrl" class="field-input" type="url" placeholder="https://script.google.com/macros/s/xxxxxxxx/exec" dir="ltr"/>
-        </div>
-        <div class="field">
-          <label class="field-label">كلمة السر (SECRET) — نفس اللي في الكود</label>
-          <input id="cfgSecret" class="field-input" type="text" placeholder="ACTIVECLASSADMIN2025" dir="ltr"/>
-        </div>
-        <div class="field" style="align-self:flex-end;">
-          <button class="btn btn-primary" onclick="saveSettings()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-            حفظ الإعدادات
-          </button>
-        </div>
-      </div>
-      <div id="apiStatus" style="font-size:.78rem;color:var(--sl-400);padding:8px 0;"></div>
+    <div class="card-body" id="gamesVisBody">
+      <div style="text-align:center;padding:20px;color:var(--sl-400);font-size:.82rem;">جاري التحميل...</div>
     </div>
   </div>
 
-  <!-- Pending Requests -->
+  <!-- Change Admin Password -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-head-icon" style="background:#f1f5f9;border:1px solid var(--sl-200);">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--sl-500)" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </div>
+      <div><div class="card-title">تغيير كلمة سر الأدمن</div><div class="card-sub">الكلمة الافتراضية: admin2025</div></div>
+      <button class="btn btn-ghost btn-sm" style="margin-right:auto;" onclick="togglePassForm()">▼ إظهار / إخفاء</button>
+    </div>
+    <div class="card-body" id="passFormBody" style="display:none;">
+      <div class="form-grid" style="margin-bottom:12px;">
+        <div class="field">
+          <label class="field-label">كلمة السر الجديدة</label>
+          <input id="newPass" class="field-input" type="password" placeholder="6 أحرف على الأقل" dir="ltr"/>
+        </div>
+        <div class="field" style="align-self:flex-end;">
+          <button class="btn btn-primary" onclick="changeAdminPass()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            حفظ
+          </button>
+        </div>
+      </div>
+      <div id="passStatus" style="font-size:.78rem;color:var(--sl-400);padding:4px 0;"></div>
+    </div>
+  </div>
+
+  <!-- Pending Registration Requests -->
   <div class="card" id="requestsCard">
     <div class="card-head">
       <div class="card-head-icon" style="background:var(--amber-pale);border:1px solid var(--amber-b);">
@@ -290,15 +306,13 @@ tbody tr:hover{background:var(--sl-50);}
         <div class="card-title">طلبات التفعيل الواردة <span id="reqBadge" style="background:var(--amber);color:#fff;border-radius:99px;padding:1px 8px;font-size:.7rem;margin-right:6px;"></span></div>
         <div class="card-sub">الطلبات القادمة من البرنامج عند العملاء</div>
       </div>
-      <button class="btn btn-ghost btn-sm" style="margin-right:auto;" id="btnSync" onclick="syncRequests()">
+      <button class="btn btn-ghost btn-sm" style="margin-right:auto;" id="btnSync" onclick="loadRequests()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.89"/></svg>
-        مزامنة
+        تحديث
       </button>
     </div>
     <div class="card-body" id="requestsBody">
-      <div style="text-align:center;padding:20px;color:var(--sl-400);font-size:.82rem;">
-        اضغط "مزامنة" لجلب الطلبات من Google Sheets
-      </div>
+      <div style="text-align:center;padding:20px;color:var(--sl-400);font-size:.82rem;">جاري التحميل...</div>
     </div>
   </div>
 
@@ -338,12 +352,16 @@ tbody tr:hover{background:var(--sl-50);}
           <label class="field-label">عدد الأيام</label>
           <input id="fCustomDays" class="field-input" type="number" min="1" max="3650" placeholder="180"/>
         </div>
-        <div class="field field-full">
-          <label class="field-label">معرّف الجهاز (Machine ID) — اختياري</label>
-          <div class="secret-row">
-            <input id="fMachineId" class="field-input" type="text" placeholder="يُنسخ من شاشة التفعيل في البرنامج" dir="ltr"/>
-            <button class="btn btn-ghost btn-sm" onclick="document.getElementById('fMachineId').value=''">مسح</button>
-          </div>
+        <div class="field" style="align-self:flex-end;">
+          <label class="field-label">خطة التفعيل</label>
+          <select id="fPlan" class="field-select">
+            <option value="">اختر الخطة...</option>
+            <option value="شهري">شهري</option>
+            <option value="ربع سنوي">ربع سنوي</option>
+            <option value="نصف سنوي">نصف سنوي</option>
+            <option value="Pro سنوي" selected>Pro سنوي</option>
+            <option value="Pro سنتين">Pro سنتين</option>
+          </select>
         </div>
       </div>
 
@@ -432,10 +450,7 @@ tbody tr:hover{background:var(--sl-50);}
           <input id="editPhone" class="input" type="text" placeholder="01xxxxxxxxx" dir="ltr">
         </label>
       </div>
-      <label style="font-size:.8rem;color:var(--sl-500);display:flex;flex-direction:column;gap:4px">
-        معرّف الجهاز (Machine ID)
-        <input id="editMachineId" class="input" type="text" placeholder="اتركه فارغاً للسماح لأي جهاز" dir="ltr" style="font-family:monospace;font-size:.8rem">
-      </label>
+      <div style="font-size:.78rem;color:var(--sl-500);background:var(--sl-50);border:1px solid var(--sl-200);border-radius:8px;padding:8px 12px;" id="editMachineInfo">—</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <label style="font-size:.8rem;color:var(--sl-500);display:flex;flex-direction:column;gap:4px">
           الخطة
@@ -473,137 +488,109 @@ tbody tr:hover{background:var(--sl-50);}
 <script>
 'use strict';
 
-// ── Admin password protection ─────────────────────────────────────────────
-(function() {
-  const ADMIN_PASS = 'admin2025'; // ← غيّرها
-  const ok = sessionStorage.getItem('ac_admin_auth');
-  if (!ok) {
-    const entered = prompt('🔐 كلمة سر الأدمن:');
-    if (entered !== ADMIN_PASS) {
-      document.body.innerHTML = '<div style="font-family:Cairo,sans-serif;text-align:center;padding:80px;font-size:1.2rem;color:#ef4444;">⛔ غير مصرح بالدخول</div>';
-      throw new Error('unauthorized');
-    }
-    sessionStorage.setItem('ac_admin_auth', '1');
+// ── Admin password — stored in sessionStorage, sent with every API call ───
+let ADMIN_PASS = sessionStorage.getItem('ac_admin_pass') || '';
+
+async function ensureAuth() {
+  if (ADMIN_PASS) return true;
+  const entered = prompt('🔐 كلمة سر الأدمن:');
+  if (!entered) { showUnauthorized(); return false; }
+  // Verify against server (401 = wrong pass, 404 = server not ready yet)
+  const r = await fetch('/api/admin/license/list', {
+    headers: { 'x-admin-pass': entered }
+  }).catch(() => null);
+  if (!r) { alert('❌ السيرفر غير متاح — أعد تشغيل التطبيق أولاً'); return false; }
+  if (r.status === 401) { showUnauthorized(); return false; }
+  if (!r.ok) { alert(`❌ خطأ في السيرفر (${r.status}) — أعد تشغيل التطبيق`); return false; }
+  ADMIN_PASS = entered;
+  sessionStorage.setItem('ac_admin_pass', entered);
+  return true;
+}
+
+function showUnauthorized() {
+  document.body.innerHTML = '<div style="font-family:Cairo,sans-serif;text-align:center;padding:80px;font-size:1.2rem;color:#ef4444;">⛔ غير مصرح بالدخول</div>';
+}
+
+function adminHeaders() {
+  return { 'Content-Type': 'application/json', 'x-admin-pass': ADMIN_PASS };
+}
+
+async function handleUnauth(res) {
+  if (res.status === 401) {
+    ADMIN_PASS = '';
+    sessionStorage.removeItem('ac_admin_pass');
+    toast('انتهت الجلسة — أعد تحديث الصفحة', 'error');
+    return true;
   }
-})();
+  return false;
+}
 
 // ── Config ────────────────────────────────────────────────────────────────
-const ADMIN_WA   = '201096066818';
-const LS_KEY     = 'ac_admin_licenses';
-const LS_SETTINGS = 'ac_admin_settings';
-
-// يُملأ بعد نشر Apps Script
-let SCRIPT_URL = '';
-let SECRET     = 'ACTIVECLASSADMIN2025';
-
-function loadSettings() {
-  try {
-    const s = JSON.parse(localStorage.getItem(LS_SETTINGS) || '{}');
-    if (s.url)    { SCRIPT_URL = s.url;    document.getElementById('cfgUrl').value    = s.url; }
-    if (s.secret) { SECRET     = s.secret; document.getElementById('cfgSecret').value = s.secret; }
-  } catch {}
-}
-function saveSettings() {
-  SCRIPT_URL = document.getElementById('cfgUrl').value.trim();
-  SECRET     = document.getElementById('cfgSecret').value.trim() || SECRET;
-  localStorage.setItem(LS_SETTINGS, JSON.stringify({ url: SCRIPT_URL, secret: SECRET }));
-  toast('تم حفظ الإعدادات ✅', 'success');
-}
-
-// ── API helpers ────────────────────────────────────────────────────────────
-async function apiGet(action) {
-  if (!SCRIPT_URL) throw new Error('لم يتم إعداد رابط الـ API بعد');
-  const url = `${SCRIPT_URL}?action=${action}&secret=${encodeURIComponent(SECRET)}`;
-  const r = await fetch(url);
-  return r.json();
-}
-async function apiPost(body) {
-  if (!SCRIPT_URL) throw new Error('لم يتم إعداد رابط الـ API بعد');
-  const r = await fetch(SCRIPT_URL, {
-    method: 'POST',
-    body: JSON.stringify(body),
-  });
-  return r.json();
-}
-const SOON_DAYS  = 14; // أقل من كذا يوم = "قريب الانتهاء"
+const ADMIN_WA  = '201096066818';
+const SOON_DAYS = 14;
 
 // ── Data ──────────────────────────────────────────────────────────────────
-let licenses = [];
-let revokeId = null;
+let licenses      = [];
+let revokeId      = null;
 let lastGenerated = null;
 
-function load() {
-  try { licenses = JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch { licenses = []; }
-}
-function save() {
-  localStorage.setItem(LS_KEY, JSON.stringify(licenses));
-}
-load();
-
-// ── SHA-256 (pure JS — works on file:// with no server) ──────────────────
-function sha256(str) {
-  function rightRotate(value, amount) { return (value >>> amount) | (value << (32 - amount)); }
-  const mathPow = Math.pow;
-  const maxWord = mathPow(2, 32);
-  let result = '';
-  const words = [];
-  const asciiBitLength = str.length * 8;
-  let hash = [], k = [], primeCounter = 0;
-  const isComposite = {};
-  for (let candidate = 2; primeCounter < 64; candidate++) {
-    if (!isComposite[candidate]) {
-      for (let i = candidate * candidate; i < 313; i += candidate) isComposite[i] = true;
-      hash[primeCounter] = (mathPow(candidate, .5) * maxWord) | 0;
-      k[primeCounter++]  = (mathPow(candidate, 1/3) * maxWord) | 0;
-    }
-  }
-  str += '\x80';
-  while (str.length % 64 - 56) str += '\x00';
-  for (let i = 0; i < str.length; i++) {
-    const j = str.charCodeAt(i);
-    if (j >> 8) return '';
-    words[i >> 2] |= j << ((3 - i) % 4) * 8;
-  }
-  words[words.length] = ((asciiBitLength / maxWord) | 0);
-  words[words.length] = (asciiBitLength | 0);
-  for (let j = 0; j < words.length;) {
-    const w = words.slice(j, j += 16);
-    const oldHash = hash.slice(0);
-    for (let i = 0; i < 64; i++) {
-      const w15 = w[i - 15], w2 = w[i - 2];
-      const a = hash[0], e = hash[4];
-      const temp1 = hash[7]
-        + (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25))
-        + ((e & hash[5]) ^ (~e & hash[6])) + k[i]
-        + (w[i] = (i < 16) ? w[i] : (
-            w[i - 16]
-            + (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3))
-            + w[i - 7]
-            + (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))
-          ) | 0);
-      const temp2 = (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22))
-        + ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
-      hash = [(temp1 + temp2) | 0, a, hash[1], hash[2], (hash[3] + temp1) | 0, e, hash[5], hash[6]];
-    }
-    for (let i = 0; i < 8; i++) hash[i] = (hash[i] + oldHash[i]) | 0;
-  }
-  for (let i = 0; i < 8; i++) {
-    for (let j = 3; j + 1; j--) {
-      const b = (hash[i] >> (j * 8)) & 255;
-      result += ((b < 16) ? '0' : '') + b.toString(16);
-    }
-  }
-  return result.toUpperCase();
+async function loadLicenses() {
+  const r = await fetch('/api/admin/license/list', { headers: adminHeaders() });
+  if (await handleUnauth(r)) return;
+  const data = await r.json();
+  if (data.ok) { licenses = data.licenses; renderAll(); }
 }
 
-// ── Key generation ────────────────────────────────────────────────────────
-// Format: ACTCLS-XXXXX-XXXXX-XXXXX
-function generateKeyFromData(name, phone, machineId, expiresAt) {
-  const raw  = [name.trim(), phone.trim(), machineId.trim(), expiresAt, SECRET].join('|');
-  const hex  = sha256(raw);
-  const body = hex.slice(0, 15);
-  const seg  = (s, e) => body.slice(s, e);
-  return `ACTCLS-${seg(0,5)}-${seg(5,10)}-${seg(10,15)}`;
+async function loadRequests() {
+  const btn = document.getElementById('btnSync');
+  if (btn) { btn.disabled = true; }
+  try {
+    const r = await fetch('/api/admin/license/requests', { headers: adminHeaders() });
+    if (await handleUnauth(r)) return;
+    const data = await r.json();
+    const pending = (data.requests || []).filter(r => r.status === 'pending');
+    const badge = document.getElementById('reqBadge');
+    if (badge) badge.textContent = pending.length || '';
+    const body = document.getElementById('requestsBody');
+    if (!body) return;
+    if (!pending.length) {
+      body.innerHTML = `<div style="text-align:center;padding:20px;color:var(--sl-400);font-size:.82rem;">✅ لا توجد طلبات جديدة</div>`;
+      return;
+    }
+    body.innerHTML = `<div style="display:flex;flex-direction:column;gap:10px;">
+      ${pending.map(r => `
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--amber-pale);border:1px solid var(--amber-b);border-radius:var(--radius-sm);">
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:800;color:var(--sl-800);font-size:.9rem;">${escHtml(r.name)}</div>
+            <div style="font-size:.78rem;color:var(--sl-500);direction:ltr;">${escHtml(r.phone)}</div>
+            <div style="font-family:'Courier New',monospace;font-size:.68rem;color:var(--sl-400);margin-top:2px;" title="${escHtml(r.machineId)}">${escHtml((r.machineId||'').slice(0,20))}${r.machineId?.length>20?'…':''}</div>
+          </div>
+          <div style="font-size:.7rem;color:var(--sl-400);white-space:nowrap">${new Date(r.requestedAt).toLocaleDateString('ar-EG')}</div>
+          <button class="btn btn-primary btn-sm" onclick="fillFromRequest(${JSON.stringify(r).replace(/"/g,'&quot;')})">إصدار ترخيص ←</button>
+          <button class="btn btn-ghost btn-sm btn-icon" title="تم التعامل معه" onclick="markRequestDone('${r.id}')">✓</button>
+        </div>`).join('')}
+    </div>`;
+  } catch { document.getElementById('requestsBody').innerHTML = `<div style="text-align:center;padding:20px;color:var(--red);font-size:.82rem;">❌ فشل الاتصال</div>`; }
+  finally { if (btn) btn.disabled = false; }
+}
+
+let _pendingRequestId = null;
+
+function fillFromRequest(r) {
+  _pendingRequestId = r.id;
+  document.getElementById('fName').value  = r.name  || '';
+  document.getElementById('fPhone').value = r.phone || '';
+  document.getElementById('fDuration').value = '365';
+  document.getElementById('fCustomWrap').style.display = 'none';
+  document.querySelector('#requestsCard').nextElementSibling?.scrollIntoView({ behavior: 'smooth' });
+  document.getElementById('fName').focus();
+}
+
+async function markRequestDone(id) {
+  await fetch('/api/admin/license/request-done', {
+    method: 'POST', headers: adminHeaders(), body: JSON.stringify({ id })
+  });
+  await loadRequests();
 }
 
 // ── Duration ──────────────────────────────────────────────────────────────
@@ -616,21 +603,13 @@ function getDays() {
   return parseInt(sel);
 }
 
-function getPlanLabel(days) {
-  if (days <= 30)  return 'شهري';
-  if (days <= 90)  return 'ربع سنوي';
-  if (days <= 180) return 'نصف سنوي';
-  if (days <= 365) return 'Pro سنوي';
-  return 'Pro سنتين';
-}
-
-// ── Generate ──────────────────────────────────────────────────────────────
-function generateLicense() {
-  const name      = document.getElementById('fName').value.trim();
-  const phone     = document.getElementById('fPhone').value.trim();
-  const machineId = document.getElementById('fMachineId').value.trim();
-  const days      = getDays();
-  const errEl     = document.getElementById('fError');
+// ── Generate — calls server to create key ─────────────────────────────────
+async function generateLicense() {
+  const name  = document.getElementById('fName').value.trim();
+  const phone = document.getElementById('fPhone').value.trim();
+  const plan  = document.getElementById('fPlan').value.trim();
+  const days  = getDays();
+  const errEl = document.getElementById('fError');
 
   errEl.style.display = 'none';
   document.getElementById('fName').classList.remove('error');
@@ -639,65 +618,47 @@ function generateLicense() {
   if (!name) {
     document.getElementById('fName').classList.add('error');
     errEl.textContent = 'من فضلك أدخل اسم العميل';
-    errEl.style.display = 'block';
-    return;
+    errEl.style.display = 'block'; return;
   }
-  if (!phone || phone.replace(/\D/g,'').length < 10) {
+  if (!phone || phone.replace(/\D/g,'').length < 8) {
     document.getElementById('fPhone').classList.add('error');
     errEl.textContent = 'من فضلك أدخل رقم موبايل صحيح';
-    errEl.style.display = 'block';
-    return;
+    errEl.style.display = 'block'; return;
   }
   if (!days) {
     errEl.textContent = 'من فضلك أدخل عدد أيام صحيح';
-    errEl.style.display = 'block';
-    return;
+    errEl.style.display = 'block'; return;
   }
 
-  const expiry = new Date();
-  expiry.setDate(expiry.getDate() + days);
-  const expiresAt = expiry.toISOString().split('T')[0];
+  const btn = document.querySelector('[onclick="generateLicense()"]');
+  btn.disabled = true;
+  btn.textContent = 'جاري التوليد...';
 
-  const key = generateKeyFromData(name, phone, machineId || 'ANY', expiresAt);
+  try {
+    const res = await fetch('/api/admin/license/create', {
+      method: 'POST',
+      headers: adminHeaders(),
+      body: JSON.stringify({ name, phone, plan: plan || 'Pro سنوي', days })
+    });
+    if (await handleUnauth(res)) return;
+    const data = await res.json();
+    if (!data.ok) { toast(data.message || 'فشل التوليد', 'error'); return; }
 
-  // Save to list
-  const record = {
-    id:        crypto.randomUUID(),
-    key,
-    name,
-    phone,
-    machineId: machineId || '',
-    plan:      getPlanLabel(days),
-    totalDays: days,
-    issuedAt:  new Date().toISOString().split('T')[0],
-    expiresAt,
-    revoked:   false,
-  };
-  licenses.unshift(record);
-  save();
-  renderAll();
-
-  // Show generated key
-  document.getElementById('genKey').textContent = key;
-  document.getElementById('genBox').style.display = 'flex';
-  lastGenerated = record;
-
-  // Clear form
-  document.getElementById('fName').value      = '';
-  document.getElementById('fPhone').value     = '';
-  document.getElementById('fMachineId').value = '';
-  document.getElementById('fDuration').value  = '365';
-
-  toast('تم توليد المفتاح بنجاح ✅', 'success');
-  document.getElementById('genBox').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-
-  // حفظ على Google Sheets في الخلفية
-  if (SCRIPT_URL && lastGenerated) {
-    const r = lastGenerated;
-    apiPost({ action:'issue', secret:SECRET, key:r.key, name:r.name, phone:r.phone,
-      machineId:r.machineId, plan:r.plan, totalDays:r.totalDays,
-      issuedAt:r.issuedAt, expiresAt:r.expiresAt })
-      .catch(() => toast('تحذير: لم يُحفظ على السيرفر', 'error'));
+    lastGenerated = { key: data.key, name, phone, plan: plan || 'Pro سنوي', expiresAt: data.expiresAt };
+    document.getElementById('genKey').textContent = data.key;
+    document.getElementById('genBox').style.display = 'flex';
+    document.getElementById('fName').value  = '';
+    document.getElementById('fPhone').value = '';
+    document.getElementById('fDuration').value = '365';
+    toast('تم توليد المفتاح بنجاح ✅', 'success');
+    document.getElementById('genBox').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    // Auto-mark the pending request as done
+    if (_pendingRequestId) { await markRequestDone(_pendingRequestId); _pendingRequestId = null; }
+    await loadLicenses();
+  } catch { toast('خطأ في الاتصال بالسيرفر', 'error'); }
+  finally {
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg> توليد مفتاح التفعيل`;
   }
 }
 
@@ -744,7 +705,8 @@ function openRevokeModal(id) {
   document.getElementById('revokeTarget').textContent = r.name;
   document.getElementById('revokeModal').classList.remove('hidden');
 }
-// ── Edit License ─────────────────────────────────────────────────────────
+
+// ── Edit License ──────────────────────────────────────────────────────────
 let editId = null;
 
 function openEditModal(id) {
@@ -753,10 +715,11 @@ function openEditModal(id) {
   editId = id;
   document.getElementById('editName').value      = r.name      || '';
   document.getElementById('editPhone').value     = r.phone     || '';
-  document.getElementById('editMachineId').value = r.machineId || '';
   document.getElementById('editPlan').value      = r.plan      || '';
   document.getElementById('editExpiry').value    = r.expiresAt ? r.expiresAt.split('T')[0] : '';
   document.getElementById('editTotalDays').value = r.totalDays || 365;
+  document.getElementById('editMachineInfo').textContent = r.machineId
+    ? `مرتبط: ${r.machineId.slice(0, 16)}…` : 'غير مفعّل بعد';
   document.getElementById('editModal').classList.remove('hidden');
 }
 
@@ -765,65 +728,65 @@ function closeEditModal() {
   document.getElementById('editModal').classList.add('hidden');
 }
 
-function saveEdit() {
-  const r = licenses.find(l => l.id === editId);
-  if (!r) return;
-
+async function saveEdit() {
   const newName      = document.getElementById('editName').value.trim();
   const newPhone     = document.getElementById('editPhone').value.trim();
-  const newMachineId = document.getElementById('editMachineId').value.trim();
   const newPlan      = document.getElementById('editPlan').value.trim();
   const newExpiry    = document.getElementById('editExpiry').value;
   const newTotalDays = parseInt(document.getElementById('editTotalDays').value) || 365;
 
-  if (!newName || !newExpiry) {
-    toast('الاسم وتاريخ الانتهاء مطلوبان', 'error');
-    return;
-  }
+  if (!newName || !newExpiry) { toast('الاسم وتاريخ الانتهاء مطلوبان', 'error'); return; }
 
-  r.name      = newName;
-  r.phone     = newPhone;
-  r.machineId = newMachineId;
-  r.plan      = newPlan || 'Pro';
-  r.expiresAt = newExpiry;
-  r.totalDays = newTotalDays;
+  const res = await fetch(`/api/admin/license/${editId}`, {
+    method: 'PUT', headers: adminHeaders(),
+    body: JSON.stringify({ name: newName, phone: newPhone, plan: newPlan || 'Pro', expiresAt: newExpiry, totalDays: newTotalDays })
+  });
+  if (await handleUnauth(res)) return;
+  const data = await res.json();
+  if (data.ok) { closeEditModal(); toast('✅ تم حفظ التعديلات'); await loadLicenses(); }
+  else toast('فشل الحفظ', 'error');
+}
 
-  save();
-  renderAll();
-  closeEditModal();
-  toast('✅ تم حفظ التعديلات');
-
-  // sync to Google Sheets if API configured
-  if (SCRIPT_URL) {
-    apiPost({ action:'issue', secret:SECRET, key:r.key, name:r.name, phone:r.phone,
-              machineId:r.machineId, plan:r.plan, totalDays:r.totalDays,
-              issuedAt:r.issuedAt, expiresAt:r.expiresAt }).catch(()=>{});
-  }
+async function resetMachine(id) {
+  if (!confirm('إعادة ربط الجهاز؟ سيتمكن العميل من التفعيل على جهاز جديد.')) return;
+  const res = await fetch('/api/admin/license/reset', {
+    method: 'POST', headers: adminHeaders(), body: JSON.stringify({ id })
+  });
+  if (await handleUnauth(res)) return;
+  toast('✅ تم إعادة تعيين الجهاز — يمكن التفعيل من جديد', 'success');
+  await loadLicenses();
 }
 
 function closeRevokeModal() {
   revokeId = null;
   document.getElementById('revokeModal').classList.add('hidden');
 }
-function confirmRevoke() {
-  const r = licenses.find(l => l.id === revokeId);
-  if (r) {
-    r.revoked = true; save(); renderAll(); toast('تم إلغاء الترخيص', 'error');
-    if (SCRIPT_URL) apiPost({ action:'revoke', secret:SECRET, key:r.key }).catch(()=>{});
-  }
+
+async function confirmRevoke() {
+  const res = await fetch('/api/admin/license/revoke', {
+    method: 'POST', headers: adminHeaders(), body: JSON.stringify({ id: revokeId })
+  });
+  if (await handleUnauth(res)) return;
+  toast('تم إلغاء الترخيص', 'error');
   closeRevokeModal();
+  await loadLicenses();
 }
-function restoreLicense(id) {
-  const r = licenses.find(l => l.id === id);
-  if (r) {
-    r.revoked = false; save(); renderAll(); toast('تم استعادة الترخيص ✅', 'success');
-    if (SCRIPT_URL) apiPost({ action:'restore', secret:SECRET, key:r.key }).catch(()=>{});
-  }
+
+async function restoreLicense(id) {
+  const res = await fetch('/api/admin/license/revoke', {
+    method: 'POST', headers: adminHeaders(), body: JSON.stringify({ id, restore: true })
+  });
+  if (await handleUnauth(res)) return;
+  toast('تم استعادة الترخيص ✅', 'success');
+  await loadLicenses();
 }
-function deleteLicense(id) {
+
+async function deleteLicense(id) {
   if (!confirm('حذف نهائي؟ لن تستطيع التراجع.')) return;
-  licenses = licenses.filter(l => l.id !== id);
-  save(); renderAll(); toast('تم الحذف');
+  const res = await fetch(`/api/admin/license/${id}`, { method: 'DELETE', headers: adminHeaders() });
+  if (await handleUnauth(res)) return;
+  toast('تم الحذف');
+  await loadLicenses();
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -902,6 +865,10 @@ function renderTable() {
            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
          </button>`;
 
+    const resetBtn = r.machineId
+      ? `<button class="btn btn-ghost btn-sm btn-icon" title="إعادة ربط الجهاز" onclick="resetMachine('${r.id}')">🔓</button>`
+      : '';
+
     const actionsHtml = r.revoked
       ? `${editBtn}
          <button class="btn btn-ghost btn-sm btn-icon" title="استعادة" onclick="restoreLicense('${r.id}')">♻️</button>
@@ -910,6 +877,7 @@ function renderTable() {
          <button class="btn btn-ghost btn-sm btn-icon" title="نسخ المفتاح" onclick="copyKey('${r.key}')">
            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
          </button>
+         ${resetBtn}
          <button class="btn btn-danger btn-sm btn-icon" title="إلغاء الترخيص" onclick="openRevokeModal('${r.id}')">
            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
          </button>
@@ -959,95 +927,32 @@ function toast(msg, type = '') {
   setTimeout(() => el.remove(), 2800);
 }
 
-// ── Settings UI ───────────────────────────────────────────────────────────
-function toggleSettings() {
-  const body = document.getElementById('settingsBody');
+// ── Password form toggle ──────────────────────────────────────────────────
+function togglePassForm() {
+  const body = document.getElementById('passFormBody');
   body.style.display = body.style.display === 'none' ? 'block' : 'none';
 }
 
-// ── Sync requests from Google Sheets ─────────────────────────────────────
-async function syncRequests() {
-  const btn = document.getElementById('btnSync');
-  btn.disabled = true;
-  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="animation:spin .65s linear infinite"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.89"/></svg> جاري الجلب...';
-
-  if (!SCRIPT_URL) {
-    document.getElementById('requestsBody').innerHTML =
-      `<div style="text-align:center;padding:20px;color:var(--red);font-size:.82rem;">⚠️ أدخل رابط الـ API في الإعدادات أولاً</div>`;
-    btn.disabled = false;
-    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.89"/></svg> مزامنة`;
-    return;
+async function changeAdminPass() {
+  const newPass = document.getElementById('newPass').value.trim();
+  const status  = document.getElementById('passStatus');
+  if (newPass.length < 6) { status.textContent = '❌ كلمة السر قصيرة جداً (6 أحرف على الأقل)'; status.style.color = 'var(--red)'; return; }
+  const res = await fetch('/api/admin/license/set-pass', {
+    method: 'POST', headers: adminHeaders(), body: JSON.stringify({ newPass })
+  });
+  if (await handleUnauth(res)) return;
+  const data = await res.json();
+  if (data.ok) {
+    ADMIN_PASS = newPass;
+    sessionStorage.setItem('ac_admin_pass', newPass);
+    status.textContent = '✅ تم تغيير كلمة السر';
+    status.style.color = 'var(--teal)';
+    document.getElementById('newPass').value = '';
+  } else {
+    status.textContent = '❌ ' + (data.message || 'فشل الحفظ');
+    status.style.color = 'var(--red)';
   }
-
-  try {
-    const result = await apiGet('requests');
-    if (!result.ok) throw new Error(result.message);
-
-    const pending = result.data.filter(r => r.status === 'pending');
-    const badge   = document.getElementById('reqBadge');
-    badge.textContent = pending.length ? pending.length : '';
-
-    // حفظ الطلبات في variable عالمي للوصول بـ index
-    window._pendingRequests = pending;
-
-    if (!pending.length) {
-      document.getElementById('requestsBody').innerHTML =
-        `<div style="text-align:center;padding:20px;color:var(--sl-400);font-size:.82rem;">✅ لا توجد طلبات جديدة</div>`;
-    } else {
-      document.getElementById('requestsBody').innerHTML = `
-        <div style="display:flex;flex-direction:column;gap:10px;">
-          ${pending.map((r, i) => `
-            <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--amber-pale);border:1px solid var(--amber-b);border-radius:var(--radius-sm);">
-              <div style="flex:1;min-width:0;">
-                <div style="font-weight:800;color:var(--sl-800);font-size:.9rem;">${escHtml(r.name)}</div>
-                <div style="font-size:.78rem;color:var(--sl-500);direction:ltr;">${escHtml(r.phone)}</div>
-                <div style="font-family:'Courier New',monospace;font-size:.7rem;color:var(--sl-400);margin-top:2px;">${escHtml(r.machineId||'—')}</div>
-              </div>
-              <div style="font-size:.7rem;color:var(--sl-400);">${new Date(r.requestedAt).toLocaleDateString('ar-EG')}</div>
-              <button class="btn btn-primary btn-sm" onclick="fillFromRequest(${i})">
-                إصدار ترخيص ←
-              </button>
-            </div>
-          `).join('')}
-        </div>`;
-    }
-
-    // Also sync licenses from server
-    const licResult = await apiGet('licenses');
-    if (licResult.ok && licResult.data.length) {
-      // Merge server licenses into local (server is source of truth)
-      licResult.data.forEach(sl => {
-        const exists = licenses.find(l => l.key === sl.key);
-        if (!exists) {
-          licenses.unshift({
-            id:        sl.id,
-            key:       sl.key,
-            name:      sl.name,
-            phone:     sl.phone,
-            machineId: sl.machineId || '',
-            plan:      sl.plan,
-            totalDays: Number(sl.totalDays) || 365,
-            issuedAt:  String(sl.issuedAt||'').split('T')[0],
-            expiresAt: String(sl.expiresAt||'').split('T')[0],
-            revoked:   !!sl.revoked,
-          });
-        } else {
-          exists.revoked = !!sl.revoked;
-        }
-      });
-      save();
-      renderAll();
-    }
-
-    toast(`تم جلب ${pending.length} طلب جديد`, 'success');
-  } catch (err) {
-    document.getElementById('requestsBody').innerHTML =
-      `<div style="text-align:center;padding:20px;color:var(--red);font-size:.82rem;">❌ ${escHtml(err.message)}</div>`;
-    toast('فشل الاتصال بالـ API', 'error');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.89"/></svg> مزامنة`;
-  }
+  setTimeout(() => { status.textContent = ''; }, 3000);
 }
 
 // ── Trial Config & Stats ──────────────────────────────────────────────────
@@ -1115,33 +1020,110 @@ async function loadTrialStats() {
   } catch {}
 }
 
-// Auto-load on page init
-(async function() {
-  await loadTrialConfig();
-  await loadTrialStats();
-})();
-
-function fillFromRequest(idx) {
-  const r = (window._pendingRequests || [])[idx];
-  if (!r) return;
-  document.getElementById('fName').value      = r.name;
-  document.getElementById('fPhone').value     = r.phone;
-  document.getElementById('fMachineId').value = r.machineId || '';
-  document.getElementById('fDuration').value  = '365';
-  document.getElementById('fCustomWrap').style.display = 'none';
-  document.querySelector('.card:nth-child(4)').scrollIntoView({ behavior:'smooth' });
-  document.getElementById('fName').focus();
-}
-
-
 // ── Custom duration toggle ────────────────────────────────────────────────
 document.getElementById('fDuration').addEventListener('change', function() {
   document.getElementById('fCustomWrap').style.display = this.value === 'custom' ? 'flex' : 'none';
 });
 
+// ── Games Visibility ──────────────────────────────────────────────────────
+const GAMES_REGISTRY = [
+  { section: '🧠 ذاكرة ومهارات', games: [
+    { id:'dino-memory',     name:'Dino Memory',             emoji:'🦕' },
+    { id:'animal-puzzle',   name:'Animal Puzzle Deluxe',    emoji:'🐾' },
+    { id:'one-line-puzzle', name:'One Line Drawing Puzzle',  emoji:'〰️' },
+    { id:'spot-5-diff',     name:'Spot 5 Differences',      emoji:'🔍' },
+    { id:'hogie',           name:'Hogie the Globehopper',   emoji:'🌍' },
+    { id:'puzzle-123',      name:'123 Puzzle',               emoji:'🔢' },
+    { id:'basketball-rush', name:'Basketball Rush',          emoji:'🏀' },
+  ]},
+  { section: '📚 ألعاب تعليمية', games: [
+    { id:'order-ops',      name:'Order of Operations',        emoji:'➗' },
+    { id:'oddball',        name:'Oddball Detective',          emoji:'🕵️' },
+    { id:'bike-math',      name:'Bike Racing Math',           emoji:'🏍️' },
+    { id:'world-flags',    name:'World Flags Trivia',         emoji:'🏳️' },
+    { id:'picsword',       name:'Picsword Puzzles',           emoji:'🧩' },
+    { id:'math-shot',      name:'Math Shot',                  emoji:'🎯' },
+    { id:'follow-code',    name:'Follow the Code',            emoji:'🔢' },
+    { id:'code-panda',     name:'Code Panda',                 emoji:'🐼' },
+    { id:'f1-math',        name:'F1 Racer Math',              emoji:'🏎️' },
+    { id:'math-tank',      name:'Math Tank',                  emoji:'🪖' },
+    { id:'math-crossword', name:'Math Crossword Puzzle',      emoji:'➕' },
+    { id:'math-runner',    name:'Math Runner',                emoji:'🏃' },
+    { id:'ducky-race',     name:'Ducky Race',                 emoji:'🦆' },
+  ]},
+  { section: '⚔️ ألعاب تنافسية', games: [
+    { id:'zombie-math',  name:'Math Battle: Zombie City', emoji:'🧟' },
+    { id:'football-cup', name:'Tiny Football Cup 2026',   emoji:'⚽' },
+  ]},
+];
+
+let gamesVis = {};
+
+async function loadGamesVis() {
+  try {
+    const r = await fetch('/api/games-visibility');
+    gamesVis = await r.json();
+  } catch { gamesVis = {}; }
+  renderGamesVis();
+}
+
+function renderGamesVis() {
+  const body = document.getElementById('gamesVisBody');
+  let html = `<div style="display:flex;flex-direction:column;gap:20px;">`;
+  GAMES_REGISTRY.forEach(sec => {
+    html += `<div>
+      <div style="font-size:.72rem;font-weight:800;color:var(--sl-400);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">${sec.section}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;">`;
+    sec.games.forEach(g => {
+      const on = gamesVis[g.id] !== false;
+      html += `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--sl-50);border:1px solid var(--sl-200);border-radius:8px;gap:10px;">
+        <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+          <span style="font-size:1.1rem;flex-shrink:0">${g.emoji}</span>
+          <span style="font-size:.8rem;font-weight:600;color:var(--sl-700);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${g.name}</span>
+        </div>
+        <label style="position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0;cursor:pointer">
+          <input type="checkbox" data-gid="${g.id}" ${on?'checked':''} style="opacity:0;width:0;height:0;position:absolute"
+            onchange="toggleGame(this)">
+          <span style="position:absolute;inset:0;border-radius:22px;background:${on?'var(--teal)':'var(--sl-300)'};transition:background .2s" class="gtrack"></span>
+          <span style="position:absolute;top:3px;${on?'right:3px':'left:3px'};width:16px;height:16px;border-radius:50%;background:#fff;transition:all .2s" class="gthumb"></span>
+        </label>
+      </div>`;
+    });
+    html += `</div></div>`;
+  });
+  html += `</div>
+  <div style="margin-top:14px;background:var(--teal-pale);border:1px solid var(--teal-b);border-radius:8px;padding:10px 14px;font-size:.78rem;color:var(--teal);font-weight:600;">
+    💡 التغييرات تُطبَّق فوراً — لا يحتاج التطبيق لإعادة تشغيل
+  </div>`;
+  body.innerHTML = html;
+}
+
+async function toggleGame(cb) {
+  const gid = cb.dataset.gid;
+  gamesVis[gid] = cb.checked;
+  // update toggle visuals
+  const label = cb.parentElement;
+  label.querySelector('.gtrack').style.background = cb.checked ? 'var(--teal)' : 'var(--sl-300)';
+  const thumb = label.querySelector('.gthumb');
+  thumb.style.right = cb.checked ? '3px' : '';
+  thumb.style.left  = cb.checked ? '' : '3px';
+  try {
+    await fetch('/api/games-visibility', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(gamesVis),
+    });
+    toast(cb.checked ? `✅ ${gid} مفعّلة` : `🚫 ${gid} معطّلة`);
+  } catch { toast('فشل الحفظ', 'error'); }
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────
-loadSettings();
-renderAll();
+(async function init() {
+  const ok = await ensureAuth();
+  if (!ok) return;
+  await Promise.all([loadLicenses(), loadRequests(), loadTrialConfig(), loadTrialStats(), loadGamesVis()]);
+})();
 </script>
 </body>
 </html>

@@ -97,14 +97,18 @@ function __acShuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.ra
       { q: '👧', a: 'Sister' }, { q: '👴', a: 'Grandfather' }, { q: '👵', a: 'Grandmother' },
       { q: '👨‍🦱', a: 'Uncle' }, { q: '👩‍🦱', a: 'Aunt' }, { q: '🧒', a: 'Cousin' },
       { q: '👶', a: 'Baby' }, { q: '👰', a: 'Bride' }, { q: '🤵', a: 'Groom' },
-      { q: '👫', a: 'Friends' }, { q: '🏠', a: 'Family' }
+      { q: '👫', a: 'Friends' }, { q: '🏠', a: 'Family' },
+      { q: '👨‍👧', a: 'Parent' }, { q: '👩‍🍼', a: 'Nanny' }, { q: '🧓', a: 'Elderly' },
+      { q: '👭', a: 'Twins' }, { q: '💑', a: 'Couple' }, { q: '🧑‍🤝‍🧑', a: 'Siblings' }
     ]},
     'Colours': { icon: '🎨', data: [
       { q: '🔴', a: 'Red' }, { q: '🔵', a: 'Blue' }, { q: '🟢', a: 'Green' },
       { q: '🟡', a: 'Yellow' }, { q: '🟠', a: 'Orange' }, { q: '🟣', a: 'Purple' },
       { q: '💗', a: 'Pink' }, { q: '⚫', a: 'Black' }, { q: '⚪', a: 'White' },
       { q: '🟤', a: 'Brown' }, { q: '🥈', a: 'Silver' }, { q: '🥇', a: 'Gold' },
-      { q: '🌈', a: 'Rainbow' }
+      { q: '🌈', a: 'Rainbow' }, { q: '🩵', a: 'Light Blue' }, { q: '🩶', a: 'Grey' },
+      { q: '🫐', a: 'Indigo' }, { q: '🟩', a: 'Lime' }, { q: '🫧', a: 'Turquoise' },
+      { q: '🌸', a: 'Magenta' }, { q: '🦩', a: 'Coral' }
     ]},
     'Nature': { icon: '🌲', data: [
       { q: '☀️', a: 'Sun' }, { q: '🌙', a: 'Moon' }, { q: '⭐', a: 'Star' },
@@ -136,7 +140,12 @@ function __acShuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.ra
       { q: '📖', a: 'Book' }, { q: '🖊️', a: 'Pen' }, { q: '🪑', a: 'Table' },
       { q: '🪑', a: 'Chair' }, { q: '🚪', a: 'Door' }, { q: '🪟', a: 'Window' },
       { q: '📱', a: 'Phone' }, { q: '💻', a: 'Computer' }, { q: '👜', a: 'Bag' },
-      { q: '💡', a: 'Lamp' }
+      { q: '💡', a: 'Lamp' }, { q: '🛏️', a: 'Bed' }, { q: '🛁', a: 'Bathtub' },
+      { q: '🪞', a: 'Mirror' }, { q: '🚿', a: 'Shower' }, { q: '🧺', a: 'Basket' },
+      { q: '🪴', a: 'Plant' }, { q: '🕰️', a: 'Clock' }, { q: '📷', a: 'Camera' },
+      { q: '📺', a: 'TV' }, { q: '🎒', a: 'Backpack' }, { q: '🧸', a: 'Toy' },
+      { q: '🪣', a: 'Bucket' }, { q: '🧴', a: 'Bottle' }, { q: '🗝️', a: 'Key' },
+      { q: '📦', a: 'Box' }, { q: '🪤', a: 'Trap' }, { q: '🧲', a: 'Magnet' }
     ]}
   };
 
@@ -177,24 +186,16 @@ function __acShuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.ra
 
   // Full Screen Logic
   function toggleFullScreen() {
+    var el = document.querySelector('.tug-of-war-container') || document.querySelector('.game-container');
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(err => {
-        console.error(`Error attempting to enable full-screen mode: ${err.message}`);
-      });
+      if (el && el.requestFullscreen) el.requestFullscreen();
     } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-      }
+      if (document.exitFullscreen) document.exitFullscreen();
     }
   }
 
-  // Create FullScreen Button
-  const fsBtn = document.createElement('button');
-  fsBtn.className = 'fullscreen-btn';
-  fsBtn.innerHTML = '⛶';
-  fsBtn.title = 'Full Screen';
-  fsBtn.onclick = toggleFullScreen;
-  document.body.appendChild(fsBtn);
+  const fsBtn = document.getElementById('fullscreen-btn');
+  if (fsBtn) fsBtn.onclick = toggleFullScreen;
 
   function startTugOfWar() {
     topicsScreen.classList.remove('active');
@@ -325,9 +326,9 @@ function __acShuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.ra
       // Dino B (Purple) is on LEFT -> pulls towards 0%
       // Dino A (Green) is on RIGHT -> pulls towards 100%
       if (team === 'b') {
-        ropePosition -= 5; // العودة لقوة شد 5%
+        ropePosition -= 5;
       } else {
-        ropePosition += 5; 
+        ropePosition += 5;
       }
       
       checkWin();
@@ -349,30 +350,25 @@ function __acShuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.ra
     const marker = document.getElementById('rope-marker');
     const dinoA = document.getElementById('dino-a');
     const dinoB = document.getElementById('dino-b');
-    
+
     marker.style.left = `${ropePosition}%`;
-    
-    // زيادة التباعد الابتدائي ليكون 20% عن المركز (تباعد كبير كما طلبت)
+    // A يمين (+20%), B يسار (-20%)
     dinoB.style.left = `calc(${ropePosition}% - 20% - 70px)`;
     dinoA.style.left = `calc(${ropePosition}% + 20% - 70px)`;
-    
+
     dinoA.setAttribute('data-name', 'Dino A');
     dinoB.setAttribute('data-name', 'Dino B');
-    
+
     const dinoImgA = dinoA.querySelector('.dino-img');
     const dinoImgB = dinoB.querySelector('.dino-img');
-    
-    // المواجهة للمركز
-    // الدينو الأخضر (A) ينظر لليمين افتراضياً -> نقلبه لليسار
-    // الدينو البنفسجي (B) ينظر لليسار افتراضياً -> نقلبه لليمين
-    dinoImgA.style.transform = `scaleX(-1)`; 
-    dinoImgB.style.transform = `scaleX(-1)`; 
-    
-    const scaleB = 1 + (50 - ropePosition) / 100;
-    const scaleA = 1 + (ropePosition - 50) / 100;
-    
-    dinoA.style.transform = `scale(${scaleA})`; 
-    dinoB.style.transform = `scale(${scaleB})`;
+    dinoImgA.style.transform = 'scaleX(1)';  // A on right → faces left (towards B)
+    dinoImgB.style.transform = 'scaleX(-1)'; // B on left → faces right (towards A)
+
+    // A يمين يفوز بسحب يمين
+    const scaleA = 1 + (ropePosition - 50) / 150;
+    const scaleB = 1 + (50 - ropePosition) / 150;
+    dinoA.style.transform = `scale(${Math.max(0.8, scaleA)})`;
+    dinoB.style.transform = `scale(${Math.max(0.8, scaleB)})`;
   }
 
   function checkWin() {
@@ -397,5 +393,11 @@ function __acShuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.ra
 
   if (restartBtn) restartBtn.onclick = () => location.reload();
   if (playAgainBtn) playAgainBtn.onclick = () => location.reload();
+
+  // Init page-level quick tools widget
+  const _qtT = document.getElementById('qtToggle_dinoEn');
+  const _qtM = document.getElementById('qtMenu_dinoEn');
+  if (_qtT && _qtM && window.initQtWidget) window.initQtWidget(_qtT, _qtM);
+
 
 })();

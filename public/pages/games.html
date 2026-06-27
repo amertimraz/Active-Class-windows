@@ -22,13 +22,7 @@
       <div class="game-item-action">ابدأ اللعب الآن</div>
     </a>
 
-    <!-- صائد القواعد -->
-    <a class="game-item-card game-purple" href="#/grammar-hunter">
-      <div class="game-item-icon">🎯</div>
-      <h3 class="game-item-title">صائد القواعد</h3>
-      <p class="game-item-desc">لعبة سريعة لتصنيف الكلمات (اسم، فعل، حرف) وإتقان قواعد النحو العربي</p>
-      <div class="game-item-action">ابدأ اللعب الآن</div>
-    </a>
+
 
     <!-- سباق البط الحسابي -->
     <a class="game-item-card game-teal" href="#/duck-race">
@@ -38,21 +32,9 @@
       <div class="game-item-action">ابدأ اللعب الآن</div>
     </a>
 
-    <!-- خريطة الكنز -->
-    <a class="game-item-card game-brown" href="#/game-geography-map">
-      <div class="game-item-icon">🗺️</div>
-      <h3 class="game-item-title">خريطة الكنز</h3>
-      <p class="game-item-desc">لعبة تفاعلية تعتمد على تحديد الأماكن التاريخية والجغرافية والأسئلة على الخريطة</p>
-      <div class="game-item-action">ابدأ اللعب الآن</div>
-    </a>
 
-    <!-- طريق الأخلاق -->
-    <a class="game-item-card game-orange" href="#/ethics-path">
-      <div class="game-item-icon">🧭</div>
-      <h3 class="game-item-title">طريق الأخلاق</h3>
-      <p class="game-item-desc">اختر التصرف الأخلاقي الصحيح في المواقف اليومية وتقدم في المسار</p>
-      <div class="game-item-action">ابدأ اللعب الآن</div>
-    </a>
+
+
 
     <!-- من سيربح المليون -->
     <a class="game-item-card game-gold" href="#/million">
@@ -62,21 +44,9 @@
       <div class="game-item-action">ابدأ اللعب الآن</div>
     </a>
 
-    <!-- تحدي السلة والأمثلة -->
-    <a class="game-item-card game-orange" href="#/basketball-quiz">
-      <div class="game-item-icon">🏀</div>
-      <h3 class="game-item-title">تحدي السلة والأسئلة</h3>
-      <p class="game-item-desc">أجب على الأسئلة من الاختبارات ثم نفذ تسديدتك لتحصد نقاطاً إضافية</p>
-      <div class="game-item-action">ابدأ اللعب الآن</div>
-    </a>
 
-    <!-- هجوم الأبطال -->
-    <a class="game-item-card game-red" href="#/hero-attack">
-      <div class="game-item-icon">⚔️</div>
-      <h3 class="game-item-title">هجوم الأبطال</h3>
-      <p class="game-item-desc">حل مسائل حسابية واضرب العدو لهزيمته، انتبه فلديك 3 قلوب فقط</p>
-      <div class="game-item-action">ابدأ اللعب الآن</div>
-    </a>
+
+
 
     <!-- محرك الألعاب التعليمي -->
     <a class="game-item-card game-engine-card" href="#/game-engine">
@@ -86,6 +56,238 @@
       <p class="game-item-desc">محرك ألعاب احترافي بتقنية WebGL — مطابقة الكلمات وألعاب تعليمية بجرافيك 60FPS</p>
       <div class="game-item-action">اكتشف الألعاب الجديدة</div>
     </a>
+
+    <!-- وصّل النقاط -->
+    <a class="game-item-card game-engine-card" href="#/dot-puzzle">
+      <div class="game-item-icon">🔵</div>
+      <h3 class="game-item-title">وصّل النقاط</h3>
+      <p class="game-item-desc">مرّر عبر كل النقاط بخط واحد دون تقاطع — 15 مستوى متصاعب</p>
+      <div class="game-item-action">ابدأ اللعب الآن</div>
+    </a>
+
+    <!-- ألعاب الإنترنت -->
+    <div class="game-item-card game-online-hub-card" onclick="openOnlineGamesHub()">
+      <div class="game-item-badge">🌐 Online</div>
+      <div class="game-item-icon">🌍</div>
+      <h3 class="game-item-title">ألعاب الإنترنت</h3>
+      <p class="game-item-desc">ألعاب تعليمية مدمجة من مواقع خارجية — ذاكرة، بازل، وتحديات حسابية</p>
+      <div class="game-item-action">استكشف الألعاب</div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- ── شاشة ألعاب الإنترنت الداخلية ── -->
+<div id="onlineGamesHub" style="display:none">
+  <div class="sub-page-container fade-in">
+    <div class="sub-page-header" style="position:relative">
+      <button class="og-back-btn" onclick="closeOnlineGamesHub()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+        العودة
+      </button>
+      <h1 class="sub-page-title">ألعاب الإنترنت</h1>
+      <p class="sub-page-subtitle">ألعاب مدمجة من مواقع تعليمية خارجية — تحتاج اتصال بالإنترنت</p>
+      <div style="display:flex;align-items:flex-start;gap:10px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:11px 15px;margin-top:12px;text-align:right;max-width:640px;">
+        <span style="font-size:1.1rem;margin-top:1px">⚠️</span>
+        <span style="font-size:.8rem;color:#c8a04a;line-height:1.7">
+          سرعة تحميل الألعاب تعتمد على جودة اتصال الإنترنت.
+          بعض الألعاب قد تعرض إعلانات من موقعها الأصلي وهذا خارج عن تحكمنا.
+        </span>
+      </div>
+    </div>
+
+    <!-- قسم: ألعاب الذاكرة والمهارات -->
+    <div class="games-section-divider">
+      <span class="games-section-divider-icon">🧠</span>
+      <span class="games-section-divider-label">ذاكرة ومهارات</span>
+      <span style="font-size:.75rem;color:#7aa8c4;margin-right:10px;font-weight:500">ألغاز وتركيز وبازل</span>
+    </div>
+
+    <div class="games-modern-grid">
+      <div class="game-item-card game-lof-card game-has-thumb" data-gid="dino-memory" onclick="openExternalGame('https://www.lofgames.com/wgames/dino_memory/','Dino Memory')">
+        <div class="game-thumb-wrap"><img src="https://www.lofgames.com/games/thumbs/dino_memory.jpg" class="game-thumb" onerror="this.parentElement.innerHTML='🦕'"></div>
+        <h3 class="game-item-title">Dino Memory</h3>
+        <p class="game-item-desc">طابق الصور المتشابهة واكسب النقاط</p>
+        <div class="game-item-action">ابدأ اللعب الآن</div>
+      </div>
+
+      <div class="game-item-card game-coko-card game-has-thumb" data-gid="animal-puzzle" onclick="openExternalGame('https://www.lofgames.com/wgames/animal_puzzle_deluxe/index.html?author=lofgames.com','Animal Puzzle Deluxe')">
+        <div class="game-thumb-wrap"><img src="https://www.lofgames.com/games/thumbs/animal_puzzle_deluxe.jpg" class="game-thumb" onerror="this.parentElement.innerHTML='🐾'"></div>
+        <h3 class="game-item-title">Animal Puzzle Deluxe</h3>
+        <p class="game-item-desc">ركّب قطع البازل وأكمل الصور</p>
+        <div class="game-item-action">ابدأ اللعب الآن</div>
+      </div>
+
+      <div class="game-item-card game-lof-card game-has-thumb" data-gid="one-line-puzzle" onclick="openExternalGame('https://www.miniplay.com/embed/one-line-drawing-puzzle','One Line Drawing Puzzle')">
+        <div class="game-thumb-wrap"><img src="https://www5.minijuegosgratis.com/v3/games/thumbnails/251260_7_sq.jpg" class="game-thumb" onerror="this.parentElement.innerHTML='〰️'"></div>
+        <h3 class="game-item-title">One Line Drawing Puzzle</h3>
+        <p class="game-item-desc">وصّل كل النقاط بخط واحد دون رفع القلم</p>
+        <div class="game-item-action">ابدأ اللعب الآن</div>
+      </div>
+
+      <div class="game-item-card game-lof-card game-has-thumb" data-gid="spot-5-diff" onclick="openExternalGame('https://www.lofgames.com/wgames/spot_5_differences/','Spot 5 Differences')">
+        <div class="game-thumb-wrap"><img src="https://www.lofgames.com/games/thumbs/spot_5_differences.jpg" class="game-thumb" onerror="this.parentElement.innerHTML='🔍'"></div>
+        <h3 class="game-item-title">Spot 5 Differences</h3>
+        <p class="game-item-desc">اكتشف الاختلافات الخمسة بين الصورتين</p>
+        <div class="game-item-action">ابدأ اللعب الآن</div>
+      </div>
+
+      <div class="game-item-card game-lof-card game-has-thumb" data-gid="hogie" onclick="openExternalGame('https://www.mathplayground.com/hogie-the-globehopper/index.html','Hogie the Globehopper')">
+        <div class="game-thumb-wrap">🌍</div>
+        <h3 class="game-item-title">Hogie the Globehopper</h3>
+        <p class="game-item-desc">ساعد Hogie يتنقل حول العالم</p>
+        <div class="game-item-action">ابدأ اللعب الآن</div>
+      </div>
+
+      <div class="game-item-card game-lof-card game-has-thumb" data-gid="puzzle-123" onclick="openExternalGame('https://www.miniplay.com/embed/123-puzzle','123 Puzzle')">
+        <div class="game-thumb-wrap"><img src="https://www3.minijuegosgratis.com/v3/games/thumbnails/208690_7_sq.jpg" class="game-thumb" onerror="this.parentElement.innerHTML='🔢'"></div>
+        <h3 class="game-item-title">123 Puzzle</h3>
+        <p class="game-item-desc">رتّب الأرقام في المكان الصحيح — ألغاز منطقية متصاعبة</p>
+        <div class="game-item-action">ابدأ اللعب الآن</div>
+      </div>
+
+      <div class="game-item-card game-lof-card game-has-thumb" data-gid="basketball-rush" onclick="openExternalGame('https://www.miniplay.com/embed/basketball-rush','Basketball Rush')">
+        <div class="game-thumb-wrap"><img src="https://www2.minijuegosgratis.com/v3/games/thumbnails/253903_7_sq.jpg" class="game-thumb" onerror="this.parentElement.innerHTML='🏀'"></div>
+        <h3 class="game-item-title">Basketball Rush</h3>
+        <p class="game-item-desc">تحدّ صديقك في كرة السلة على نفس الجهاز</p>
+        <div class="game-item-action">ابدأ اللعب الآن</div>
+      </div>
+    </div>
+
+    <!-- قسم: ألعاب تعليمية -->
+    <div class="games-section-divider" style="margin-top:16px">
+      <span class="games-section-divider-icon">📚</span>
+      <span class="games-section-divider-label">ألعاب تعليمية</span>
+      <span style="font-size:.75rem;color:#7aa8c4;margin-right:10px;font-weight:500">رياضيات وعلوم وترميز</span>
+    </div>
+
+    <div class="games-modern-grid">
+      <div class="game-item-card game-lof-card game-has-thumb" data-gid="order-ops" onclick="openExternalGame('https://www.lofgames.com/games/gameloader.php?game=order_of_operation_challenge','Order of Operations')">
+        <div class="game-thumb-wrap"><img src="https://www.lofgames.com/games/thumbs/order_of_operation_challenge.jpg" class="game-thumb" onerror="this.parentElement.innerHTML='➗'"></div>
+        <h3 class="game-item-title">Order of Operations</h3>
+        <p class="game-item-desc">حل المعادلات بالترتيب الصحيح</p>
+        <div class="game-item-action">ابدأ اللعب الآن</div>
+      </div>
+
+      <div class="game-item-card game-coko-card game-has-thumb" data-gid="oddball" onclick="openExternalGame('https://www.lofgames.com/wgames/oddball_detective/','Oddball Detective')">
+
+        <div class="game-thumb-wrap"><img src="https://www.lofgames.com/games/thumbs/oddball_detective.jpg" class="game-thumb" onerror="this.parentElement.innerHTML='🔍'"></div>
+        <h3 class="game-item-title">Oddball Detective</h3>
+        <p class="game-item-desc">اكتشف العنصر المختلف</p>
+        <div class="game-item-action">ابدأ اللعب الآن</div>
+      </div>
+
+      <div class="game-item-card game-lof-card game-has-thumb" data-gid="bike-math" onclick="openExternalGame('https://www.lofgames.com/wgames/bike_racing_math/','Bike Racing Math')">
+
+        <div class="game-thumb-wrap"><img src="https://www.lofgames.com/games/thumbs/bike_racing_math.jpg" class="game-thumb" onerror="this.parentElement.innerHTML='🏍️'"></div>
+        <h3 class="game-item-title">Bike Racing Math</h3>
+        <p class="game-item-desc">أجب على الرياضيات وافز بالسباق</p>
+        <div class="game-item-action">ابدأ اللعب الآن</div>
+      </div>
+
+      <div class="game-item-card game-coko-card game-has-thumb" data-gid="world-flags" onclick="openExternalGame('https://www.lofgames.com/wgames/world_flags_trivia/','World Flags Trivia')">
+
+        <div class="game-thumb-wrap"><img src="https://www.lofgames.com/games/thumbs/world_flags_trivia.jpg" class="game-thumb" onerror="this.parentElement.innerHTML='🏳️'"></div>
+        <h3 class="game-item-title">World Flags Trivia</h3>
+        <p class="game-item-desc">اختبر معلوماتك عن أعلام العالم</p>
+        <div class="game-item-action">ابدأ اللعب الآن</div>
+      </div>
+
+      <div class="game-item-card game-lof-card game-has-thumb" data-gid="picsword" onclick="openExternalGame('https://www.lofgames.com/wgames/picsword_puzzles/','Picsword Puzzles')">
+
+        <div class="game-thumb-wrap"><img src="https://www.lofgames.com/games/thumbs/picsword_puzzles.jpg" class="game-thumb" onerror="this.parentElement.innerHTML='🧩'"></div>
+        <h3 class="game-item-title">Picsword Puzzles</h3>
+        <p class="game-item-desc">خمّن الكلمة من الصورة</p>
+        <div class="game-item-action">ابدأ اللعب الآن</div>
+      </div>
+
+      <div class="game-item-card game-coko-card game-has-thumb" data-gid="math-shot" onclick="openExternalGame('https://www.cokoplay.com/games/math-shot/','Math Shot')">
+
+        <div class="game-thumb-wrap"><img src="https://www.cokogames.com/wp-content/uploads/thumbs/custom/M/math-shot-150x150.jpg" class="game-thumb" onerror="this.parentElement.innerHTML='🎯'"></div>
+        <h3 class="game-item-title">Math Shot</h3>
+        <p class="game-item-desc">أطلق على الإجابة الصحيحة</p>
+        <div class="game-item-action">ابدأ اللعب الآن</div>
+      </div>
+
+      <div class="game-item-card game-lof-card game-has-thumb" data-gid="follow-code" onclick="openExternalGame('https://www.mathplayground.com/codegames/follow_code.htm','Follow the Code')">
+
+        <div class="game-thumb-wrap"><img src="https://www.mathplayground.com/logic-games/followthecode.png" class="game-thumb" onerror="this.parentElement.innerHTML='🔢'"></div>
+        <h3 class="game-item-title">Follow the Code</h3>
+        <p class="game-item-desc">اتبع الكود وحل الألغاز المنطقية</p>
+        <div class="game-item-action">ابدأ اللعب الآن</div>
+      </div>
+
+      <div class="game-item-card game-lof-card game-has-thumb" data-gid="code-panda" onclick="openExternalGame('https://www.mathplayground.com/code-panda/index.html','Code Panda')">
+
+        <div class="game-thumb-wrap"><img src="https://www.mathplayground.com/logic-games/code-panda-180x180.png" class="game-thumb" onerror="this.parentElement.innerHTML='🐼'"></div>
+        <h3 class="game-item-title">Code Panda</h3>
+        <p class="game-item-desc">علّم الباندا أساسيات البرمجة</p>
+        <div class="game-item-action">ابدأ اللعب الآن</div>
+      </div>
+
+      <div class="game-item-card game-coko-card game-has-thumb" data-gid="f1-math" onclick="openExternalGame('https://www.cokoplay.com/games/f1-racer-math/','F1 Racer Math')">
+        <div class="game-thumb-wrap"><img src="https://www.cokogames.com/wp-content/uploads/thumbs/custom/F/f1-racer-addition-sustraction-150x150.jpg" class="game-thumb" onerror="this.parentElement.innerHTML='🏎️'"></div>
+        <h3 class="game-item-title">F1 Racer Math</h3>
+        <p class="game-item-desc">سباق F1 — أجب على الرياضيات وافز بالسباق</p>
+        <div class="game-item-action">ابدأ اللعب الآن</div>
+      </div>
+
+      <div class="game-item-card game-coko-card game-has-thumb" data-gid="math-tank" onclick="openExternalGame('https://www.lofgames.com/wgames/math_tank/','Math Tank')">
+
+        <div class="game-thumb-wrap"><img src="https://www.lofgames.com/games/thumbs/math_tank.jpg" class="game-thumb" onerror="this.parentElement.innerHTML='🪖'"></div>
+        <h3 class="game-item-title">Math Tank</h3>
+        <p class="game-item-desc">قُد دبابتك وحل مسائل الرياضيات</p>
+        <div class="game-item-action">ابدأ اللعب الآن</div>
+      </div>
+
+      <div class="game-item-card game-lof-card game-has-thumb" data-gid="math-crossword" onclick="openExternalGame('https://www.miniplay.com/embed/math-crossword-puzzle-genius-edition','Math Crossword Puzzle')">
+        <div class="game-thumb-wrap"><img src="https://www1.minijuegosgratis.com/v3/games/thumbnails/254412_7_sq.jpg" class="game-thumb" onerror="this.parentElement.innerHTML='➕'"></div>
+        <h3 class="game-item-title">Math Crossword Puzzle</h3>
+        <p class="game-item-desc">كلمات متقاطعة بالأرقام — اختبر عقلك بمسائل رياضية ممتعة</p>
+        <div class="game-item-action">ابدأ اللعب الآن</div>
+      </div>
+
+      <div class="game-item-card game-lof-card game-has-thumb" data-gid="math-runner" onclick="openExternalGame('https://www.miniplay.com/embed/math-runner','Math Runner')">
+        <div class="game-thumb-wrap"><img src="https://www5.minijuegosgratis.com/v3/games/thumbnails/254332_7_sq.jpg" class="game-thumb" onerror="this.parentElement.innerHTML='🏃'"></div>
+        <h3 class="game-item-title">Math Runner</h3>
+        <p class="game-item-desc">العب وحل مسائل الرياضيات أثناء الجري</p>
+        <div class="game-item-action">ابدأ اللعب الآن</div>
+      </div>
+
+      <div class="game-item-card game-lof-card game-has-thumb" data-gid="ducky-race" onclick="openExternalGame('https://www.mathplayground.com/internal/arcademics_ducky_race.html','Ducky Race')">
+        <div class="game-thumb-wrap"><img src="https://static.arcademics.com/images/screenshots/ducky-race.png?v=2" class="game-thumb" onerror="this.parentElement.innerHTML='🦆'"></div>
+        <h3 class="game-item-title">Ducky Race</h3>
+        <p class="game-item-desc">سباق البط — تدريب سريع على العمليات الحسابية</p>
+        <div class="game-item-action">ابدأ اللعب الآن</div>
+      </div>
+    </div>
+
+    <!-- قسم: ألعاب تنافسية -->
+    <div class="games-section-divider" style="margin-top:16px">
+      <span class="games-section-divider-icon">⚔️</span>
+      <span class="games-section-divider-label">ألعاب تنافسية</span>
+      <span style="font-size:.75rem;color:#7aa8c4;margin-right:10px;font-weight:500">طالب ضد طالب</span>
+    </div>
+
+    <div class="games-modern-grid">
+<div class="game-item-card game-lof-card game-has-thumb" data-gid="zombie-math" onclick="openExternalGame('https://ilindekguru.github.io/zombiemtk/','Math Battle Zombie City')">
+        <div class="game-thumb-wrap" style="background:#0a1628;">
+          <img src="https://ilindekguru.github.io/zombiemtk/thumbnail.jpg" class="game-thumb" onerror="this.parentElement.innerHTML='🧟'">
+        </div>
+        <h3 class="game-item-title">Math Battle: Zombie City</h3>
+        <p class="game-item-desc">طالب ضد طالب — حل العمليات الحسابية وافز بالمعركة</p>
+        <div class="game-item-action">ابدأ اللعب الآن</div>
+      </div>
+
+      <div class="game-item-card game-lof-card game-has-thumb" data-gid="football-cup" onclick="openExternalGame('https://www.miniplay.com/embed/tiny-football-cup-2026','Tiny Football Cup 2026')">
+        <div class="game-thumb-wrap"><img src="https://www3.minijuegosgratis.com/v3/games/thumbnails/256690_7_sq.jpg" class="game-thumb" onerror="this.parentElement.innerHTML='⚽'"></div>
+        <h3 class="game-item-title">Tiny Football Cup 2026</h3>
+        <p class="game-item-desc">كأس العالم 2026 — ضربات جزاء ضد صديقك على نفس الجهاز</p>
+        <div class="game-item-action">ابدأ اللعب الآن</div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -115,6 +317,86 @@
 </script>
 
 <style>
+.game-lof-card {
+  background: linear-gradient(135deg, #1a2a1a 0%, #1e3a1e 60%, #0f3020 100%) !important;
+  border: 2px solid rgba(74,222,128,0.4) !important;
+  color: #fff !important;
+  position: relative;
+  overflow: hidden;
+}
+.game-lof-card:hover {
+  border-color: rgba(74,222,128,0.8) !important;
+  box-shadow: 0 20px 40px rgba(74,222,128,0.2) !important;
+}
+.game-lof-card .game-item-title,
+.game-lof-card .game-item-desc { color: #fff !important; }
+.game-lof-card .game-item-action {
+  background: rgba(74,222,128,0.15) !important;
+  color: #4ade80 !important;
+  border-color: rgba(74,222,128,0.3) !important;
+}
+.game-lof-card .game-item-badge {
+  background: rgba(74,222,128,0.2);
+  color: #4ade80;
+  border-color: rgba(74,222,128,0.4);
+}
+
+.game-wordwall-card {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%) !important;
+  border: 2px solid rgba(229,160,51,0.4) !important;
+  color: #fff !important;
+  position: relative;
+  overflow: hidden;
+}
+.game-wordwall-card::before {
+  content: '';
+  position: absolute;
+  top: -50%; right: -30%;
+  width: 120%; height: 120%;
+  background: radial-gradient(circle at 70% 30%, rgba(229,160,51,0.1) 0%, transparent 60%);
+  pointer-events: none;
+}
+.game-wordwall-card:hover {
+  border-color: rgba(229,160,51,0.8) !important;
+  box-shadow: 0 20px 40px rgba(229,160,51,0.2) !important;
+}
+.game-wordwall-card .game-item-title,
+.game-wordwall-card .game-item-desc { color: #fff !important; }
+.game-wordwall-card .game-item-action {
+  background: rgba(229,160,51,0.15) !important;
+  color: #e5a033 !important;
+  border-color: rgba(229,160,51,0.3) !important;
+}
+.game-wordwall-card .game-item-badge {
+  background: rgba(229,160,51,0.2);
+  color: #e5a033;
+  border-color: rgba(229,160,51,0.4);
+}
+
+.game-coko-card {
+  background: linear-gradient(135deg, #2a1a0e 0%, #3d2010 60%, #4a2800 100%) !important;
+  border: 2px solid rgba(251,146,60,0.4) !important;
+  color: #fff !important;
+  position: relative;
+  overflow: hidden;
+}
+.game-coko-card:hover {
+  border-color: rgba(251,146,60,0.8) !important;
+  box-shadow: 0 20px 40px rgba(251,146,60,0.2) !important;
+}
+.game-coko-card .game-item-title,
+.game-coko-card .game-item-desc { color: #fff !important; }
+.game-coko-card .game-item-action {
+  background: rgba(251,146,60,0.15) !important;
+  color: #fb923c !important;
+  border-color: rgba(251,146,60,0.3) !important;
+}
+.game-coko-card .game-item-badge {
+  background: rgba(251,146,60,0.2);
+  color: #fb923c;
+  border-color: rgba(251,146,60,0.4);
+}
+
 .game-engine-card {
   background: linear-gradient(135deg, #0d1b2a 0%, #1e3a5c 60%, #1a3050 100%) !important;
   border: 2px solid rgba(96,165,250,0.4) !important;
@@ -156,4 +438,608 @@
   border-radius: 20px;
   letter-spacing: 0.05em;
 }
+
+/* ── Game Thumbnail ── */
+.game-has-thumb { padding-top: 0 !important; overflow: hidden; }
+.game-thumb-wrap {
+  width: 100%;
+  height: 120px;
+  margin: 0 0 10px;
+  overflow: hidden;
+  border-radius: 12px 12px 0 0;
+  background: rgba(0,0,0,0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+}
+.game-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.game-thumb-icon {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+}
+.game-has-thumb .game-item-badge { margin: 0 10px 6px; }
+
+/* ── Main Games Grid: compact ── */
+.sub-page-container > .games-modern-grid {
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+  padding: 0.5rem 0 1.5rem;
+}
+.sub-page-container > .games-modern-grid .game-item-card {
+  min-height: unset !important;
+  padding: 1.5rem 1rem !important;
+  border-radius: 16px !important;
+}
+.sub-page-container > .games-modern-grid .game-item-icon {
+  width: 64px !important;
+  height: 64px !important;
+  font-size: 2.2rem !important;
+  margin-bottom: 1rem !important;
+  border-radius: 18px !important;
+}
+.sub-page-container > .games-modern-grid .game-item-title { font-size: .92rem !important; }
+.sub-page-container > .games-modern-grid .game-item-desc  { font-size: .78rem !important; }
+.sub-page-container > .games-modern-grid .game-item-action { font-size: .78rem !important; padding: 8px 16px !important; }
+
+/* ── Online Hub Card: compact ── */
+.game-online-hub-card {
+  margin: 0 0 1.5rem;
+  border-radius: 16px !important;
+  padding: 1.5rem !important;
+  min-height: unset !important;
+}
+.game-online-hub-card .game-item-icon { width: 56px !important; height: 56px !important; font-size: 2rem !important; margin-bottom: .8rem !important; }
+
+/* ── Online Hub: compact grid & cards ── */
+#onlineGamesHub .games-modern-grid {
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 14px;
+  padding: 0.5rem 0 2rem;
+}
+#onlineGamesHub .game-item-card {
+  min-height: unset !important;
+  padding: 0 0 10px !important;
+  border-radius: 14px !important;
+  cursor: pointer;
+  align-items: flex-start !important;
+  text-align: right !important;
+}
+#onlineGamesHub .game-thumb-wrap { height: 110px; border-radius: 12px 12px 0 0; }
+#onlineGamesHub .game-item-title { font-size: .88rem; padding: 0 10px; margin: 4px 0; }
+#onlineGamesHub .game-item-desc  { font-size: .75rem; padding: 0 10px; margin: 0 0 6px; line-height: 1.4; }
+#onlineGamesHub .game-item-action {
+  font-size: .75rem !important;
+  margin: 4px 10px 2px !important;
+  padding: 6px 14px !important;
+  width: calc(100% - 20px) !important;
+  text-align: center !important;
+}
+#onlineGamesHub .game-item-badge { font-size: .65rem; }
+
+/* ── Online Hub Card ── */
+.game-online-hub-card {
+  background: linear-gradient(135deg, #0a1628 0%, #0d2044 60%, #0a1e3d 100%) !important;
+  border: 2px solid rgba(99,179,237,0.45) !important;
+  color: #fff !important;
+  position: relative;
+  overflow: hidden;
+}
+.game-online-hub-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 70% 30%, rgba(99,179,237,0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+.game-online-hub-card:hover {
+  border-color: rgba(99,179,237,0.85) !important;
+  box-shadow: 0 20px 40px rgba(99,179,237,0.22) !important;
+}
+.game-online-hub-card .game-item-title,
+.game-online-hub-card .game-item-desc { color: #fff !important; }
+.game-online-hub-card .game-item-action {
+  background: rgba(99,179,237,0.15) !important;
+  color: #90cdf4 !important;
+  border-color: rgba(99,179,237,0.35) !important;
+}
+.game-online-hub-card .game-item-badge {
+  background: rgba(99,179,237,0.18);
+  color: #90cdf4;
+  border-color: rgba(99,179,237,0.4);
+}
+
+/* ── Online Hub Back Button ── */
+.og-back-btn {
+  position: absolute;
+  left: 0; top: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color, #334155);
+  background: var(--card-bg, #1e293b);
+  color: var(--text-primary, #e2e8f0);
+  font-size: .9rem;
+  font-weight: 700;
+  cursor: pointer;
+  min-height: 44px;
+  touch-action: manipulation;
+}
+.og-back-btn:hover { background: var(--hover-bg, #334155); }
+
+/* ── Section Divider ── */
+.games-section-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 24px 0 12px;
+  padding: 12px 18px;
+  background: linear-gradient(135deg, rgba(99,179,237,0.12) 0%, rgba(99,179,237,0.04) 100%);
+  border-radius: 12px;
+  border: 1.5px solid rgba(99,179,237,0.35);
+}
+.games-section-divider-icon { font-size: 1.3rem; }
+.games-section-divider-label {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #63b3ed;
+  letter-spacing: .02em;
+}
+.games-section-divider-badge {
+  margin-right: auto;
+  background: rgba(99,179,237,0.12);
+  color: #63b3ed;
+  border: 1px solid rgba(99,179,237,0.3);
+  border-radius: 20px;
+  padding: 3px 12px;
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+}
+
+/* ── Online Games Section ── */
+.online-games-section {
+  margin-top: 32px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(99,179,237,0.25);
+  background: linear-gradient(135deg, rgba(10,20,40,0.95) 0%, rgba(15,30,60,0.95) 100%);
+}
+
+.online-games-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+  background: linear-gradient(90deg, rgba(99,179,237,0.12) 0%, transparent 100%);
+  border-bottom: 1px solid rgba(99,179,237,0.2);
+}
+
+.online-games-header-icon {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.online-games-title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #90cdf4;
+  margin: 0 0 2px;
+}
+
+.online-games-subtitle {
+  font-size: .8rem;
+  color: #718096;
+  margin: 0;
+}
+
+.online-badge {
+  margin-right: auto;
+  background: rgba(99,179,237,0.15);
+  color: #63b3ed;
+  border: 1px solid rgba(99,179,237,0.35);
+  border-radius: 20px;
+  padding: 4px 14px;
+  font-size: .75rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+}
+
+.online-games-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.online-game-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 24px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  transition: background .18s;
+}
+.online-game-card:last-child { border-bottom: none; }
+.online-game-card:hover { background: rgba(99,179,237,0.07); }
+.online-game-card:active { background: rgba(99,179,237,0.14); }
+
+.online-game-icon {
+  font-size: 2rem;
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.05);
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.online-game-info { flex: 1; min-width: 0; }
+
+.online-game-title {
+  font-size: .95rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  margin: 0 0 4px;
+}
+
+.online-game-desc {
+  font-size: .8rem;
+  color: #718096;
+  margin: 0 0 6px;
+}
+
+.online-game-source {
+  font-size: .72rem;
+  color: #63b3ed;
+  background: rgba(99,179,237,0.1);
+  border: 1px solid rgba(99,179,237,0.25);
+  border-radius: 20px;
+  padding: 2px 10px;
+}
+
+.online-game-play {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(99,179,237,0.15);
+  color: #63b3ed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+  transition: background .18s;
+}
+.online-game-card:hover .online-game-play {
+  background: rgba(99,179,237,0.3);
+}
+
+.online-subsection-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 24px;
+  background: rgba(255,255,255,0.03);
+  border-top: 1px solid rgba(255,255,255,0.07);
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+.online-subsection-icon { font-size: 1rem; }
+.online-subsection-label {
+  font-size: .78rem;
+  font-weight: 700;
+  color: #a0aec0;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+#extGameOverlay {
+  position: fixed;
+  top: 56px; left: 0; right: 0; bottom: 0;
+  z-index: 10000;
+  background: #000;
+}
+#extGameBar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 56px;
+  z-index: 10001;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  background: #111;
+  border-bottom: 2px solid #2a2a2a;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.5);
+  direction: rtl;
+}
+.eg-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 18px;
+  height: 38px;
+  border-radius: 8px;
+  border: 1.5px solid #444;
+  background: #222;
+  color: #fff;
+  font-size: .95rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .15s, border-color .15s;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  font-family: inherit;
+}
+.eg-back-btn:hover  { background: #333; border-color: #666; }
+.eg-back-btn:active { background: #444; }
+.eg-title {
+  flex: 1;
+  font-size: .95rem;
+  font-weight: 700;
+  color: #ccc;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.eg-fs-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  border: 1.5px solid #444;
+  background: #222;
+  color: #fff;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+  touch-action: manipulation;
+  flex-shrink: 0;
+}
+.eg-fs-btn:hover  { background: #333; border-color: #666; }
+.eg-fs-btn:active { background: #444; }
+#extGameOverlay webview,
+#extGameOverlay iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+/* locked game card */
+.game-locked {
+  pointer-events: none;
+  position: relative;
+}
+.game-locked .game-thumb-wrap img,
+.game-locked .game-item-icon { filter: grayscale(1) brightness(.55); }
+.game-locked .game-item-title,
+.game-locked .game-item-desc  { color: #8899aa !important; }
+.game-locked .game-item-action { display: none; }
+.game-lock-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10,18,30,.55);
+  backdrop-filter: blur(2px);
+  pointer-events: none;
+}
+.game-lock-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.game-lock-icon { font-size: 1.6rem; }
+.game-lock-msg  {
+  font-size: .72rem;
+  font-weight: 700;
+  color: #f0c96e;
+  text-align: center;
+  line-height: 1.4;
+  white-space: nowrap;
+}
 </style>
+
+<script>
+async function applyGamesVisibility() {
+  // Licensed users see everything — no locking needed
+  var s = window.TRIAL_STATUS;
+  var isTrial = s && s.trial && !s.licensed && !s.expired;
+
+  var vis = {};
+  var servers = ['http://localhost:5000', 'https://twisting-energy-applied.ngrok-free.dev'];
+  for (var i = 0; i < servers.length; i++) {
+    try {
+      var r = await fetch(servers[i] + '/api/games-visibility', { signal: AbortSignal.timeout(4000) });
+      if (r.ok) { vis = await r.json(); break; }
+    } catch(e) { /* try next */ }
+  }
+
+  document.querySelectorAll('#onlineGamesHub [data-gid]').forEach(function(card) {
+    var old = card.querySelector('.game-lock-overlay');
+    if (old) old.remove();
+
+    // Trial users: only games explicitly set to true (ON) in admin panel are accessible
+    // Licensed users: all games accessible regardless
+    var locked = isTrial && vis[card.dataset.gid] !== true;
+
+    card.classList.toggle('game-locked', locked);
+    card.style.pointerEvents = locked ? 'none' : '';
+    if (locked) {
+      var ov = document.createElement('div');
+      ov.className = 'game-lock-overlay';
+      ov.innerHTML = '<div class="game-lock-inner"><span class="game-lock-icon">🔒</span><span class="game-lock-msg">متاح في النسخة الكاملة</span></div>';
+      card.appendChild(ov);
+    }
+  });
+}
+
+function openOnlineGamesHub() {
+  const main = document.querySelector('.sub-page-container.fade-in');
+  const hub  = document.getElementById('onlineGamesHub');
+  if (!main || !hub) return;
+  main.style.display = 'none';
+  hub.style.display  = 'block';
+  applyGamesVisibility();
+}
+
+function closeOnlineGamesHub() {
+  const main = document.querySelector('.sub-page-container.fade-in');
+  const hub  = document.getElementById('onlineGamesHub');
+  if (!main || !hub) return;
+  hub.style.display  = 'none';
+  main.style.display = '';
+}
+
+function openExternalGame(url, title) {
+  document.getElementById('extGameOverlay')?.remove();
+  document.getElementById('extGameBar')?.remove();
+
+  // Bar
+  const bar = document.createElement('div');
+  bar.id = 'extGameBar';
+  bar.innerHTML = `
+    <span class="eg-title">${title}</span>
+    <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+      <div class="header-quick-tools" id="extQtWrap" style="position:relative">
+        <button class="icon-btn hqt-toggle" id="extQtToggle" aria-haspopup="true" aria-expanded="false" style="background:#222;border:1px solid #444;color:#fff;width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        </button>
+        <div class="hqt-menu" id="extQtMenu" hidden style="position:fixed;z-index:999999;background:#1e293b;border:1px solid #334155;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.5);padding:6px;min-width:190px;direction:rtl">
+          <button class="hqt-item" data-qt="timer"   style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:none;background:none;width:100%;text-align:right;border-radius:8px;cursor:pointer;font-family:inherit;font-size:.87rem;font-weight:600;color:#fff;">⏱ <span>المؤقت الذكي</span></button>
+          <button class="hqt-item" data-qt="wheel"   style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:none;background:none;width:100%;text-align:right;border-radius:8px;cursor:pointer;font-family:inherit;font-size:.87rem;font-weight:600;color:#fff;">✨ <span>عجلة الحظ</span></button>
+          <button class="hqt-item" data-qt="numbers" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:none;background:none;width:100%;text-align:right;border-radius:8px;cursor:pointer;font-family:inherit;font-size:.87rem;font-weight:600;color:#fff;">🔢 <span>أرقام عشوائية</span></button>
+          <button class="hqt-item" data-qt="names"   style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:none;background:none;width:100%;text-align:right;border-radius:8px;cursor:pointer;font-family:inherit;font-size:.87rem;font-weight:600;color:#fff;">🎲 <span>اختيار اسم عشوائي</span></button>
+        </div>
+      </div>
+      <button class="eg-fs-btn" id="egFsBtn" title="ملء الشاشة" style="padding:6px 10px;border-radius:8px;border:1px solid #444;background:#222;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+      </button>
+      <button class="eg-back-btn" id="egBackBtn" title="العودة">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+  `;
+
+  // Overlay
+  const overlay = document.createElement('div');
+  overlay.id = 'extGameOverlay';
+
+  const isElectron = !!(window.api);
+  const isMiniplay = url.includes('miniplay.com');
+  const embed = document.createElement(isElectron ? 'webview' : 'iframe');
+  embed.setAttribute('src', url);
+  // For miniplay embeds: extend height to clip their bottom branding bar (~44px)
+  embed.style.cssText = isMiniplay
+    ? 'position:absolute;top:0;left:0;width:100%;height:calc(100% + 44px);border:none;'
+    : 'position:absolute;inset:0;width:100%;height:100%;border:none;';
+  if (isMiniplay) overlay.style.overflow = 'hidden';
+  if (isElectron) {
+    embed.setAttribute('allowpopups', '');
+    if (window.electronPaths && window.electronPaths.gamePreload) {
+      embed.setAttribute('preload', window.electronPaths.gamePreload);
+    }
+  } else {
+    embed.setAttribute('allowfullscreen', '');
+  }
+  overlay.appendChild(embed);
+
+  // Floating controls inside overlay (visible in fullscreen)
+  const fsControls = document.createElement('div');
+  fsControls.style.cssText = `display:none;position:absolute;top:14px;left:14px;z-index:99999;align-items:center;gap:8px;`;
+
+  // Exit fullscreen button
+  const exitFsBtn = document.createElement('button');
+  exitFsBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg> خروج`;
+  exitFsBtn.style.cssText = `display:flex;align-items:center;gap:6px;padding:8px 16px;background:rgba(20,20,20,0.9);color:#fff;border:1px solid #555;border-radius:10px;font-size:.85rem;font-weight:700;cursor:pointer;font-family:inherit;`;
+  exitFsBtn.onclick = () => { if (document.exitFullscreen) document.exitFullscreen(); };
+
+  // Quick tools button (fullscreen)
+  const fsQtBtn = document.createElement('button');
+  fsQtBtn.innerHTML = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>`;
+  fsQtBtn.style.cssText = `display:flex;align-items:center;justify-content:center;width:36px;height:36px;background:rgba(20,20,20,0.9);color:#fff;border:1px solid #555;border-radius:10px;cursor:pointer;`;
+
+  // Quick tools menu (fullscreen) — shared menu rendered inside overlay
+  const fsQtMenu = document.createElement('div');
+  fsQtMenu.style.cssText = `display:none;position:absolute;top:50px;left:0;z-index:999999;background:#1e293b;border:1px solid #334155;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.5);padding:6px;min-width:190px;direction:rtl;`;
+  fsQtMenu.innerHTML = `
+    <button class="hqt-item" data-qt="timer"   style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:none;background:none;width:100%;text-align:right;border-radius:8px;cursor:pointer;font-family:inherit;font-size:.87rem;font-weight:600;color:#fff;">⏱ <span>المؤقت الذكي</span></button>
+    <button class="hqt-item" data-qt="wheel"   style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:none;background:none;width:100%;text-align:right;border-radius:8px;cursor:pointer;font-family:inherit;font-size:.87rem;font-weight:600;color:#fff;">✨ <span>عجلة الحظ</span></button>
+    <button class="hqt-item" data-qt="numbers" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:none;background:none;width:100%;text-align:right;border-radius:8px;cursor:pointer;font-family:inherit;font-size:.87rem;font-weight:600;color:#fff;">🔢 <span>أرقام عشوائية</span></button>
+    <button class="hqt-item" data-qt="names"   style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:none;background:none;width:100%;text-align:right;border-radius:8px;cursor:pointer;font-family:inherit;font-size:.87rem;font-weight:600;color:#fff;">🎲 <span>اختيار اسم عشوائي</span></button>
+  `;
+  fsQtBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = fsQtMenu.style.display === 'block';
+    fsQtMenu.style.display = open ? 'none' : 'block';
+  });
+  fsQtMenu.addEventListener('click', (e) => {
+    if (e.target.closest('[data-qt]')) fsQtMenu.style.display = 'none';
+  });
+  overlay.addEventListener('click', (e) => {
+    if (!fsQtBtn.contains(e.target) && !fsQtMenu.contains(e.target)) fsQtMenu.style.display = 'none';
+  });
+
+  fsControls.appendChild(exitFsBtn);
+  fsControls.appendChild(fsQtBtn);
+  fsControls.appendChild(fsQtMenu);
+  overlay.appendChild(fsControls);
+
+  document.addEventListener('fullscreenchange', () => {
+    fsControls.style.display = document.fullscreenElement ? 'flex' : 'none';
+  });
+
+  const root = window.top ? window.top.document.body : document.body;
+  root.appendChild(bar);
+  root.appendChild(overlay);
+
+  const closeGame = () => {
+    document.getElementById('extGameOverlay')?.remove();
+    document.getElementById('extGameBar')?.remove();
+    if (document.fullscreenElement) document.exitFullscreen();
+  };
+
+  bar.querySelector('#egBackBtn').addEventListener('click', closeGame);
+  bar.querySelector('#egFsBtn').addEventListener('click', () => {
+    if (overlay.requestFullscreen) overlay.requestFullscreen();
+  });
+
+  // Wire quick tools widget
+  const _qtT = bar.querySelector('#extQtToggle');
+  const _qtM = bar.querySelector('#extQtMenu');
+  if (_qtT && _qtM) {
+    if (window.initQtWidget) {
+      window.initQtWidget(_qtT, _qtM);
+    } else {
+      // Fallback: simple toggle
+      _qtT.addEventListener('click', (e) => {
+        e.stopPropagation();
+        _qtM.hidden = !_qtM.hidden;
+        if (!_qtM.hidden) {
+          const r = _qtT.getBoundingClientRect();
+          _qtM.style.top  = (r.bottom + 6) + 'px';
+          _qtM.style.right = Math.max(8, window.innerWidth - r.right) + 'px';
+        }
+      });
+      document.addEventListener('click', () => { _qtM.hidden = true; });
+    }
+  }
+}
+</script>

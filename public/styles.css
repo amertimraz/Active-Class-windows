@@ -286,19 +286,13 @@ body {
   margin-bottom: 20px;
 }
 
-.login-brand-badge {
-  position: relative;
-  width: 50px; height: 50px;
-  border-radius: 15px;
-  background: linear-gradient(135deg, #0f766e 0%, #14b8a6 60%, #0ea5e9 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 17px;
-  font-weight: 900;
+.login-brand-logo {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  object-fit: cover;
   flex-shrink: 0;
-  box-shadow: 0 0 0 3px rgba(15,118,110,0.18), 0 8px 24px rgba(15,118,110,0.28);
+  box-shadow: 0 4px 16px rgba(15,118,110,0.25);
 }
 
 .login-brand-dot {
@@ -733,11 +727,11 @@ body {
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
-  margin-left: 4px;
+  margin-inline-end: 4px;
 }
 .wc-close, .wc-minimize, .wc-maximize {
-  width: 20px;
-  height: 20px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   border: none;
   cursor: pointer;
@@ -767,17 +761,12 @@ body {
   margin: 0 0.5rem;
   pointer-events: none;
 }
-.header-logo-icon {
-  width: 26px;
-  height: 26px;
-  border-radius: 7px;
-  background: linear-gradient(135deg, #0d9488, #0f766e);
-  color: #fff;
-  font-size: 10px;
-  font-weight: 900;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.header-logo-img {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
   box-shadow: 0 2px 6px rgba(15,118,110,0.3);
   flex-shrink: 0;
 }

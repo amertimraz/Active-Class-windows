@@ -3,8 +3,6 @@
 (function () {
   // ── Config ────────────────────────────────────────────────────────────────
   const ADMIN_WHATSAPP = '201096066818';
-  // ضع هنا رابط الـ Web App بعد نشر Google Apps Script
-  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyTzd-OZZUyrt7km1gYzFLRnSndASq_fAv5JmtDEV6CV-cYNrancbIN9zC6gVRRwMns/exec';
 
   const hasAPI = typeof window !== 'undefined' && !!window.api;
   const LS_KEY = 'ac_license_v1';
@@ -113,13 +111,12 @@
     regPhone = phoneVal;
     saveRegistration(regName, regPhone);
 
-    // بعت الطلب للـ API في الخلفية (مش بيوقف المستخدم لو فشل)
-    if (SCRIPT_URL) {
-      fetch(SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify({ action: 'register', name: regName, phone: regPhone, machineId }),
-      }).catch(() => {});
-    }
+    // Send registration request to local server (shows up in admin panel)
+    fetch('/api/license/request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: regName, phone: regPhone, machineId }),
+    }).catch(() => {});
 
     // Move to step 2
     goToActivateStep();
@@ -182,28 +179,30 @@
     if (regPhone) $('regPhone').value = regPhone;
   });
 
-  // ── STEP 2: Key Entry ─────────────────────────────────────────────────────
-  const SEG_LEN   = 5;
-  const SEG_COUNT = 4;
+  // ── STEP 2: Key Entry — format: AC-XXXX-YYYY (10 raw chars, 12 with dashes) ──
+  // Segment sizes: [2, 4, 4]
+  const SEG_SIZES = [2, 4, 4];
+  const TOTAL_RAW = SEG_SIZES.reduce((a, b) => a + b, 0); // 10
 
   function buildSegments() {
     const wrap = $('keySegments');
     if (!wrap) return;
     wrap.innerHTML = '';
-    for (let s = 0; s < SEG_COUNT; s++) {
-      for (let c = 0; c < SEG_LEN; c++) {
+    let pos = 0;
+    SEG_SIZES.forEach((len, si) => {
+      for (let c = 0; c < len; c++) {
         const span = document.createElement('span');
         span.className = 'seg';
-        span.dataset.pos = String(s * SEG_LEN + c);
+        span.dataset.pos = String(pos++);
         wrap.appendChild(span);
       }
-      if (s < SEG_COUNT - 1) {
+      if (si < SEG_SIZES.length - 1) {
         const sep = document.createElement('span');
         sep.className = 'seg-sep';
         sep.textContent = '—';
         wrap.appendChild(sep);
       }
-    }
+    });
   }
 
   function updateSegments(raw) {
@@ -217,9 +216,10 @@
   }
 
   function formatKey(val) {
-    const raw = val.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, SEG_LEN * SEG_COUNT);
+    const raw = val.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, TOTAL_RAW);
     const segs = [];
-    for (let i = 0; i < SEG_COUNT; i++) segs.push(raw.slice(i * SEG_LEN, (i + 1) * SEG_LEN));
+    let idx = 0;
+    SEG_SIZES.forEach(len => { segs.push(raw.slice(idx, idx + len)); idx += len; });
     return segs.filter(Boolean).join('-');
   }
 
@@ -241,7 +241,7 @@
   // ── Activate ──────────────────────────────────────────────────────────────
   $('btnActivate')?.addEventListener('click', async () => {
     const key = $('keyInput')?.value?.trim();
-    if (!key || key.replace(/-/g, '').length < SEG_LEN * SEG_COUNT) {
+    if (!key || key.replace(/-/g, '').length < TOTAL_RAW) {
       showMsg('keyMsg', 'أدخل كود التفعيل كاملاً');
       shake($('keyInput'));
       $('keyInput')?.classList.add('error');
@@ -256,16 +256,14 @@
 
       if (hasAPI && window.api.activateLicense) {
         result = await window.api.activateLicense(key, machineId, regName, regPhone);
-      } else if (SCRIPT_URL) {
-        // تحقق مباشر من Google Apps Script
-        const r = await fetch(SCRIPT_URL, {
+      } else {
+        // Web fallback: try remote license server
+        const r = await fetch('https://twisting-energy-applied.ngrok-free.dev/api/license/verify', {
           method: 'POST',
-          body: JSON.stringify({ action: 'verify', key, machineId }),
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key, machineId }),
         });
         result = await r.json();
-      } else {
-        await new Promise(r => setTimeout(r, 1200));
-        result = simulateActivation(key);
       }
 
       if (result.ok) {
@@ -277,7 +275,7 @@
         shake($('keyInput'));
       }
     } catch {
-      showMsg('keyMsg', 'تعذّر الاتصال — تحقق من الإنترنت وأعد المحاولة');
+      showMsg('keyMsg', 'تعذّر الاتصال بسيرفر التراخيص — تأكد من تشغيل البرنامج على الجهاز الرئيسي');
     } finally {
       setActivating(false);
     }
@@ -289,16 +287,6 @@
     btn.disabled = on;
     $('btnActivateText').textContent = on ? 'جاري التحقق...' : 'تفعيل الترخيص';
     $('btnActivateSpinner')?.classList.toggle('hidden', !on);
-  }
-
-  // Demo mode — accept any key starting with ACTCLS
-  function simulateActivation(key) {
-    if (key.toUpperCase().replace(/-/g, '').startsWith('ACTCLS')) {
-      const expiry = new Date();
-      expiry.setFullYear(expiry.getFullYear() + 1);
-      return { ok: true, plan: 'Pro سنوي', expiresAt: expiry.toISOString().split('T')[0], daysLeft: 365, totalDays: 365 };
-    }
-    return { ok: false, message: 'كود غير صحيح' };
   }
 
   // ── Render states ─────────────────────────────────────────────────────────

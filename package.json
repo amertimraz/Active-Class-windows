@@ -1,11 +1,11 @@
 {
   "name": "active-class",
-  "version": "1.0.0",
+  "version": "1.3.0",
   "description": "Active Class - تطبيق إدارة الفصل التفاعلي باستخدام Electron",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder --win",
+    "dist": "electron-rebuild -f -w better-sqlite3 && electron-builder --win",
     "server": "node server/server.js",
     "migrate:sqlite": "node server/migrate-sqlite.js",
     "lint": "eslint .",
@@ -87,6 +87,7 @@
     "autoprefixer": "^10.5.0",
     "electron": "^39.3.0",
     "electron-builder": "^25.1.8",
+    "electron-rebuild": "^3.2.9",
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^9.1.2",
     "globals": "^15.15.0",

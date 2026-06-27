@@ -38,9 +38,9 @@
 </head>
 <body>
   <div class="page-top-bar">
-    <a class="page-back-btn" href="/">
-      <span class="icon">🏠</span>
-      <span>العودة للرئيسية</span>
+    <a class="page-back-btn" href="#/games">
+      <span class="icon">🎮</span>
+      <span>العودة للألعاب</span>
     </a>
   </div>
   <main class="container">
@@ -49,18 +49,19 @@
       <p class="subtitle">قم بتخصيص إعدادات اللعبة وتحديد الأسئلة</p>
 
       <form id="millionSettingsForm">
-        <!-- Configuration Grid -->
         <div class="settings-section config-grid">
-          <!-- Row 1 -->
-          <!-- Question Source -->
-          <div class="config-box">
+
+          <!-- Question Sources (multi-quiz) -->
+          <div class="config-box full-width">
             <h3 class="config-title">📚 مصدر الأسئلة</h3>
-            <div class="form-group">
-              <label for="quizSelect">اختبار:</label>
+            <div class="quiz-picker-row">
               <select id="quizSelect" class="form-select">
-                <option value="">جاري التحميل...</option>
+                <option value="">اختر اختبار لإضافته...</option>
               </select>
+              <button type="button" id="addQuizBtn" class="btn btn-add">+ إضافة</button>
             </div>
+            <div id="selectedQuizzes" class="selected-quizzes"></div>
+            <div id="quizPoolInfo" class="pool-info" style="display:none;"></div>
           </div>
 
           <!-- Question Ordering -->
@@ -75,26 +76,27 @@
             </div>
           </div>
 
-          <!-- Row 2 -->
           <!-- Difficulty Distribution -->
           <div class="config-box">
             <div class="config-header">
               <h3 class="config-title">📊 توزيع الصعوبة</h3>
-              <p class="config-total">الإجمالي: 15</p>
+              <p class="config-total" id="totalLabel">الإجمالي: 15</p>
             </div>
-            
             <div class="difficulty-grid">
               <div class="form-group">
                 <label for="easyCount">سهلة:</label>
                 <input type="number" id="easyCount" min="0" max="15" value="5" class="form-input difficulty-input" />
+                <small id="easyAvail" class="avail-hint"></small>
               </div>
               <div class="form-group">
                 <label for="mediumCount">متوسطة:</label>
                 <input type="number" id="mediumCount" min="0" max="15" value="5" class="form-input difficulty-input" />
+                <small id="mediumAvail" class="avail-hint"></small>
               </div>
               <div class="form-group">
                 <label for="hardCount">صعبة:</label>
                 <input type="number" id="hardCount" min="0" max="15" value="5" class="form-input difficulty-input" />
+                <small id="hardAvail" class="avail-hint"></small>
               </div>
             </div>
             <div id="difficultyWarning" class="warning" style="display: none;"></div>
@@ -106,24 +108,15 @@
             <div class="lifelines-grid lifelines-horizontal">
               <label class="checkbox-label">
                 <input type="checkbox" id="lifelineFiftyFifty" checked />
-                <div>
-                  <span>50:50</span>
-                  <p>إلغاء خيارين</p>
-                </div>
+                <div><span>50:50</span><p>إلغاء خيارين</p></div>
               </label>
               <label class="checkbox-label">
                 <input type="checkbox" id="lifelineChange" checked />
-                <div>
-                  <span>تغيير السؤال</span>
-                  <p>الانتقال للسؤال التالي</p>
-                </div>
+                <div><span>تغيير السؤال</span><p>الانتقال للسؤال التالي</p></div>
               </label>
               <label class="checkbox-label">
                 <input type="checkbox" id="lifelineHint" checked />
-                <div>
-                  <span>👥 مساعدة الجمهور</span>
-                  <p>استطلاع رأي الجمهور</p>
-                </div>
+                <div><span>👥 مساعدة الجمهور</span><p>استطلاع رأي الجمهور</p></div>
               </label>
             </div>
           </div>
@@ -131,7 +124,7 @@
 
         <!-- Action Buttons -->
         <div class="actions">
-          <button type="button" class="btn btn-secondary" onclick="window.history.back()">العودة</button>
+          <a class="btn btn-secondary" href="#/games">العودة</a>
           <button type="submit" class="btn btn-primary">🎮 ابدأ اللعبة</button>
         </div>
       </form>

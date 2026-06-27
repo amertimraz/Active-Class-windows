@@ -8,6 +8,10 @@ class SettingsManager {
             dbPath: '',
             backupPath: '',
             autoBackup: false,
+            autoBackupOnClose: false,
+            autoBackupPeriodic: false,
+            autoBackupInterval: 30,
+            autoBackupFolder: '',
             showDeleteAllStudents: false,
             showDeleteAllGroups: false,
             showAnimations: true,
@@ -228,6 +232,67 @@ class SettingsManager {
                 this.applyLanguage();
             });
         }
+
+        // ── Export / Restore buttons ────────────────────────────────────────
+        const exportDbBtn = document.getElementById('exportDbBtn');
+        if (exportDbBtn) exportDbBtn.addEventListener('click', () => this.createBackup());
+
+        const importDbBtn = document.getElementById('importDbBtn');
+        if (importDbBtn) importDbBtn.addEventListener('click', () => this.restoreBackup());
+        // ── End Export / Restore ────────────────────────────────────────────
+
+        // ── Auto-backup controls ────────────────────────────────────────────
+        const selectAutoFolderBtn = document.getElementById('selectAutoBackupFolderBtn');
+        if (selectAutoFolderBtn) {
+            selectAutoFolderBtn.addEventListener('click', async () => {
+                if (!window.api?.selectBackupFolder) return;
+                const result = await window.api.selectBackupFolder();
+                if (!result?.canceled && result?.path) {
+                    this.settings.autoBackupFolder = result.path;
+                    const label = document.getElementById('autoBackupPathLabel');
+                    if (label) label.textContent = result.path;
+                    this._syncAutoBackupSettings();
+                }
+            });
+        }
+
+        const onCloseToggle = document.getElementById('autoBackupOnCloseToggle');
+        if (onCloseToggle) {
+            onCloseToggle.addEventListener('change', () => {
+                this.settings.autoBackupOnClose = onCloseToggle.checked;
+                this._syncAutoBackupSettings();
+            });
+        }
+
+        const periodicToggle = document.getElementById('autoBackupPeriodicToggle');
+        const intervalRow    = document.getElementById('periodicIntervalRow');
+        if (periodicToggle) {
+            periodicToggle.addEventListener('change', () => {
+                this.settings.autoBackupPeriodic = periodicToggle.checked;
+                if (intervalRow) intervalRow.style.display = periodicToggle.checked ? 'flex' : 'none';
+                this._syncAutoBackupSettings();
+            });
+        }
+
+        const intervalSelect = document.getElementById('autoBackupInterval');
+        if (intervalSelect) {
+            intervalSelect.addEventListener('change', () => {
+                this.settings.autoBackupInterval = parseInt(intervalSelect.value, 10);
+                this._syncAutoBackupSettings();
+            });
+        }
+        // ── End Auto-backup controls ────────────────────────────────────────
+    }
+
+    _syncAutoBackupSettings() {
+        const cfg = {
+            folder:   this.settings.autoBackupFolder  || '',
+            onClose:  this.settings.autoBackupOnClose  || false,
+            periodic: this.settings.autoBackupPeriodic || false,
+            interval: this.settings.autoBackupInterval || 30,
+        };
+        localStorage.setItem('ac_auto_backup', JSON.stringify(cfg));
+        if (window.api?.setAutoBackup) window.api.setAutoBackup(cfg);
     }
 
     closeModal() {
@@ -307,6 +372,23 @@ class SettingsManager {
             if (geminiInput) {
                 geminiInput.value = this.settings.groq_api_key || '';
             }
+
+            // Auto-backup UI
+            const autoFolderLabel = document.getElementById('autoBackupPathLabel');
+            if (autoFolderLabel) autoFolderLabel.textContent = this.settings.autoBackupFolder || 'لم يتم تحديد مجلد';
+
+            const onCloseToggle = document.getElementById('autoBackupOnCloseToggle');
+            if (onCloseToggle) onCloseToggle.checked = !!this.settings.autoBackupOnClose;
+
+            const periodicToggle = document.getElementById('autoBackupPeriodicToggle');
+            const intervalRow    = document.getElementById('periodicIntervalRow');
+            if (periodicToggle) {
+                periodicToggle.checked = !!this.settings.autoBackupPeriodic;
+                if (intervalRow) intervalRow.style.display = periodicToggle.checked ? 'flex' : 'none';
+            }
+
+            const intervalSelect = document.getElementById('autoBackupInterval');
+            if (intervalSelect) intervalSelect.value = this.settings.autoBackupInterval || 30;
         } catch (error) {
             console.error('Error updating UI:', error);
         }
@@ -342,55 +424,120 @@ class SettingsManager {
     
     async selectBackupPath() {
         try {
-            // In a real Electron app, this would open a folder dialog
-            // For now, we'll simulate it
-            const path = prompt('أدخل مسار مجلد النسخ الاحتياطي:');
-            if (path) {
-                this.settings.backupPath = path;
-                this.updateBackupPath();
+            if (window.api?.selectBackupFolder) {
+                const result = await window.api.selectBackupFolder();
+                if (!result?.canceled && result?.path) {
+                    this.settings.backupPath = result.path;
+                    this.updateBackupPath();
+                }
             }
         } catch (error) {
             console.error('Error selecting backup path:', error);
         }
     }
-    
+
     async createBackup() {
         try {
-            if (!this.settings.backupPath) {
-                this.showNotification('يرجى تحديد مجلد النسخ الاحتياطي أولاً', 'warning');
-                return;
+            // If no folder set, open dialog to pick one
+            let folder = this.settings.autoBackupFolder || this.settings.backupPath;
+            if (!folder) {
+                if (window.api?.selectBackupFolder) {
+                    const result = await window.api.selectBackupFolder();
+                    if (result?.canceled || !result?.path) return;
+                    folder = result.path;
+                    this.settings.autoBackupFolder = folder;
+                    this.settings.backupPath = folder;
+                    const label = document.getElementById('autoBackupPathLabel');
+                    if (label) label.textContent = folder;
+                } else {
+                    this.showNotification('يرجى تحديد مجلد النسخ الاحتياطي أولاً', 'warning');
+                    return;
+                }
             }
-            
+
             this.showLoading(true);
-            
+
             const response = await authFetch('/api/backup', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ backupPath: this.settings.backupPath })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ backupPath: folder })
             });
-            
+
             if (response.ok) {
                 const result = await response.json();
-                this.showNotification(this.t('backup_success'), 'success');
+                this.showBackupSuccessToast(result.backupFile || folder);
             } else {
-                throw new Error('Backup failed');
+                const errText = await response.text().catch(() => response.status);
+                throw new Error(`Backup failed (${response.status}): ${errText}`);
             }
         } catch (error) {
             console.error('Error creating backup:', error);
-            this.showNotification(this.t('backup_error'), 'error');
+            this.showNotification(`❌ ${error.message}`, 'error');
         } finally {
             this.showLoading(false);
         }
     }
+
+    showBackupSuccessToast(filePath) {
+        // Remove any existing toast
+        const old = document.getElementById('_backupToast');
+        if (old) old.remove();
+
+        const toast = document.createElement('div');
+        toast.id = '_backupToast';
+        toast.style.cssText = `
+            position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+            background:#0f172a;color:#f1f5f9;border-radius:12px;
+            padding:16px 20px;min-width:340px;max-width:90vw;
+            box-shadow:0 8px 32px rgba(0,0,0,.45);z-index:99999;
+            font-family:inherit;direction:rtl;
+            border:1px solid rgba(99,102,241,.4);
+            animation:_bkSlideIn .25s ease;
+        `;
+
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes _bkSlideIn{from{opacity:0;transform:translateX(-50%) translateY(16px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+        `;
+        document.head.appendChild(style);
+
+        toast.innerHTML = `
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                <span style="font-size:20px">✅</span>
+                <span style="font-weight:700;font-size:15px">تم حفظ النسخة الاحتياطية</span>
+                <button id="_bkClose" style="margin-right:auto;background:none;border:none;color:#94a3b8;cursor:pointer;font-size:18px;line-height:1">✕</button>
+            </div>
+            <div style="background:#1e293b;border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:8px">
+                <span style="font-size:13px;color:#94a3b8;flex:1;word-break:break-all;font-family:monospace">${filePath}</span>
+                <button id="_bkCopy" title="نسخ المسار" style="background:#334155;border:none;border-radius:6px;color:#e2e8f0;cursor:pointer;padding:5px 10px;font-size:12px;white-space:nowrap;flex-shrink:0">📋 نسخ</button>
+            </div>
+        `;
+
+        document.body.appendChild(toast);
+
+        document.getElementById('_bkClose').onclick = () => toast.remove();
+        document.getElementById('_bkCopy').onclick = () => {
+            navigator.clipboard.writeText(filePath).catch(() => {});
+            const btn = document.getElementById('_bkCopy');
+            if (btn) { btn.textContent = '✓ تم النسخ'; setTimeout(() => { if (btn) btn.textContent = '📋 نسخ'; }, 2000); }
+        };
+
+        // Auto-dismiss after 10 seconds
+        setTimeout(() => { if (document.getElementById('_backupToast')) toast.remove(); }, 10000);
+    }
     
     async restoreBackup() {
         try {
-            // In a real Electron app, this would open a file dialog
-            const backupFile = prompt('أدخل مسار ملف النسخة الاحتياطية:');
-            if (!backupFile) return;
-            
+            let backupFile;
+            if (window.api?.selectBackupFile) {
+                const result = await window.api.selectBackupFile();
+                if (result.canceled) return;
+                backupFile = result.filePath;
+            } else {
+                backupFile = prompt('أدخل مسار ملف النسخة الاحتياطية:');
+                if (!backupFile) return;
+            }
+
             if (!confirm('هل أنت متأكد من استرجاع هذه النسخة؟ سيتم استبدال البيانات الحالية.')) {
                 return;
             }
@@ -493,6 +640,86 @@ class SettingsManager {
     
     t(key) {
         return this.translations[this.settings.language]?.[key] || key;
+    }
+
+    _fillGamesTab() {
+        const REGISTRY = [
+            { section: 'memory', label: '🧠 ذاكرة ومهارات', games: [
+                { id: 'dino-memory',     name: 'Dino Memory',             emoji: '🦕' },
+                { id: 'animal-puzzle',   name: 'Animal Puzzle Deluxe',    emoji: '🐾' },
+                { id: 'one-line-puzzle', name: 'One Line Drawing Puzzle',  emoji: '〰️' },
+                { id: 'spot-5-diff',     name: 'Spot 5 Differences',      emoji: '🔍' },
+                { id: 'hogie',           name: 'Hogie the Globehopper',   emoji: '🌍' },
+            ]},
+            { section: 'edu', label: '📚 ألعاب تعليمية', games: [
+                { id: 'order-ops',      name: 'Order of Operations',           emoji: '➗' },
+                { id: 'oddball',        name: 'Oddball Detective',             emoji: '🕵️' },
+                { id: 'bike-math',      name: 'Bike Racing Math',              emoji: '🏍️' },
+                { id: 'world-flags',    name: 'World Flags Trivia',            emoji: '🏳️' },
+                { id: 'picsword',       name: 'Picsword Puzzles',              emoji: '🧩' },
+                { id: 'math-shot',      name: 'Math Shot',                     emoji: '🎯' },
+                { id: 'follow-code',    name: 'Follow the Code',               emoji: '🔢' },
+                { id: 'code-panda',     name: 'Code Panda',                    emoji: '🐼' },
+                { id: 'f1-math',        name: 'F1 Racer Math',                 emoji: '🏎️' },
+                { id: 'math-tank',      name: 'Math Tank',                     emoji: '🪖' },
+                { id: 'math-crossword', name: 'Math Crossword Puzzle',         emoji: '➕' },
+                { id: 'math-runner',    name: 'Math Runner',                   emoji: '🏃' },
+            ]},
+            { section: 'compete', label: '⚔️ ألعاب تنافسية', games: [
+                { id: 'zombie-math',      name: 'Math Battle: Zombie City',  emoji: '🧟' },
+                { id: 'football-cup',     name: 'Tiny Football Cup 2026',    emoji: '⚽' },
+                { id: 'basketball-rush',  name: 'Basketball Rush',            emoji: '🏀' },
+            ]},
+        ];
+
+        const vis = JSON.parse(localStorage.getItem('ac_games_vis') || '{}');
+        const tab = document.getElementById('games-tab');
+        if (!tab) return;
+
+        let html = `<div style="display:flex;flex-direction:column;gap:2rem;">`;
+
+        REGISTRY.forEach(sec => {
+            html += `
+            <div>
+              <div style="font-size:1rem;font-weight:800;margin-bottom:12px;color:var(--text-primary)">${sec.label}</div>
+              <div style="display:flex;flex-direction:column;gap:0;">`;
+
+            sec.games.forEach((g, i) => {
+                const enabled = vis[g.id] !== false;
+                const isLast  = i === sec.games.length - 1;
+                html += `
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--card);border:1px solid var(--border);border-radius:${i===0?'12px 12px':'0'} ${isLast?'0 0 12px 12px':''};${i>0?'border-top:none':''}">
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <span style="font-size:1.2rem">${g.emoji}</span>
+                    <span style="font-size:.9rem;font-weight:600;color:var(--text-primary)">${g.name}</span>
+                  </div>
+                  <label style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;cursor:pointer">
+                    <input type="checkbox" data-gid="${g.id}" ${enabled ? 'checked' : ''} style="opacity:0;width:0;height:0;position:absolute"
+                      onchange="(function(el){
+                        var vis=JSON.parse(localStorage.getItem('ac_games_vis')||'{}');
+                        vis[el.dataset.gid]=el.checked;
+                        localStorage.setItem('ac_games_vis',JSON.stringify(vis));
+                        var track=el.parentElement.querySelector('.gt');
+                        if(track){track.style.background=el.checked?'#0d9488':'#cbd5e1';}
+                        var thumb=el.parentElement.querySelector('.gth');
+                        if(thumb){thumb.style.transform=el.checked?'translateX(-20px)':'translateX(0)';}
+                      })(this)">
+                    <span class="gt" style="position:absolute;inset:0;border-radius:24px;background:${enabled?'#0d9488':'#cbd5e1'};transition:background .2s"></span>
+                    <span class="gth" style="position:absolute;top:3px;right:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .2s;transform:${enabled?'translateX(-20px)':'translateX(0)'}"></span>
+                  </label>
+                </div>`;
+            });
+
+            html += `</div></div>`;
+        });
+
+        html += `
+          <div style="background:rgba(14,149,136,.08);border:1px solid rgba(14,149,136,.25);border-radius:10px;padding:11px 15px;font-size:.8rem;color:#0d9488;">
+            💡 الألعاب المعطّلة لن تظهر في هاب الألعاب الأونلاين. التغيير فوري بدون حفظ.
+          </div>`;
+
+        html += `</div>`;
+        tab.innerHTML = html;
     }
 
     _fillLicenseTab() {

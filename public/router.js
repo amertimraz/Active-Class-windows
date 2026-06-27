@@ -121,13 +121,15 @@
     '/dino-arabic': () => fetchPageContent('/pages/dino-arabic.html'),
     '/grammar-hunter': () => fetchPageContent('/pages/grammar-hunter.html'),
     '/ethics-path': () => fetchPageContent('/pages/ethics-path.html'),
-    '/million': () => fetchPageContent('/pages/million/million-game.html'),
+    '/million': () => fetchPageContent('/pages/million/million-settings.html'),
     '/basketball-quiz': () => fetchPageContent('/pages/basketball-quiz.html'),
     '/hero-attack': () => fetchPageContent('/pages/hero-attack.html'),
     '/dino-english': () => fetchPageContent('/pages/dino-english.html'),
     '/duck-race': () => fetchPageContent('/pages/duck-race.html'),
+    '/dot-puzzle': () => fetchPageContent('/pages/dot-puzzle/index.html'),
     '/game-geography-map': () => fetchPageContent('/pages/game_geography_map.html'),
     // Game Engine Routes
+    '/external-game': () => fetchPageContent('/pages/external-game.html'),
     '/game-engine': () => fetchPageContent('/game-engine/launcher.html'),
     '/game-engine/word-match': () => fetchPageContent('/game-engine/games/word-match/word-match.html'),
     '/game-engine/edu-platformer': () => fetchPageContent('/game-engine/games/edu-platformer/edu-platformer.html'),
@@ -186,7 +188,7 @@
         if (oldScript.src && (
           oldScript.src.includes('router.js') || 
           oldScript.src.includes('i18n.js') || 
-          oldScript.src.includes('settings.js') ||
+          oldScript.src.endsWith('/settings.js') ||
           oldScript.src.includes('ux-improvements.js') ||
           oldScript.src.includes('performance.js')
         )) continue;
@@ -277,7 +279,7 @@
             </div>
             <div class="hv2-stat-divider"></div>
             <div class="hv2-stat">
-              <span class="hv2-stat-num">11</span>
+              <span class="hv2-stat-num" id="_heroGamesNum">...</span>
               <span class="hv2-stat-lbl">لعبة تعليمية</span>
             </div>
           </div>
@@ -287,7 +289,7 @@
         <div class="hv2-features">
           ${featureCardV2('#/quizzes',    '#f97316', 'M9 11l3 3L22 4 M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11', 'الاختبارات',         'أنشئ اختبارات تفاعلية لحظية وتابع نتائج طلابك فوراً.',  'إنشاء اختبار',   '#fff7ed', '#f97316', true)}
           ${featureCardV2('#/groups',     '#3b82f6', 'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75', 'المجموعات والطلاب', 'أدر مجموعاتك واعرف أداء كل طالب بنظرة واحدة.',         'إدارة المجموعات', '#eff6ff', '#3b82f6', true)}
-          ${featureCardV2('#/games',      '#ec4899', 'M8 21h8m-4-4v4M7 4H4v6a8 8 0 0 0 16 0V4h-3 M4 4a16 16 0 0 0 16 0',                                 'الألعاب التعليمية',  '11 لعبة تفاعلية تحوّل المراجعة إلى تنافس ممتع.',       'ابدأ لعبة',       '#fdf2f8', '#ec4899')}
+          ${featureCardV2('#/games',      '#ec4899', 'M8 21h8m-4-4v4M7 4H4v6a8 8 0 0 0 16 0V4h-3 M4 4a16 16 0 0 0 16 0',                                 'الألعاب التعليمية',  '<span id="_gamesCountLabel">...</span> لعبة تفاعلية تحوّل المراجعة إلى تنافس ممتع.',       'ابدأ لعبة',       '#fdf2f8', '#ec4899')}
           ${featureCardV2('#/content',    '#14b8a6', 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20 M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z', 'المحتوى التعليمي',  'ارفع دروسك وعرضها بشكل احترافي داخل الفصل.',          'تصفح المحتوى',    '#f0fdfa', '#14b8a6')}
           <!-- ai-generator hidden temporarily -->
           ${featureCardV2('#/competitions','#eab308','M8 21h8m-4-4v4M7 4H4v6a8 8 0 0 0 16 0V4h-3 M4 4a16 16 0 0 0 16 0',                                  'المسابقات',          'نظّم مسابقات بين الطلاب وتابع النتائج فورياً.',        'ابدأ مسابقة',     '#fefce8', '#eab308')}
@@ -298,6 +300,21 @@
 
     try { I18n.apply(app); } catch {}
     loadHomeStats();
+    updateGamesCount();
+  }
+
+  async function updateGamesCount() {
+    try {
+      const vis = await fetch('http://localhost:5000/api/games-visibility').then(r => r.ok ? r.json() : {}).catch(() => ({}));
+      const builtIn = 7;
+      const onlineTotal = 22;
+      const disabledCount = Object.values(vis).filter(v => v === false).length;
+      const total = builtIn + (onlineTotal - disabledCount);
+      const el1 = document.getElementById('_gamesCountLabel');
+      const el2 = document.getElementById('_heroGamesNum');
+      if (el1) el1.textContent = total;
+      if (el2) el2.textContent = total;
+    } catch {}
   }
 
   function summaryCard(label, initialValue, icon, colorClass) {
@@ -439,84 +456,63 @@
   }
 
   // Attach quick tools events
-  document.addEventListener('DOMContentLoaded', () => {
-    const container = document.querySelector('.header-quick-tools') || document.querySelector('.quick-tools');
-    if (!container) return;
+  // Action handler fires on ANY [data-qt] click anywhere in the document
+  async function handleQtAction(tool) {
+    try {
+      if (tool === 'timer' && window.api?.openToolWindow) {
+        await window.api.openToolWindow('timer'); return;
+      }
+      if (tool === 'wheel' && window.api?.openWheelWindow) {
+        window.api.openWheelWindow(); return;
+      }
+      if (tool === 'numbers') {
+        try {
+          if (window.api?.openToolWindow) await window.api.openToolWindow('numbers');
+          else if (window.api?.openNumbersWindow) await window.api.openNumbersWindow();
+          else window.open('/pages/numbers-standalone.html', '_blank');
+        } catch(_) { window.open('/pages/numbers-standalone.html', '_blank'); }
+        return;
+      }
+      if (tool === 'names') {
+        try {
+          if (window.api?.openToolWindow) await window.api.openToolWindow('names');
+          else window.open('/pages/names.html', '_blank');
+        } catch (e) { window.open('/pages/names.html', '_blank'); }
+        return;
+      }
+    } catch (err) { console.error('Quick tool error:', err); }
+  }
 
-    // Grouped quick-tools dropdown: toggle open/close + close on outside click
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-qt]');
+    if (btn) handleQtAction(btn.getAttribute('data-qt'));
+  });
+
+  // Init a quick-tools toggle widget (supports multiple instances on page)
+  window.initQtWidget = function initQtWidget(toggleEl, menuEl) {
+    const placeMenu = () => {
+      const r = toggleEl.getBoundingClientRect();
+      menuEl.style.top   = `${r.bottom + 6}px`;
+      menuEl.style.left  = 'auto';
+      menuEl.style.right = `${Math.max(8, window.innerWidth - r.right)}px`;
+    };
+    const setOpen = (open) => {
+      if (open) placeMenu();
+      menuEl.hidden = !open;
+      toggleEl.setAttribute('aria-expanded', open ? 'true' : 'false');
+    };
+    toggleEl.addEventListener('click', (e) => { e.stopPropagation(); setOpen(menuEl.hidden); });
+    document.addEventListener('click', (e) => {
+      if (!toggleEl.contains(e.target) && !menuEl.contains(e.target)) setOpen(false);
+    });
+    menuEl.addEventListener('click', (e) => { if (e.target.closest('[data-qt]')) setOpen(false); });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    // Main header widget
     const qtToggle = document.getElementById('qtToggle');
     const qtMenu   = document.getElementById('qtMenu');
-    if (qtToggle && qtMenu) {
-      const placeMenu = () => {
-        const r = qtToggle.getBoundingClientRect();
-        qtMenu.style.top   = `${r.bottom + 6}px`;
-        qtMenu.style.left  = 'auto';
-        qtMenu.style.right = `${Math.max(8, window.innerWidth - r.right)}px`;   /* align to button's right edge (RTL) */
-      };
-      const setOpen = (open) => {
-        if (open) placeMenu();
-        qtMenu.hidden = !open;
-        qtToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-      };
-      qtToggle.addEventListener('click', (e) => {
-        e.stopPropagation();
-        setOpen(qtMenu.hidden);
-      });
-      document.addEventListener('click', (e) => {
-        if (!container.contains(e.target)) setOpen(false);
-      });
-      // close after picking a tool
-      qtMenu.addEventListener('click', (e) => {
-        if (e.target.closest('[data-qt]')) setOpen(false);
-      });
-    }
-
-    container.addEventListener('click', async (e) => {
-      const btn = e.target.closest('[data-qt]');
-      if (!btn) return;
-      const tool = btn.getAttribute('data-qt');
-      try {
-        if (tool === 'timer' && window.api?.openToolWindow) {
-          await window.api.openToolWindow('timer');
-          return;
-        }
-        if (tool === 'wheel' && window.api?.openWheelWindow) {
-          window.api.openWheelWindow();
-          return;
-        }
-        if (tool === 'numbers') {
-          try {
-            if (window.api?.openToolWindow) {
-              await window.api.openToolWindow('numbers');
-            } else if (window.api?.openNumbersWindow) {
-              await window.api.openNumbersWindow();
-            } else {
-              window.open('/pages/numbers-standalone.html', '_blank');
-            }
-          } catch(_) {
-            window.open('/pages/numbers-standalone.html', '_blank');
-          }
-          return;
-        }
-        if (tool === 'names') {
-          // Always open standalone Names window; fallback to new tab if Electron IPC is unavailable
-          try {
-            if (window.api?.openToolWindow) {
-              await window.api.openToolWindow('names');
-            } else {
-              window.open('/pages/names.html', '_blank');
-            }
-          } catch (e) {
-            console.error('Quick tool (names) error:', e);
-            window.open('/pages/names.html', '_blank');
-          }
-          return;
-        }
-
-      } catch (err) {
-        console.error('Quick tool error:', err);
-      }
-    });
+    if (qtToggle && qtMenu) initQtWidget(qtToggle, qtMenu);
   });
 
   function toolCard(toolName, icon, title, desc, color){
@@ -1111,6 +1107,7 @@
   async function onRoute(){
     console.log('onRoute called');
     const hash = location.hash.replace('#','') || '/';
+    const hashPath = hash.split('?')[0];
     console.log('Current hash:', hash);
 
     const settingsModal = document.getElementById('settingsModal');
@@ -1123,9 +1120,9 @@
     // Clean up game-page state on every navigation
     const gameRoutes = ['/dino-arabic', '/grammar-hunter', '/ethics-path', '/million',
       '/basketball-quiz', '/hero-attack', '/dino-english', '/duck-race', '/game-geography-map',
-      '/game-engine', '/game-engine/word-match', '/game-engine/edu-platformer'];
-    const isGameRoute = gameRoutes.includes(hash);
-    const isEngineRoute = hash === '/game-engine' || hash.startsWith('/game-engine/');
+      '/game-engine', '/game-engine/word-match', '/game-engine/edu-platformer', '/external-game'];
+    const isGameRoute = gameRoutes.includes(hashPath);
+    const isEngineRoute = hashPath === '/game-engine' || hashPath.startsWith('/game-engine/');
 
     if (!isGameRoute) {
       document.body.classList.remove('game-page');
@@ -1186,8 +1183,8 @@
       return;
     }
 
-    const view = pages[hash];
-    
+    const view = pages[hashPath] || pages[hash];
+
     if (hash.startsWith('/ai-player/')) {
        console.log('Loading AI Player');
        fetchPageContent('/pages/quiz-player.html');

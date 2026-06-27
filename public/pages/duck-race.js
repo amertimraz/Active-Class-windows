@@ -1,5 +1,110 @@
 /* uniform Fisher-Yates shuffle (replaces biased Array.sort random comparator) */
 function __acShuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+
+/* ── Sound Engine ── */
+const SFX = (() => {
+  let ctx = null;
+  let bgNode = null, bgGain = null;
+
+  function getCtx() {
+    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+
+  function play(freq, type, duration, volume = 0.3, delay = 0) {
+    const c = getCtx();
+    const osc = c.createOscillator();
+    const gain = c.createGain();
+    osc.connect(gain); gain.connect(c.destination);
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, c.currentTime + delay);
+    gain.gain.setValueAtTime(volume, c.currentTime + delay);
+    gain.gain.exponentialRampToValueAtTime(0.001, c.currentTime + delay + duration);
+    osc.start(c.currentTime + delay);
+    osc.stop(c.currentTime + delay + duration);
+  }
+
+  function correct() {
+    play(523, 'sine', 0.12, 0.35);
+    play(659, 'sine', 0.12, 0.35, 0.1);
+    play(784, 'sine', 0.2,  0.35, 0.2);
+  }
+
+  function wrong() {
+    play(220, 'sawtooth', 0.08, 0.25);
+    play(180, 'sawtooth', 0.18, 0.25, 0.08);
+  }
+
+  function quack() {
+    const c = getCtx();
+    const osc = c.createOscillator();
+    const gain = c.createGain();
+    osc.connect(gain); gain.connect(c.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(600, c.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(350, c.currentTime + 0.12);
+    gain.gain.setValueAtTime(0.18, c.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.15);
+    osc.start(c.currentTime);
+    osc.stop(c.currentTime + 0.15);
+  }
+
+  function fanfare() {
+    [[523,0],[659,0.15],[784,0.3],[1047,0.5]].forEach(([f,d]) => play(f,'sine',0.3,0.4,d));
+    play(1047, 'sine', 0.6, 0.5, 0.8);
+  }
+
+  function startBgMusic() {
+    stopBgMusic();
+    const c = getCtx();
+    bgGain = c.createGain();
+    bgGain.gain.setValueAtTime(0.06, c.currentTime);
+    bgGain.connect(c.destination);
+
+    const melody = [523,587,659,698,784,698,659,587];
+    let step = 0;
+    function tick() {
+      if (!bgGain) return;
+      const osc = c.createOscillator();
+      osc.connect(bgGain);
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(melody[step % melody.length], c.currentTime);
+      osc.start(c.currentTime);
+      osc.stop(c.currentTime + 0.22);
+      step++;
+      bgNode = setTimeout(tick, 280);
+    }
+    tick();
+  }
+
+  function stopBgMusic() {
+    if (bgNode) { clearTimeout(bgNode); bgNode = null; }
+    if (bgGain) { bgGain.disconnect(); bgGain = null; }
+  }
+
+  let musicOn = true;
+  let sfxOn = true;
+
+  function setMusicOn(v) {
+    musicOn = v;
+    if (!musicOn) stopBgMusic();
+  }
+
+  function setSfxOn(v) { sfxOn = v; }
+
+  return {
+    correct: () => sfxOn && correct(),
+    wrong:   () => sfxOn && wrong(),
+    quack:   () => sfxOn && quack(),
+    fanfare: () => sfxOn && fanfare(),
+    startBgMusic: () => musicOn && startBgMusic(),
+    stopBgMusic,
+    setMusicOn,
+    setSfxOn,
+  };
+})();
+
 (function(){
 const COLORS = ['#1d4ed8', '#be123c', '#16a34a', '#f59e0b', '#7c3aed', '#0ea5e9'];
 
@@ -94,6 +199,8 @@ const elements = {
   saveSettings: document.getElementById('saveSettings'),
   cancelSettings: document.getElementById('cancelSettings'),
   fullscreenToggle: document.getElementById('fullscreenToggle'),
+  toggleMusic: document.getElementById('toggleMusic'),
+  toggleSfx: document.getElementById('toggleSfx'),
   playersIndicator: document.getElementById('playersIndicator'),
   gameSection: document.getElementById('gameSection'),
   playerCount: document.getElementById('playerCount'),
@@ -176,6 +283,7 @@ function handleStartButtonClick() {
 }
 
 function createNameInputs(count, names = []) {
+  if (!elements.playerNames) return;
   elements.playerNames.innerHTML = '';
   const title = document.createElement('div');
   title.textContent = 'أسماء اللاعبين';
@@ -286,7 +394,7 @@ function createPlayers(settings) {
       name,
       score: 0,
       passiveScore: 0,
-      randomSpeed: 0.003 + Math.random() * 0.004,
+      randomSpeed: 0.007,
       spriteIndex: spriteIndices[index % spriteIndices.length],
       question: null,
       input: '',
@@ -337,7 +445,7 @@ function buildQuestion(level, operations, mode, topic) {
       } else {
         state.topicQueues[topicToUse] = [...data.data];
       }
-      state.__acShuffle(topicQueues[topicToUse]);
+      __acShuffle(state.topicQueues[topicToUse]);
     }
 
     const currentItem = state.topicQueues[topicToUse].pop();
@@ -480,8 +588,8 @@ function updateLanes() {
     label.className = 'duck-label';
     label.textContent = player.name;
 
+    duck.appendChild(label);
     lane.appendChild(duck);
-    lane.appendChild(label);
     elements.lanes.appendChild(lane);
   });
   updateDuckPositions();
@@ -489,26 +597,25 @@ function updateLanes() {
 
 function updateDuckPositions(onlyPlayerId = null) {
   const trackWidth = elements.raceTrack.clientWidth;
-  const maxOffset = trackWidth - 140;
+  const maxOffset = trackWidth - 200;
   state.players.forEach((player) => {
     if (onlyPlayerId !== null && player.id !== onlyPlayerId) return;
     
     const lane = elements.lanes.querySelector(`[data-player-id="${player.id}"]`);
     if (!lane) return;
     const duck = lane.querySelector('.duck');
-    const label = lane.querySelector('.duck-label');
     const totalScore = player.score + player.passiveScore;
     const progress = Math.min(totalScore / state.targetScore, 1);
-    const offset = 16 + progress * maxOffset;
-    
+    const offset = 80 + progress * maxOffset;
+
     if (onlyPlayerId !== null) {
       duck.classList.remove('moving');
-      void duck.offsetWidth; // trigger reflow
+      void duck.offsetWidth;
       duck.classList.add('moving');
+      setTimeout(() => duck.classList.remove('moving'), 800);
     }
-    
+
     duck.style.left = `${offset}px`;
-    label.style.left = `${Math.min(offset, maxOffset)}px`;
   });
 }
 
@@ -546,6 +653,8 @@ function submitAnswer(player, providedChoice = null) {
   
   if (isCorrect) {
     player.score += 1.2;
+    SFX.correct();
+    SFX.quack();
     if (panel) {
       panel.classList.add('correct');
       setTimeout(() => panel.classList.remove('correct'), 500);
@@ -559,6 +668,7 @@ function submitAnswer(player, providedChoice = null) {
     updateDuckPositions(player.id);
   } else {
     player.input = '';
+    SFX.wrong();
     if (panel) {
       panel.classList.add('wrong');
       setTimeout(() => panel.classList.remove('wrong'), 500);
@@ -569,6 +679,8 @@ function submitAnswer(player, providedChoice = null) {
 
 function showWinner(player) {
   state.isRunning = false;
+  SFX.stopBgMusic();
+  SFX.fanfare();
   if (state.gameLoopId) {
     clearInterval(state.gameLoopId);
     state.gameLoopId = null;
@@ -596,7 +708,8 @@ function startCountdown() {
       clearInterval(interval);
       elements.countdownOverlay.style.display = 'none';
       state.isRunning = true;
-      
+      SFX.startBgMusic();
+
       // Start Passive Movement
       state.gameLoopId = setInterval(() => {
         if (!state.isRunning) return;
@@ -667,6 +780,7 @@ function restartRace() {
 }
 
 function backToSetup() {
+  SFX.stopBgMusic();
   if (state.gameLoopId) {
     clearInterval(state.gameLoopId);
     state.gameLoopId = null;
@@ -706,15 +820,9 @@ function toggleFullscreen() {
 function updateFullscreenLabel() {
   if (!elements.fullscreenToggle || !elements.root) return;
   const isExpanded = elements.root.classList.contains('is-expanded');
-  if (isExpanded) {
-    elements.fullscreenToggle.textContent = '🗗';
-    elements.restartRace.textContent = '🔄';
-    elements.backToSetup.textContent = '⚙️';
-  } else {
-    elements.fullscreenToggle.textContent = 'تكبير المساحة';
-    elements.restartRace.textContent = 'إعادة السباق';
-    elements.backToSetup.textContent = 'رجوع للإعدادات';
-  }
+  elements.fullscreenToggle.textContent = isExpanded ? '🗗' : '⛶';
+  elements.restartRace.textContent = '🔄';
+  elements.backToSetup.textContent = '⚙️';
 }
 
 function handleSaveSettings() {
@@ -728,9 +836,21 @@ function setupEventListeners() {
   
   if (elements.modeSelect) elements.modeSelect.addEventListener('change', updateTopicOptions);
   if (elements.playerCount) elements.playerCount.addEventListener('change', handlePlayerCountChange);
-  if (elements.startRace) elements.startRace.addEventListener('click', startRace);
+  if (elements.startRace) elements.startRace.addEventListener('click', () => {
+    const settings = getSettingsFromInputs();
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    startRace();
+  });
   if (elements.restartRace) elements.restartRace.addEventListener('click', restartRace);
   if (elements.backToSetup) elements.backToSetup.addEventListener('click', backToSetup);
+  if (elements.toggleMusic) elements.toggleMusic.addEventListener('click', () => {
+    const on = elements.toggleMusic.classList.toggle('active');
+    SFX.setMusicOn(on);
+  });
+  if (elements.toggleSfx) elements.toggleSfx.addEventListener('click', () => {
+    const on = elements.toggleSfx.classList.toggle('active');
+    SFX.setSfxOn(on);
+  });
   if (elements.playAgain) elements.playAgain.addEventListener('click', restartRace);
   if (elements.closeWinner) elements.closeWinner.addEventListener('click', hideWinner);
   if (elements.openSettings) elements.openSettings.addEventListener('click', openSettingsModal);

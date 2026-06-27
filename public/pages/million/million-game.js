@@ -152,23 +152,24 @@ function playTones(audioContext, frequencies, durations) {
 
 async function initGame() {
   const params = new URLSearchParams(window.location.search);
-  const sessionId = params.get('sessionId');
-
   initializePaletteToggle();
 
-  if (!sessionId) {
-    showErrorScreen('لم يتم العثور على معرف الجلسة');
-    return;
-  }
-
   try {
-    const response = await window.api.getMillionSession(sessionId);
-    if (response.ok && response.session) {
-      session = response.session;
-      startGame();
-    } else {
-      showErrorScreen(response.error || 'فشل تحميل اللعبة');
+    const stored = localStorage.getItem('millionGameSettings');
+    if (!stored) {
+      showErrorScreen('لم يتم العثور على إعدادات اللعبة — ارجع للإعدادات');
+      return;
     }
+    const settings = JSON.parse(stored);
+    session = {
+      questions: settings.questions || [],
+      lifelines: settings.lifelines || { fiftyFifty: true, change: true, hint: true },
+    };
+    if (!session.questions.length) {
+      showErrorScreen('لا توجد أسئلة — تأكد من اختيار اختبار يحتوي على أسئلة');
+      return;
+    }
+    startGame();
   } catch (error) {
     console.error('Error loading session:', error);
     showErrorScreen(`خطأ: ${error.message}`);
@@ -514,3 +515,38 @@ function showErrorScreen(message) {
 }
 
 initGame();
+
+// ── Quick Tools ──
+(function () {
+  const fab   = document.getElementById('quickToolsBtn');
+  const panel = document.getElementById('quickToolsPanel');
+  const close = document.getElementById('qtClose');
+
+  fab.addEventListener('click', () => {
+    const open = panel.style.display !== 'none';
+    panel.style.display = open ? 'none' : 'block';
+  });
+  close.addEventListener('click', () => { panel.style.display = 'none'; });
+  document.addEventListener('click', e => {
+    if (!panel.contains(e.target) && e.target !== fab) panel.style.display = 'none';
+  });
+
+  // Random number
+  document.getElementById('qtNumBtn').addEventListener('click', () => {
+    const min = parseInt(document.getElementById('qtNumMin').value) || 1;
+    const max = parseInt(document.getElementById('qtNumMax').value) || 100;
+    const n   = Math.floor(Math.random() * (max - min + 1)) + min;
+    document.getElementById('qtNumResult').textContent = n;
+  });
+
+  // Random name
+  let students = [];
+  window.api.loadStudents().then(data => { students = data || []; }).catch(() => {});
+
+  document.getElementById('qtNameBtn').addEventListener('click', () => {
+    const res = document.getElementById('qtNameResult');
+    if (!students.length) { res.textContent = 'لا توجد أسماء'; return; }
+    const s = students[Math.floor(Math.random() * students.length)];
+    res.textContent = s.name || s;
+  });
+})();

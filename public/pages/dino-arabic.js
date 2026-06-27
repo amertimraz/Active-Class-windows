@@ -32,7 +32,9 @@ function __acShuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.ra
       { q: '🟡', a: 'أصفر' }, { q: '🟠', a: 'برتقالي' }, { q: '🟣', a: 'بنفسجي' },
       { q: '💗', a: 'وردي' }, { q: '⚫', a: 'أسود' }, { q: '⚪', a: 'أبيض' },
       { q: '🟤', a: 'بني' }, { q: ' Silver', a: 'فضي' }, { q: ' Gold', a: 'ذهبي' },
-      { q: ' Rainbow', a: 'قوس قزح' }
+      { q: ' Rainbow', a: 'قوس قزح' }, { q: ' Turquoise', a: 'تركوازي' },
+      { q: ' Beige', a: 'بيج' }, { q: ' Cream', a: 'كريمي' }, { q: ' Navy', a: 'كحلي' },
+      { q: ' Maroon', a: 'عنابي' }, { q: ' Lime', a: 'أخضر فاتح' }, { q: ' Coral', a: 'مرجاني' }
     ]},
     'الحيوانات': { icon: '🦁', data: [
       { q: '🦁', a: 'أسد' }, { q: '🐯', a: 'نمر' }, { q: '🐘', a: 'فيل' },
@@ -75,7 +77,9 @@ function __acShuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.ra
       { q: '👧', a: 'أخت' }, { q: '👴', a: 'جد' }, { q: '👵', a: 'جدة' },
       { q: '👨‍🦱', a: 'عم' }, { q: '👩‍🦱', a: 'عمة' }, { q: '🧒', a: 'ابن عم' },
       { q: '👶', a: 'طفل' }, { q: ' Bride', a: 'عروس' }, { q: ' Groom', a: 'عريس' },
-      { q: ' Friends', a: 'أصدقاء' }, { q: ' Family', a: 'عائلة' }
+      { q: ' Friends', a: 'أصدقاء' }, { q: ' Family', a: 'عائلة' },
+      { q: ' Uncle', a: 'خال' }, { q: ' Aunt', a: 'خالة' }, { q: ' Cousin', a: 'ابن خال' },
+      { q: ' Grandson', a: 'حفيد' }, { q: ' Neighbor', a: 'جار' }, { q: ' Twin', a: 'توأم' }
     ]},
     'المهن': { icon: '👮', data: [
       { q: '👨‍🏫', a: 'معلم' }, { q: '👨‍⚕️', a: 'طبيب' }, { q: '👷', a: 'مهندس' },
@@ -136,7 +140,12 @@ function __acShuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.ra
       { q: '📖', a: 'كتاب' }, { q: '🖊️', a: 'قلم' }, { q: '🖼️', a: 'لوحة' },
       { q: '🪑', a: 'كرسي' }, { q: '🚪', a: 'باب' }, { q: '🪟', a: 'نافذة' },
       { q: '📱', a: 'هاتف' }, { q: '💻', a: 'حاسوب' }, { q: '👜', a: 'حقيبة' },
-      { q: '💡', a: 'مصباح' }
+      { q: '💡', a: 'مصباح' }, { q: '🪴', a: 'نبتة' }, { q: '🛏️', a: 'سرير' },
+      { q: '🪞', a: 'مرآة' }, { q: '🚿', a: 'دش' }, { q: '🧹', a: 'مكنسة' },
+      { q: '🔑', a: 'مفتاح' }, { q: '⌚', a: 'ساعة' }, { q: '👓', a: 'نظارة' },
+      { q: '☂️', a: 'مظلة' }, { q: '🎒', a: 'حقيبة ظهر' }, { q: '🪣', a: 'دلو' },
+      { q: '🧲', a: 'مغناطيس' }, { q: '✂️', a: 'مقص' }, { q: '📏', a: 'مسطرة' },
+      { q: '🔦', a: 'مصباح يدوي' }, { q: '📌', a: 'دبوس' }, { q: '🗓️', a: 'تقويم' }
     ]}
   };
 
@@ -179,22 +188,18 @@ function __acShuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.ra
     });
   }
 
-  // Full Screen Logic
+  // Full Screen Logic — only the game frame
   function toggleFullScreen() {
+    var el = document.querySelector('.tug-of-war-container') || document.querySelector('.game-container');
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen();
+      if (el && el.requestFullscreen) el.requestFullscreen();
     } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-      }
+      if (document.exitFullscreen) document.exitFullscreen();
     }
   }
 
-  const fsBtn = document.createElement('button');
-  fsBtn.className = 'fullscreen-btn';
-  fsBtn.innerHTML = '⛶';
-  fsBtn.onclick = toggleFullScreen;
-  document.body.appendChild(fsBtn);
+  const fsBtn = document.getElementById('fullscreen-btn');
+  if (fsBtn) fsBtn.onclick = toggleFullScreen;
 
   function startTugOfWar() {
     topicsScreen.classList.remove('active');
@@ -323,21 +328,25 @@ function __acShuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.ra
     const marker = document.getElementById('rope-marker');
     const dinoA = document.getElementById('dino-a');
     const dinoB = document.getElementById('dino-b');
+
     marker.style.left = `${ropePosition}%`;
+    // A يمين (+20%), B يسار (-20%) — في RTL: A أول في DOM = يمين
     dinoB.style.left = `calc(${ropePosition}% - 20% - 70px)`;
     dinoA.style.left = `calc(${ropePosition}% + 20% - 70px)`;
+
     dinoA.setAttribute('data-name', 'دينو أ');
     dinoB.setAttribute('data-name', 'دينو ب');
-    
+
     const dinoImgA = dinoA.querySelector('.dino-img');
     const dinoImgB = dinoB.querySelector('.dino-img');
-    dinoImgA.style.transform = `scaleX(-1)`; 
-    dinoImgB.style.transform = `scaleX(-1)`; 
-    
-    const scaleB = 1 + (50 - ropePosition) / 100;
-    const scaleA = 1 + (ropePosition - 50) / 100;
-    dinoA.style.transform = `scale(${scaleA})`; 
-    dinoB.style.transform = `scale(${scaleB})`;
+    dinoImgA.style.transform = 'scaleX(1)';  // A يمين → يبص يسار (نحو B)
+    dinoImgB.style.transform = 'scaleX(-1)'; // B يسار → يبص يمين (نحو A)
+
+    // A يمين يفوز بسحب يمين (ropePosition يرتفع)
+    const scaleA = 1 + (ropePosition - 50) / 150;
+    const scaleB = 1 + (50 - ropePosition) / 150;
+    dinoA.style.transform = `scale(${Math.max(0.8, scaleA)})`;
+    dinoB.style.transform = `scale(${Math.max(0.8, scaleB)})`;
   }
 
   function checkWin() {
@@ -357,5 +366,11 @@ function __acShuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.ra
 
   if (restartBtn) restartBtn.onclick = () => location.reload();
   if (playAgainBtn) playAgainBtn.onclick = () => location.reload();
+
+  // Init page-level quick tools widget
+  const _qtT = document.getElementById('qtToggle_dinoAr');
+  const _qtM = document.getElementById('qtMenu_dinoAr');
+  if (_qtT && _qtM && window.initQtWidget) window.initQtWidget(_qtT, _qtM);
+
 
 })();

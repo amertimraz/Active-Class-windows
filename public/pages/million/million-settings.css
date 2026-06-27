@@ -287,6 +287,61 @@ h2 {
   accent-color: var(--primary);
 }
 
+/* ── Multi-quiz picker ── */
+.full-width { grid-column: 1 / -1; }
+
+.quiz-picker-row { display: flex; gap: 8px; align-items: center; }
+.quiz-picker-row .form-select { flex: 1; margin: 0; }
+
+.btn-add {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.btn-add:hover { filter: brightness(1.1); }
+
+.selected-quizzes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+
+.quiz-tag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--primary-bg);
+  border: 1.5px solid var(--primary);
+  color: var(--primary);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.quiz-tag em { font-style: normal; opacity: 0.7; }
+
+.remove-quiz {
+  background: none; border: none; color: var(--primary);
+  cursor: pointer; font-size: 0.8rem; padding: 0; opacity: 0.7;
+}
+.remove-quiz:hover { opacity: 1; }
+
+.pool-info {
+  font-size: 0.8rem; color: var(--text-muted);
+  background: var(--card-hover);
+  border-radius: var(--radius);
+  padding: 6px 10px; margin-top: 6px;
+}
+
+.avail-hint {
+  display: block; font-size: 0.72rem;
+  color: var(--text-muted); margin-top: 2px;
+}
+
 .no-questions {
   text-align: center;
   padding: 20px;

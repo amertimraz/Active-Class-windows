@@ -21,14 +21,14 @@
     <!-- Frameless titlebar -->
     <div class="login-titlebar">
       <div class="win-controls">
-        <button class="wc-close" title="إغلاق" onclick="window.api && window.api.close()">
-          <svg width="7" height="7" viewBox="0 0 8 8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="1" y1="1" x2="7" y2="7"/><line x1="7" y1="1" x2="1" y2="7"/></svg>
-        </button>
         <button class="wc-minimize" title="تصغير" onclick="window.api && window.api.minimize()">
           <svg width="8" height="2" viewBox="0 0 8 2" fill="currentColor"><rect width="8" height="2" rx="1"/></svg>
         </button>
         <button class="wc-maximize" title="تكبير" onclick="window.api && window.api.maximize()">
           <svg width="7" height="7" viewBox="0 0 8 8" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="0.8"/></svg>
+        </button>
+        <button class="wc-close" title="إغلاق" onclick="window.api && window.api.close()">
+          <svg width="7" height="7" viewBox="0 0 8 8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="1" y1="1" x2="7" y2="7"/><line x1="7" y1="1" x2="1" y2="7"/></svg>
         </button>
       </div>
       <span class="login-titlebar-label">Active Class</span>
@@ -54,10 +54,7 @@
 
           <!-- Brand header -->
           <div class="login-brand">
-            <div class="login-brand-badge">
-              <span>AC</span>
-              <span class="login-brand-dot"></span>
-            </div>
+            <img src="/assets/logo.png" alt="Active Class" class="login-brand-logo">
             <div>
               <h1>Active Class</h1>
               <p>منصة إدارة الصف التفاعلي</p>
@@ -155,22 +152,9 @@
     <header class="app-header" style="-webkit-app-region: drag;">
       <div class="header-content">
 
-        <!-- Window Controls (no-drag) -->
-        <div class="win-controls" style="-webkit-app-region: no-drag;">
-          <button class="wc-close"    title="إغلاق"  onclick="window.api.close()">
-            <svg width="7" height="7" viewBox="0 0 8 8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="1" y1="1" x2="7" y2="7"/><line x1="7" y1="1" x2="1" y2="7"/></svg>
-          </button>
-          <button class="wc-minimize" title="تصغير" onclick="window.api.minimize()">
-            <svg width="8" height="2" viewBox="0 0 8 2" fill="currentColor"><rect width="8" height="2" rx="1"/></svg>
-          </button>
-          <button class="wc-maximize" title="تكبير"  onclick="window.api.maximize()">
-            <svg width="7" height="7" viewBox="0 0 8 8" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="0.8"/></svg>
-          </button>
-        </div>
-
-        <!-- Logo (centre, pointer-events none so drag still works) -->
+        <!-- Logo — rightmost in RTL -->
         <div class="header-logo-group">
-          <div class="header-logo-icon">AC</div>
+          <img src="/assets/logo.png" alt="Active Class" class="header-logo-img">
           <h1 class="header-title">Active Class</h1>
         </div>
 
@@ -225,10 +209,19 @@
           <a href="#/settings" class="icon-btn" id="settingsBtn" title="الإعدادات">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           </a>
-          <div class="user-profile" id="headerUserProfile" style="cursor:pointer" title="معلومات الترخيص" onclick="document.querySelector('[data-tab=license]')&&document.querySelector('[data-tab=license]').click();document.getElementById('settingsBtn')&&document.getElementById('settingsBtn').click()">
-            <span class="user-name" id="headerUserName">المعلم</span>
-            <img src="/assets/icon.gif" alt="Teacher" class="user-avatar">
-          </div>
+        </div>
+
+        <!-- Window Controls — leftmost in RTL -->
+        <div class="win-controls" style="-webkit-app-region: no-drag;">
+          <button class="wc-minimize" title="تصغير" onclick="window.api.minimize()">
+            <svg width="8" height="2" viewBox="0 0 8 2" fill="currentColor"><rect width="8" height="2" rx="1"/></svg>
+          </button>
+          <button class="wc-maximize" title="تكبير"  onclick="window.api.maximize()">
+            <svg width="7" height="7" viewBox="0 0 8 8" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="0.8"/></svg>
+          </button>
+          <button class="wc-close"    title="إغلاق"  onclick="window.api.close()">
+            <svg width="7" height="7" viewBox="0 0 8 8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="1" y1="1" x2="7" y2="7"/><line x1="7" y1="1" x2="1" y2="7"/></svg>
+          </button>
         </div>
 
       </div>
@@ -238,7 +231,7 @@
 
     <footer class="footer">
       <div class="footer-content">
-        © 2024 Active Class. جميع الحقوق محفوظة. الإصدار 2.1.0.
+        © <span id="footer-year">2026</span> Active Class. جميع الحقوق محفوظة. الإصدار <span id="footer-version">…</span>
       </div>
     </footer>
   </div>
@@ -251,10 +244,10 @@
       <!-- ── Sidebar ── -->
       <aside class="sm-sidebar">
         <div class="sm-brand">
-          <div class="sm-brand-icon">AC</div>
+          <img src="/assets/logo.png" alt="Active Class" class="sm-brand-logo">
           <div>
             <div class="sm-brand-name">Active Class</div>
-            <div class="sm-brand-ver">الإصدار 2.1.0</div>
+            <div class="sm-brand-ver" id="sidebar-version">الإصدار …</div>
           </div>
         </div>
 
@@ -364,6 +357,40 @@
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                   استعادة من نسخة
                 </button>
+              </div>
+            </div>
+
+            <div class="sm-divider"></div>
+
+            <div class="sm-section">
+              <div class="sm-section-label">النسخ الاحتياطي التلقائي</div>
+              <p class="sm-hint">حدد مجلد الحفظ أولاً، ثم فعّل الخيارات التي تريدها.</p>
+
+              <div class="sm-row" style="align-items:center;gap:10px;margin-bottom:12px">
+                <span style="font-size:.85rem;color:var(--text-secondary);flex:1">مجلد الحفظ:</span>
+                <span id="autoBackupPathLabel" style="font-size:.8rem;color:var(--text-muted);flex:2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">لم يتم تحديد مجلد</span>
+                <button class="sm-btn sm-btn-outline" id="selectAutoBackupFolderBtn" type="button" style="flex-shrink:0">اختيار</button>
+              </div>
+
+              <label class="sm-toggle-row" style="margin-bottom:10px">
+                <span class="sm-toggle-label">نسخ احتياطي تلقائي عند إغلاق البرنامج</span>
+                <input type="checkbox" id="autoBackupOnCloseToggle" class="sm-toggle-input">
+                <span class="sm-toggle-track"></span>
+              </label>
+
+              <label class="sm-toggle-row" style="margin-bottom:10px">
+                <span class="sm-toggle-label">نسخ دوري أثناء التشغيل</span>
+                <input type="checkbox" id="autoBackupPeriodicToggle" class="sm-toggle-input">
+                <span class="sm-toggle-track"></span>
+              </label>
+
+              <div id="periodicIntervalRow" style="display:none;align-items:center;gap:10px;margin-top:4px">
+                <span style="font-size:.85rem;color:var(--text-secondary)">كل:</span>
+                <select id="autoBackupInterval" class="sm-input" style="width:auto;padding:6px 10px">
+                  <option value="15">15 دقيقة</option>
+                  <option value="30" selected>30 دقيقة</option>
+                  <option value="60">ساعة</option>
+                </select>
               </div>
             </div>
 
@@ -539,5 +566,19 @@
   <script src="/router.js?v=20260304b"></script>
   <script src="/pages/settings.js"></script>
   <script src="/scripts/app-init.js" nonce="ac"></script>
+  <script>
+    fetch('/api/app-info').then(function(r){ return r.json(); }).then(function(info){
+      var v = info.version || '?';
+      var y = info.year  || new Date().getFullYear();
+      var fv = document.getElementById('footer-version');
+      var fy = document.getElementById('footer-year');
+      var sv = document.getElementById('sidebar-version');
+      var av = document.getElementById('aboutCurrentVersion');
+      if (fv) fv.textContent = v;
+      if (fy) fy.textContent = y;
+      if (sv) sv.textContent = 'الإصدار ' + v;
+      if (av) av.textContent = 'الإصدار ' + v;
+    }).catch(function(){});
+  </script>
 </body>
 </html>

@@ -236,8 +236,36 @@
       </div>
     </div>
 
-    <!-- Back Button -->
-    <a href="/pages/games.html" class="back-btn" title="العودة">←</a>
+    <!-- Quick Tools FAB -->
+    <button id="quickToolsBtn" class="quick-tools-fab" title="أدوات سريعة">⚡</button>
+    <div id="quickToolsPanel" class="quick-tools-panel" style="display:none;">
+      <div class="qt-header">
+        <span>⚡ أدوات سريعة</span>
+        <button id="qtClose" class="qt-close">✕</button>
+      </div>
+      <div class="qt-body">
+        <div class="qt-section">
+          <h4>🔢 رقم عشوائي</h4>
+          <div class="qt-row">
+            <input id="qtNumMin" type="number" value="1" class="qt-input" />
+            <span>—</span>
+            <input id="qtNumMax" type="number" value="100" class="qt-input" />
+            <button id="qtNumBtn" class="qt-btn">سحب</button>
+          </div>
+          <div id="qtNumResult" class="qt-result"></div>
+        </div>
+        <div class="qt-section">
+          <h4>👤 اسم عشوائي</h4>
+          <button id="qtNameBtn" class="qt-btn full">سحب اسم</button>
+          <div id="qtNameResult" class="qt-result"></div>
+        </div>
+        <div class="qt-section qt-nav-links">
+          <a href="#/names" class="qt-link">🎰 عجلة الأسماء</a>
+          <a href="#/wheel" class="qt-link">🎡 عجلة الحظ</a>
+          <a href="#/timer" class="qt-link">⏱ مؤقت</a>
+        </div>
+      </div>
+    </div>
   </main>
 
   <script src="/pages/million/million-game.js"></script>

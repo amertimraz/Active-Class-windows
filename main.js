@@ -1,5 +1,7 @@
 // Simple Electron main process
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, session, shell } = require('electron');
+
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 const path = require('path');
 const { spawn } = require('child_process');
 const fs = require('fs');
@@ -39,30 +41,41 @@ function writeLicenseFile(data) {
 
 function isLicenseValid(lic) {
   if (!lic || !lic.expiresAt || !lic.key) return false;
-  return new Date(lic.expiresAt) > new Date();
+  if (new Date(lic.expiresAt) <= new Date()) return false;
+  // Offline grace: allow 7 days without re-verifying against server
+  if (lic.cachedAt) {
+    const daysSinceCached = (Date.now() - new Date(lic.cachedAt).getTime()) / 86400000;
+    if (daysSinceCached > 7) return false;
+  }
+  return true;
 }
 
-// License server URL — update when your server is ready
-const LICENSE_SERVER = process.env.LICENSE_SERVER_URL || 'https://your-license-server.com';
+// License verification — tries remote server first (for client machines),
+// then falls back to local server (admin's machine).
+const REMOTE_LICENSE_SERVER = 'https://twisting-energy-applied.ngrok-free.dev';
 
 async function verifyWithServer(key, machineId) {
-  try {
-    const res = await fetch(`${LICENSE_SERVER}/api/verify`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key, machineId }),
-      signal: AbortSignal.timeout(8000)
-    });
-    return await res.json();
-  } catch {
-    return null; // offline — caller falls back to local
+  // Try local server first (admin's machine), then remote (client's machine)
+  const urls = [`http://localhost:${SERVER_PORT}`, REMOTE_LICENSE_SERVER];
+  for (const base of urls) {
+    try {
+      const res = await fetch(`${base}/api/license/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, machineId }),
+        signal: AbortSignal.timeout(6000)
+      });
+      const data = await res.json();
+      if (data && (data.ok || data.ok === false)) return data; // valid server response
+    } catch { /* try next */ }
   }
+  return null; // all servers unreachable — caller uses local cache
 }
 // ──────────────────────────────────────────────────────────────────────────
 
 // Single source of truth for the renderer Content-Security-Policy (was
 // duplicated across every BrowserWindow). Update here only.
-const CSP_VALUE = `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' http://localhost:* https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://script.google.com https://script.googleusercontent.com; media-src 'self' data: blob:; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com; worker-src 'self' blob: https://cdnjs.cloudflare.com;`;
+const CSP_VALUE = `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' http://localhost:* https://twisting-energy-applied.ngrok-free.dev https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://script.google.com https://script.googleusercontent.com; media-src 'self' data: blob:; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://wordwall.net https://*.wordwall.net https://learningapps.org https://*.learningapps.org https://cokogames.com https://*.cokogames.com; worker-src 'self' blob: https://cdnjs.cloudflare.com;`;
 
 // Uniform in-place shuffle (Fisher–Yates). Replaces the biased
 // `arr.sort(() => Math.random() - 0.5)` idiom, which does not produce a
@@ -83,11 +96,24 @@ let serverProcess;
 const toolWindows = new Map();
 
 function createWindow() {
+  const { screen } = require('electron');
+  const { width: sw, height: sh } = screen.getPrimaryDisplay().workAreaSize;
+
+  // Scale up on large screens (interactive whiteboards etc.)
+  let zoom = 1.0;
+  if (sw >= 3840) zoom = 2.0;       // 4K
+  else if (sw >= 2560) zoom = 1.5;  // 2K / QHD
+  else if (sw >= 1920) zoom = 1.0;  // FHD
+
+  const winW = Math.min(Math.round(sw * 0.92), 1600);
+  const winH = Math.min(Math.round(sh * 0.92), 1000);
+
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    width: winW,
+    height: winH,
     frame: false,
     titleBarStyle: 'hidden',
+    icon: path.join(__dirname, 'public/assets/logo.png'),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -95,7 +121,8 @@ function createWindow() {
       allowRunningInsecureContent: false,
       experimentalFeatures: false,
       webSecurity: true,
-      sandbox: true,
+      sandbox: false,
+      webviewTag: true,
       preload: path.join(__dirname, 'preload.js')
     }
   });
@@ -131,6 +158,36 @@ function createWindow() {
     ? APP_URL
     : `${APP_URL}/pages/activation.html`;
   mainWindow.loadURL(startUrl);
+  mainWindow.webContents.on('did-finish-load', () => {
+    if (zoom !== 1.0) mainWindow.webContents.setZoomFactor(zoom);
+  });
+
+  // Background license re-validation on startup — catches revoked licenses
+  if (isLicenseValid(lic)) {
+    setTimeout(async () => {
+      try {
+        const result = await verifyWithServer(lic.key, lic.machineId);
+        if (result && result.ok === false) {
+          // Server explicitly revoked — wipe local cache and redirect
+          try { fs.unlinkSync(LICENSE_FILE()); } catch {}
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.loadURL(`${APP_URL}/pages/activation.html`);
+          }
+        } else if (result && result.ok) {
+          // Re-verified — refresh cachedAt so offline grace resets
+          writeLicenseFile({ ...lic, ...result, key: lic.key, machineId: lic.machineId, cachedAt: new Date().toISOString() });
+        }
+      } catch {}
+    }, 3000); // give the app time to finish loading before any redirect
+  }
+
+  // Block popup windows from embedded games; open external URLs in system browser
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      shell.openExternal(url);
+    }
+    return { action: 'deny' };
+  });
 
   // Retry a few times if initial load fails due to server not being ready
   try {
@@ -167,19 +224,15 @@ function createNumbersWindow() {
     frame: false,
     transparent: true,
     resizable: true,
-    alwaysOnTop: false,
+    alwaysOnTop: true,
     backgroundColor: '#00000000',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      enableRemoteModule: false,
-      allowRunningInsecureContent: false,
-      experimentalFeatures: false,
-      webSecurity: true,
-      sandbox: true,
       preload: path.join(__dirname, 'preload.js')
     }
   });
+  win.setAlwaysOnTop(true, 'screen-saver');
 
   // Optional CSP for numbers window (same as main)
   win.webContents.session.webRequest.onHeadersReceived((details, callback) => {
@@ -208,19 +261,15 @@ function createWheelWindow() {
     height: 700,
     frame: false,
     transparent: true,
-    alwaysOnTop: false,
     resizable: true,
+    alwaysOnTop: true,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      enableRemoteModule: false,
-      allowRunningInsecureContent: false,
-      experimentalFeatures: false,
-      webSecurity: true,
-      sandbox: true,
       preload: path.join(__dirname, 'preload.js')
     }
   });
+  win.setAlwaysOnTop(true, 'screen-saver');
 
   // Set CSP header for wheel window
   win.webContents.session.webRequest.onHeadersReceived((details, callback) => {
@@ -234,7 +283,6 @@ function createWheelWindow() {
     });
   });
 
-  // Load via server to ensure absolute paths work
   win.loadURL('http://localhost:5000/pages/wheel-standalone.html');
 
   win.on('closed', () => { toolWindows.delete('wheel'); });
@@ -292,6 +340,46 @@ function startServer() {
 }
 
 app.whenReady().then(async () => {
+  // Block ad networks in embedded games
+  const adBlockList = [
+    '*://*.googlesyndication.com/*',
+    '*://*.googleads.g.doubleclick.net/*',
+    '*://*.pagead2.googlesyndication.com/*',
+    '*://*.azerioncircle.com/*',
+    '*://*.gamemonetize.com/*',
+    '*://*.criteo.net/*',
+  ];
+  session.defaultSession.webRequest.onBeforeRequest({ urls: adBlockList }, (_details, callback) => {
+    callback({ cancel: true });
+  });
+
+  // Spoof Referer/Origin for external game sites so embedded games load correctly
+
+  // Per-domain Referer spoof so each site sees its own domain as referrer
+  const spoofMap = [
+    { match: 'mathplayground.com', referer: 'https://www.mathplayground.com/', origin: 'https://www.mathplayground.com' },
+    { match: 'cokoplay.com',       referer: 'https://www.cokoplay.com/',       origin: 'https://www.cokoplay.com'       },
+    { match: 'lofgames.com',       referer: 'https://www.lofgames.com/',       origin: 'https://www.lofgames.com'       },
+    { match: 'cokogames.com',      referer: 'https://www.cokogames.com/',      origin: 'https://www.cokogames.com'      },
+    { match: 'wordwall.net',       referer: 'https://wordwall.net/',           origin: 'https://wordwall.net'           },
+  ];
+  const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
+
+  session.defaultSession.webRequest.onBeforeSendHeaders(
+    { urls: ['http://*/*', 'https://*/*'] },
+    (details, callback) => {
+      if (!details.url.startsWith('file://')) {
+        const rule = spoofMap.find(r => details.url.includes(r.match));
+        if (rule) {
+          details.requestHeaders['Referer'] = rule.referer;
+          details.requestHeaders['Origin']  = rule.origin;
+        }
+        details.requestHeaders['User-Agent'] = UA;
+      }
+      callback({ requestHeaders: details.requestHeaders });
+    }
+  );
+
   // IPC handlers (invoke)
   ipcMain.handle('open-tool-window', async (_e, toolName) => {
     try {
@@ -305,9 +393,11 @@ app.whenReady().then(async () => {
           frame: false,
           transparent: true,
           resizable: true,
+          alwaysOnTop: true,
           backgroundColor: '#00000000',
           webPreferences: { contextIsolation: true, nodeIntegration: false, preload: path.join(__dirname, 'preload.js') }
         });
+        win.setAlwaysOnTop(true, 'screen-saver');
         win.webContents.session.webRequest.onHeadersReceived((details, callback) => {
           const h2 = {}; for (const [k,v] of Object.entries(details.responseHeaders)) { if (k.toLowerCase() !== 'content-security-policy') h2[k]=v; } callback({ responseHeaders: { ...h2, 'Content-Security-Policy': [CSP_VALUE] } });
         });
@@ -325,9 +415,11 @@ app.whenReady().then(async () => {
           frame: false,
           transparent: true,
           resizable: false,
+          alwaysOnTop: true,
           backgroundColor: '#00000000',
           webPreferences: { contextIsolation: true, nodeIntegration: false, preload: path.join(__dirname, 'preload.js') }
         });
+        win.setAlwaysOnTop(true, 'screen-saver');
         win.webContents.session.webRequest.onHeadersReceived((details, callback) => {
           const h2 = {}; for (const [k,v] of Object.entries(details.responseHeaders)) { if (k.toLowerCase() !== 'content-security-policy') h2[k]=v; } callback({ responseHeaders: { ...h2, 'Content-Security-Policy': [CSP_VALUE] } });
         });
@@ -594,6 +686,67 @@ app.whenReady().then(async () => {
   });
 
   // Excel file operations
+  ipcMain.handle('open-game-url', async (_e, { url, title }) => {
+    const win = new BrowserWindow({
+      width: 1100, height: 700,
+      title: title || 'لعبة تعليمية',
+      webPreferences: { nodeIntegration: false, contextIsolation: true }
+    });
+    win.loadURL(url);
+    win.setMenuBarVisibility(false);
+    return { ok: true };
+  });
+
+  ipcMain.handle('select-backup-file', async () => {
+    const result = await dialog.showOpenDialog({
+      title: 'اختر ملف النسخة الاحتياطية',
+      filters: [{ name: 'Database Backup', extensions: ['db'] }],
+      properties: ['openFile']
+    });
+    if (result.canceled) return { canceled: true };
+    return { canceled: false, filePath: result.filePaths[0] };
+  });
+
+  ipcMain.handle('select-backup-folder', async () => {
+    const result = await dialog.showOpenDialog({
+      title: 'اختر مجلد النسخ الاحتياطي التلقائي',
+      properties: ['openDirectory', 'createDirectory']
+    });
+    if (result.canceled) return { canceled: true };
+    return { canceled: false, path: result.filePaths[0] };
+  });
+
+  // Auto-backup helpers
+  const AUTO_BACKUP_CFG_FILE = () => path.join(app.getPath('userData'), 'ac_auto_backup.json');
+  function readAutoBackupCfg() {
+    try { return JSON.parse(fs.readFileSync(AUTO_BACKUP_CFG_FILE(), 'utf8')); } catch { return null; }
+  }
+  function makeBackupName() {
+    const _n = new Date();
+    return `activeclass_backup_${_n.getFullYear()}-${String(_n.getMonth()+1).padStart(2,'0')}-${String(_n.getDate()).padStart(2,'0')}_${String(_n.getHours()).padStart(2,'0')}-${String(_n.getMinutes()).padStart(2,'0')}.db`;
+  }
+  function doBackup(folder) {
+    const src  = path.join(app.getPath('userData'), 'activeclass.db');
+    const dest = path.join(folder, makeBackupName());
+    fs.copyFileSync(src, dest);
+    return dest;
+  }
+
+  let _autoBackupTimer = null;
+  ipcMain.on('set-auto-backup', (_e, cfg) => {
+    if (_autoBackupTimer) { clearInterval(_autoBackupTimer); _autoBackupTimer = null; }
+
+    // Persist to disk so before-quit can read it without needing IPC
+    try { fs.writeFileSync(AUTO_BACKUP_CFG_FILE(), JSON.stringify(cfg, null, 2), 'utf8'); } catch {}
+
+    if (cfg.periodic && cfg.folder && cfg.interval > 0) {
+      _autoBackupTimer = setInterval(() => {
+        try { log.info(`[AutoBackup] Periodic → ${doBackup(cfg.folder)}`); }
+        catch (e) { log.warn(`[AutoBackup] Periodic failed: ${e.message}`); }
+      }, cfg.interval * 60 * 1000);
+    }
+  });
+
   ipcMain.handle('select-excel-file', async () => {
     try {
       const result = await dialog.showOpenDialog({
@@ -760,29 +913,17 @@ app.whenReady().then(async () => {
 
     const mid = machineId || getMachineId();
 
-    // Try server first
+    // Verify against local server (which stores all licenses in data/licenses.json)
     const serverResult = await verifyWithServer(key, mid);
 
     if (serverResult) {
       if (!serverResult.ok) return serverResult;
-      writeLicenseFile({ ...serverResult, key, machineId: mid, name: name || '', phone: phone || '', activatedAt: new Date().toISOString() });
+      // Cache result locally so the app can work offline for up to 7 days
+      writeLicenseFile({ ...serverResult, key, machineId: mid, name: serverResult.name || name || '', phone: serverResult.phone || phone || '', activatedAt: new Date().toISOString(), cachedAt: new Date().toISOString() });
       return serverResult;
     }
 
-    // ── Demo mode: accept any key starting with ACTCLS ──
-    if (key.toUpperCase().replace(/-/g,'').startsWith('ACTCLS')) {
-      const expiry = new Date();
-      expiry.setFullYear(expiry.getFullYear() + 1);
-      const result = {
-        ok: true, plan: 'Pro سنوي',
-        expiresAt: expiry.toISOString().split('T')[0],
-        daysLeft: 365, totalDays: 365
-      };
-      writeLicenseFile({ ...result, key, machineId: mid, name: name || '', phone: phone || '', activatedAt: new Date().toISOString() });
-      return result;
-    }
-
-    return { ok: false, message: 'تعذّر الاتصال بالسيرفر — جرّب لاحقاً' };
+    return { ok: false, message: 'تعذّر الاتصال بسيرفر التراخيص — تأكد من تشغيل البرنامج على الجهاز الرئيسي' };
   });
 
   ipcMain.handle('verify-license', async (_e, key, machineId) => {
@@ -831,20 +972,21 @@ app.whenReady().then(async () => {
     };
     writeTrialFile(trialData);
 
-    // Log this activation (for admin stats)
-    try {
-      await fetch(`http://localhost:${SERVER_PORT}/api/trial-log`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ machineId: getMachineId() }),
-      });
-    } catch {}
+    // Log this activation — try local first, then remote (for admin stats)
+    const logBody = JSON.stringify({ machineId: getMachineId() });
+    const logHeaders = { 'Content-Type': 'application/json' };
+    try { await fetch(`http://localhost:${SERVER_PORT}/api/trial-log`, { method: 'POST', headers: logHeaders, body: logBody }); } catch {}
+    try { await fetch(`${REMOTE_LICENSE_SERVER}/api/trial-log`, { method: 'POST', headers: logHeaders, body: logBody, signal: AbortSignal.timeout(5000) }); } catch {}
 
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.loadURL('http://localhost:5000');
     return { ok: true };
   });
 
   ipcMain.handle('get-trial-status', async () => {
+    // If user has a valid full license, never show trial restrictions
+    const lic = readLicenseFile();
+    if (lic && isLicenseValid(lic)) return { trial: false };
+
     const t = readTrialFile();
     if (!t) return { trial: false };
 
@@ -880,7 +1022,14 @@ app.whenReady().then(async () => {
 
     autoUpdater.on('checking-for-update',  ()     => sendUpdateMsg('checking'));
     autoUpdater.on('update-not-available', (info) => sendUpdateMsg('up-to-date', { version: info.version }));
-    autoUpdater.on('error',                (err)  => sendUpdateMsg('error',      { message: err.message }));
+    autoUpdater.on('error', (err) => {
+      // 404 on latest.yml means no release file published yet — treat as "up to date"
+      if (err.message && (err.message.includes('latest.yml') || err.message.includes('404'))) {
+        sendUpdateMsg('up-to-date', { version: app.getVersion() });
+      } else {
+        sendUpdateMsg('error', { message: err.message });
+      }
+    });
     autoUpdater.on('update-available',     (info) => sendUpdateMsg('available',  { version: info.version }));
     autoUpdater.on('download-progress',    (prog) => sendUpdateMsg('progress',   { percent: Math.round(prog.percent) }));
     autoUpdater.on('update-downloaded',    ()     => sendUpdateMsg('downloaded'));
@@ -1147,6 +1296,22 @@ app.on('window-all-closed', () => {
   }
   if (process.platform !== 'darwin') {
     app.quit();
+  }
+});
+
+app.on('before-quit', () => {
+  try {
+    const cfgPath = path.join(app.getPath('userData'), 'ac_auto_backup.json');
+    const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
+    if (!cfg?.onClose || !cfg?.folder) return;
+    const _n   = new Date();
+    const name = `activeclass_backup_${_n.getFullYear()}-${String(_n.getMonth()+1).padStart(2,'0')}-${String(_n.getDate()).padStart(2,'0')}_${String(_n.getHours()).padStart(2,'0')}-${String(_n.getMinutes()).padStart(2,'0')}.db`;
+    const src  = path.join(app.getPath('userData'), 'activeclass.db');
+    const dest = path.join(cfg.folder, name);
+    fs.copyFileSync(src, dest);
+    log.info(`[AutoBackup] On-close backup saved → ${dest}`);
+  } catch (e) {
+    if (e.code !== 'ENOENT') log.warn(`[AutoBackup] On-close failed: ${e.message}`);
   }
 });
 

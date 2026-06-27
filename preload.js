@@ -1,11 +1,20 @@
 // Preload script for Classroom Manager
 const { contextBridge, ipcRenderer } = require('electron');
+const path = require('path');
+
+contextBridge.exposeInMainWorld('electronPaths', {
+  gamePreload: 'file://' + path.join(__dirname, 'public', 'preloads', 'game-preload.js').replace(/\\/g, '/'),
+});
 
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('api', {
   // Excel file operations
   selectExcelFile: () => ipcRenderer.invoke('select-excel-file'),
+  openGameUrl:        (opts) => ipcRenderer.invoke('open-game-url', opts),
+  selectBackupFile:   () => ipcRenderer.invoke('select-backup-file'),
+  selectBackupFolder: () => ipcRenderer.invoke('select-backup-folder'),
+  setAutoBackup:      (cfg) => ipcRenderer.send('set-auto-backup', cfg),
   getExcelColumns: (filePath) => ipcRenderer.invoke('get-excel-columns', filePath),
   previewExcelData: (options) => ipcRenderer.invoke('preview-excel-data', options),
   

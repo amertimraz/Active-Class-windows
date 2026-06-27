@@ -62,6 +62,12 @@ window.addEventListener('DOMContentLoaded', () => {
         if (nameEl && name) nameEl.textContent = name;
     } catch {}
 
+    // Restore auto-backup settings to main process on startup
+    try {
+        const abCfg = JSON.parse(localStorage.getItem('ac_auto_backup') || 'null');
+        if (abCfg && window.api?.setAutoBackup) window.api.setAutoBackup(abCfg);
+    } catch {}
+
     // Game engine controls
     const geBackBtn = document.getElementById('geBackBtn');
     const geFullscreenBtn = document.getElementById('geFullscreenBtn');

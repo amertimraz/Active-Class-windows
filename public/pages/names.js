@@ -177,14 +177,26 @@
     updateAvailable();
   });
 
+  async function loadStudentsData() {
+    try {
+      const api = window.api || (window.parent?.api);
+      if (api?.loadStudents) {
+        const result = await api.loadStudents();
+        if (Array.isArray(result) && result.length > 0) return result;
+      }
+    } catch(e) { console.error('IPC loadStudents failed:', e); }
+    try {
+      const res = await fetch('http://localhost:5000/api/students');
+      if (res.ok) return await res.json();
+    } catch(e) { console.error('fetch loadStudents failed:', e); }
+    return [];
+  }
+
   groupSelect.addEventListener('change', async () => {
     const gid = groupSelect.value;
     if (gid) {
-      try {
-        const api = window.api || (window.parent && window.parent.api);
-        const all = await api.loadStudents() || [];
-        students = all.filter(s => s.groupId === gid);
-      } catch(e) { console.error(e); }
+      const all = await loadStudentsData();
+      students = all.filter(s => s.groupId === gid);
     } else {
       students = [];
     }
@@ -222,7 +234,8 @@
     }
   });
 
-  let isPinned = false;
+  let isPinned = true;
+  if (pinBtn) pinBtn.classList.add('active-pin');
   pinBtn?.addEventListener('click', async () => {
     isPinned = !isPinned;
     pinBtn.classList.toggle('active-pin', isPinned);
@@ -236,34 +249,43 @@
   });
 
   closeBtn?.addEventListener('click', () => {
-    if (window.api && window.api.closeWindow) {
-      window.api.closeWindow();
-    } else if (window.parent && window.parent.closeNamesModal) {
-      window.parent.closeNamesModal();
-    } else {
-      // Fallback: search for modal in parent
-      const modal = window.parent.document.getElementById('namesModal');
-      if (modal) {
-        modal.classList.remove('active');
-        modal.style.display = 'none';
-      }
-    }
+    if (window.api?.closeWindow) { window.api.closeWindow(); return; }
+    if (window.api?.close)       { window.api.close();       return; }
+    window.close();
   });
+
+  // Load groups — tries IPC first, falls back to direct HTTP fetch
+  async function loadGroupsData() {
+    try {
+      const api = window.api || (window.parent?.api);
+      if (api?.loadGroups) {
+        const result = await api.loadGroups();
+        if (Array.isArray(result) && result.length > 0) return result;
+      }
+    } catch(e) { console.error('IPC loadGroups failed:', e); }
+    // Fallback: direct fetch from server
+    try {
+      const res = await fetch('http://localhost:5000/api/groups');
+      if (res.ok) return await res.json();
+    } catch(e) { console.error('fetch loadGroups failed:', e); }
+    return [];
+  }
+
+  async function renderGroups() {
+    groups = await loadGroupsData();
+    groupSelect.innerHTML = '<option value="">— اختر مجموعة —</option>';
+    groups.forEach(g => {
+      const opt = document.createElement('option');
+      opt.value = g.id; opt.textContent = g.name;
+      groupSelect.appendChild(opt);
+    });
+    updateAvailable();
+  }
 
   // Init
   (async function init(){
     setPlaceholder();
-    try {
-      const api = window.api || (window.parent && window.parent.api);
-      groups = await api.loadGroups() || [];
-      groupSelect.innerHTML = '<option value="">— اختر مجموعة —</option>';
-      groups.forEach(g => {
-        const opt = document.createElement('option');
-        opt.value = g.id; opt.textContent = g.name;
-        groupSelect.appendChild(opt);
-      });
-    } catch(e) { console.error(e); }
-    updateAvailable();
+    await renderGroups();
   })();
 
 })();
