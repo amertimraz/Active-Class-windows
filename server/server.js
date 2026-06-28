@@ -5,6 +5,7 @@ const fsSync = require('fs');
 const multer = require('multer');
 const crypto = require('crypto');
 const os = require('os');
+const AdmZip = require('adm-zip');
 const { db, openDB, closeDB } = require('./sqlite');
 const { generateQuizFromPDF } = require('./ai-service');
 const log = require('./logger').create('server');
@@ -15,11 +16,30 @@ const PORT = process.env.PORT || 5000;
 const publicDir = path.join(__dirname, '..', 'public');
 const assetsDir = path.join(__dirname, '..', 'assets');
 const dataDir = process.env.APP_DATA_DIR || path.join(__dirname, '..', 'data');
-const dbPath = path.join(__dirname, '..', 'db.json');
-const uploadsDir = path.join(publicDir, 'uploads');
+const dbPath = process.env.APP_DB_PATH || path.join(__dirname, '..', 'db.json');
+const legacyDbPath = path.join(__dirname, '..', 'db.json');
+const uploadsDir = process.env.APP_UPLOADS_DIR || path.join(publicDir, 'uploads');
 
 // Ensure uploads directory exists
 fs.mkdir(uploadsDir, { recursive: true });
+
+// Migrate db.json from old location to userData if needed
+(async () => {
+  if (process.env.APP_DB_PATH && dbPath !== legacyDbPath) {
+    try {
+      await fs.access(dbPath);
+    } catch {
+      // New path doesn't exist yet — copy from legacy if available
+      try {
+        await fs.access(legacyDbPath);
+        await fs.copyFile(legacyDbPath, dbPath);
+        log.info('[db] Migrated db.json to userData:', dbPath);
+      } catch {
+        // No legacy file either — will be created on first readDB()
+      }
+    }
+  }
+})();
 
 // Middleware
 
@@ -43,6 +63,7 @@ app.use((req, res, next) => {
 });
 
 app.use(express.static(publicDir));
+app.use('/uploads', express.static(uploadsDir));
 app.use('/assets', express.static(assetsDir));
 /* PDF.js v5 (local) — avoids CDN blocks & uses latest Arabic support */
 app.use('/pdfjs-build', express.static(path.join(__dirname, '../node_modules/pdfjs-dist/build')));
@@ -148,12 +169,19 @@ function handleUpload(mw) {
 
 // --- API Endpoints ---
 
-// Read data from db.json
+const DEFAULT_DB = { grades: [], quizzes: [] };
+
+// Read data from db.json — creates the file with defaults if missing
 async function readDB() {
   try {
     const data = await fs.readFile(dbPath, 'utf8');
     return JSON.parse(data);
   } catch (error) {
+    if (error.code === 'ENOENT') {
+      // File doesn't exist yet (fresh install) — create it
+      try { await fs.writeFile(dbPath, JSON.stringify(DEFAULT_DB, null, 2), 'utf8'); } catch {}
+      return { ...DEFAULT_DB };
+    }
     log.error('Error reading database:', error);
     throw new Error('Could not read from database.');
   }
@@ -235,7 +263,9 @@ app.get('/api/lesson/:id', async (req, res) => {
 });
 
 // Upload a file
-app.post('/api/content/upload', authenticateTeacher, handleUpload(upload.single('file')), async (req, res) => {
+const contentTrialGuard = trialGuard(t => t.content ? null : 'ميزة المحتوى التعليمي غير متاحة في النسخة التجريبية');
+
+app.post('/api/content/upload', authenticateTeacher, contentTrialGuard, handleUpload(upload.single('file')), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ message: 'No file uploaded.' });
   }
@@ -266,7 +296,7 @@ app.post('/api/content/upload', authenticateTeacher, handleUpload(upload.single(
 });
 
 // Add a link
-app.post('/api/content/link', authenticateTeacher, async (req, res) => {
+app.post('/api/content/link', authenticateTeacher, contentTrialGuard, async (req, res) => {
   const { lessonId, url, title } = req.body;
   if (!lessonId || !url || !title) {
     return res.status(400).json({ message: 'Missing required fields.' });
@@ -295,7 +325,7 @@ app.post('/api/content/link', authenticateTeacher, async (req, res) => {
 });
 
 // Add a whiteboard slide
-app.post('/api/content/whiteboard', authenticateTeacher, async (req, res) => {
+app.post('/api/content/whiteboard', authenticateTeacher, contentTrialGuard, async (req, res) => {
   const { lessonId, name } = req.body;
   if (!lessonId) return res.status(400).json({ message: 'lessonId is required.' });
   const item = { id: crypto.randomUUID(), type: 'whiteboard', name: name || 'لوح رسم' };
@@ -311,7 +341,7 @@ app.post('/api/content/whiteboard', authenticateTeacher, async (req, res) => {
 });
 
 // Add a quiz
-app.post('/api/content/quiz', authenticateTeacher, async (req, res) => {
+app.post('/api/content/quiz', authenticateTeacher, contentTrialGuard, async (req, res) => {
   const { lessonId, quizId } = req.body;
   if (!lessonId || !quizId) {
     return res.status(400).json({ message: 'Missing required fields.' });
@@ -502,7 +532,7 @@ app.delete('/api/grades/:id', authenticateTeacher, async (req, res) => {
     for (const unit of grade.units) {
       for (const lesson of unit.lessons) {
         for (const item of (lesson.content || [])) {
-          if (item.path) fs.unlink(path.join(__dirname, '..', item.path)).catch(() => {});
+          if (item.path) fs.unlink(path.join(uploadsDir, path.basename(item.path))).catch(() => {});
         }
       }
     }
@@ -535,7 +565,7 @@ app.delete('/api/units/:id', authenticateTeacher, async (req, res) => {
       if (idx !== -1) {
         for (const lesson of g.units[idx].lessons) {
           for (const item of (lesson.content || [])) {
-            if (item.path) fs.unlink(path.join(__dirname, '..', item.path)).catch(() => {});
+            if (item.path) fs.unlink(path.join(uploadsDir, path.basename(item.path))).catch(() => {});
           }
         }
         g.units.splice(idx, 1);
@@ -572,7 +602,7 @@ app.delete('/api/lessons/:id', authenticateTeacher, async (req, res) => {
         const idx = u.lessons.findIndex(l => l.id === req.params.id);
         if (idx !== -1) {
           for (const item of (u.lessons[idx].content || [])) {
-            if (item.path) fs.unlink(path.join(__dirname, '..', item.path)).catch(() => {});
+            if (item.path) fs.unlink(path.join(uploadsDir, path.basename(item.path))).catch(() => {});
           }
           u.lessons.splice(idx, 1);
           await writeDB(content);
@@ -585,7 +615,7 @@ app.delete('/api/lessons/:id', authenticateTeacher, async (req, res) => {
 });
 
 // Add a new grade
-app.post('/api/grades', authenticateTeacher, async (req, res) => {
+app.post('/api/grades', authenticateTeacher, contentTrialGuard, async (req, res) => {
   const { name } = req.body;
   if (!name) {
     return res.status(400).json({ message: 'Grade name is required.' });
@@ -607,7 +637,7 @@ app.post('/api/grades', authenticateTeacher, async (req, res) => {
 });
 
 // Add a new unit to a grade
-app.post('/api/units', authenticateTeacher, async (req, res) => {
+app.post('/api/units', authenticateTeacher, contentTrialGuard, async (req, res) => {
   const { gradeId, name } = req.body;
   if (!gradeId || !name) {
     return res.status(400).json({ message: 'Grade ID and unit name are required.' });
@@ -705,7 +735,7 @@ app.get('/api/ai-lessons/:id', (req, res) => {
 });
 
 // Add a new lesson to a unit
-app.post('/api/lessons', authenticateTeacher, async (req, res) => {
+app.post('/api/lessons', authenticateTeacher, contentTrialGuard, async (req, res) => {
   const { unitId, name } = req.body;
   if (!unitId || !name) {
     return res.status(400).json({ message: 'Unit ID and lesson name are required.' });
@@ -742,7 +772,7 @@ const fssync = require('fs');
 const resultsPath = path.join(dataDir, 'results.json');
 const studentsPath = path.join(dataDir, 'students.json');
 const groupsPath = path.join(dataDir, 'groups.json');
-const tempQuizzesPath = path.join(__dirname, '..', 'temp_quizzes.json');
+const tempQuizzesPath = path.join(dataDir, 'temp_quizzes.json');
 
 function ensureDataFiles() {
   try { if (!fssync.existsSync(dataDir)) fssync.mkdirSync(dataDir, { recursive: true }); } catch {}
@@ -808,9 +838,13 @@ app.get('/api/group/:id/students', (req, res) => {
 });
 
 // PUT /api/groups/bulk — upsert groups list (never DELETE to avoid ON DELETE SET NULL cascade)
-app.put('/api/groups/bulk', authenticateTeacher, (req, res) => {
+app.put('/api/groups/bulk', authenticateTeacher, async (req, res) => {
   try {
     const groups = Array.isArray(req.body) ? req.body : [];
+    const trial = await getActiveTrial();
+    if (trial && groups.length > trial.maxGroups) {
+      return res.status(403).json({ message: `النسخة التجريبية تسمح بـ ${trial.maxGroups} ${trial.maxGroups === 1 ? 'مجموعة' : 'مجموعات'} كحد أقصى` });
+    }
     const now = new Date().toISOString();
     db.transaction(() => {
       const upsert = db.prepare(`
@@ -840,9 +874,13 @@ app.put('/api/groups/bulk', authenticateTeacher, (req, res) => {
 });
 
 // PUT /api/students/bulk — replace entire students list (used by save-students IPC)
-app.put('/api/students/bulk', authenticateTeacher, (req, res) => {
+app.put('/api/students/bulk', authenticateTeacher, async (req, res) => {
   try {
     const students = Array.isArray(req.body) ? req.body : [];
+    const trial = await getActiveTrial();
+    if (trial && students.length > trial.maxStudents) {
+      return res.status(403).json({ message: `النسخة التجريبية تسمح بـ ${trial.maxStudents} طلاب كحد أقصى` });
+    }
     const now = new Date().toISOString();
     db.transaction(() => {
       db.prepare('DELETE FROM students').run();
@@ -857,10 +895,15 @@ app.put('/api/students/bulk', authenticateTeacher, (req, res) => {
 });
 
 // POST /api/students — add single student
-app.post('/api/students', authenticateTeacher, (req, res) => {
+app.post('/api/students', authenticateTeacher, async (req, res) => {
   try {
     const { id, group_id, groupId, name, code, gender, photo, attendanceDate, notes, ...rest } = req.body || {};
     if (!name) return res.status(400).json({ message: 'name is required' });
+    const trial = await getActiveTrial();
+    if (trial) {
+      const count = db.prepare('SELECT COUNT(*) as c FROM students').get().c;
+      if (count >= trial.maxStudents) return res.status(403).json({ message: `النسخة التجريبية تسمح بـ ${trial.maxStudents} طلاب كحد أقصى` });
+    }
     const now = new Date().toISOString();
     const sid = id || crypto.randomUUID();
     db.prepare('INSERT INTO students (id,group_id,name,code,gender,photo,attendance_date,notes,extra_json,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)')
@@ -892,10 +935,15 @@ app.delete('/api/students/:id', authenticateTeacher, (req, res) => {
 });
 
 // POST /api/groups — add single group
-app.post('/api/groups', authenticateTeacher, (req, res) => {
+app.post('/api/groups', authenticateTeacher, async (req, res) => {
   try {
     const { id, name, color, icon, ...rest } = req.body || {};
     if (!name) return res.status(400).json({ message: 'name is required' });
+    const trial = await getActiveTrial();
+    if (trial) {
+      const count = db.prepare('SELECT COUNT(*) as c FROM groups').get().c;
+      if (count >= trial.maxGroups) return res.status(403).json({ message: `النسخة التجريبية تسمح بـ ${trial.maxGroups} ${trial.maxGroups === 1 ? 'مجموعة' : 'مجموعات'} كحد أقصى` });
+    }
     const now = new Date().toISOString();
     const gid = id || crypto.randomUUID();
     db.prepare('INSERT INTO groups (id,name,color,icon,extra_json,created_at,updated_at) VALUES (?,?,?,?,?,?,?)')
@@ -990,10 +1038,15 @@ app.get('/results', authenticateTeacher, (req, res) => {
 // ===== Quiz & Questions CRUD (SQLite) =====
 
 // Create a new quiz
-app.post('/api/quizzes', authenticateTeacher, (req, res) => {
+app.post('/api/quizzes', authenticateTeacher, async (req, res) => {
   try {
     const { name, description, groupId, duration, status, settings } = req.body || {};
     if (!name || typeof name !== 'string') return res.status(400).json({ message: 'name is required' });
+    const trial = await getActiveTrial();
+    if (trial) {
+      const count = db.prepare('SELECT COUNT(*) as c FROM quizzes').get().c;
+      if (count >= trial.maxQuizzes) return res.status(403).json({ message: `النسخة التجريبية تسمح بـ ${trial.maxQuizzes} اختبارات كحد أقصى` });
+    }
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
     
@@ -1350,23 +1403,62 @@ app.delete('/api/settings/:key', authenticateTeacher, (req, res) => {
   }
 });
 
+// Helper: copy a directory recursively
+async function copyDir(src, dest) {
+  await fs.mkdir(dest, { recursive: true });
+  const entries = await fs.readdir(src, { withFileTypes: true });
+  for (const entry of entries) {
+    const s = path.join(src, entry.name);
+    const d = path.join(dest, entry.name);
+    if (entry.isDirectory()) await copyDir(s, d);
+    else await fs.copyFile(s, d);
+  }
+}
+
+// Reset all data
+app.post('/api/reset-all', authenticateTeacher, async (req, res) => {
+  try {
+    // 1. Clear SQLite tables (order respects FK constraints)
+    db.prepare('DELETE FROM results').run();
+    db.prepare('DELETE FROM short_links').run();
+    db.prepare('DELETE FROM questions').run();
+    db.prepare('DELETE FROM quizzes').run();
+    db.prepare('DELETE FROM game_results').run();
+    db.prepare('DELETE FROM ai_lessons').run();
+    db.prepare('DELETE FROM students').run();
+    db.prepare('DELETE FROM groups').run();
+
+    // 2. Clear educational content (db.json)
+    await writeDB({ grades: [], quizzes: [] });
+
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
 // Database backup and restore endpoints
 app.post('/api/backup', authenticateTeacher, async (req, res) => {
   try {
     const { backupPath } = req.body;
-    if (!backupPath) {
-      return res.status(400).json({ message: 'Backup path is required' });
-    }
-    
-    // Use the active data directory (Electron sets APP_DATA_DIR); the old code
-    // hard-coded ../data which pointed at the wrong file in the packaged app.
-    const liveDbPath = path.join(dataDir, 'activeclass.db');
+    if (!backupPath) return res.status(400).json({ message: 'Backup path is required' });
+
     const _n = new Date();
     const _stamp = `${_n.getFullYear()}-${String(_n.getMonth()+1).padStart(2,'0')}-${String(_n.getDate()).padStart(2,'0')}_${String(_n.getHours()).padStart(2,'0')}-${String(_n.getMinutes()).padStart(2,'0')}`;
-    const backupFile = path.join(backupPath, `activeclass_backup_${_stamp}.db`);
+    const zipName = `activeclass_backup_${_stamp}.acbak`;
+    const zipPath = path.join(backupPath, zipName);
 
-    await fs.copyFile(liveDbPath, backupFile);
-    res.json({ success: true, backupFile });
+    const zip = new AdmZip();
+
+    // 1. SQLite database
+    const liveDbPath = path.join(dataDir, 'activeclass.db');
+    zip.addLocalFile(liveDbPath, '', 'activeclass.db');
+
+    // 2. Educational content (db.json)
+    if (fsSync.existsSync(dbPath)) {
+      zip.addLocalFile(dbPath, '', 'db.json');
+    }
+
+    zip.writeZip(zipPath);
+    res.json({ success: true, backupFile: zipPath });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -1385,17 +1477,36 @@ app.post('/api/restore', authenticateTeacher, async (req, res) => {
     }
 
     const liveDbPath = path.join(dataDir, 'activeclass.db');
+    const stat = await fs.stat(source);
 
-    // The WAL'd file is locked while open, so close before overwriting,
-    // then reopen so the shared `db` proxy points at the restored data.
-    closeDB();
-    await fs.copyFile(source, liveDbPath);
-    openDB();
+    if (stat.isDirectory()) {
+      // Old folder format (backward compat)
+      closeDB();
+      await fs.copyFile(path.join(source, 'activeclass.db'), liveDbPath);
+      openDB();
+      try { await fs.copyFile(path.join(source, 'db.json'), dbPath); } catch {}
+
+    } else if (source.endsWith('.acbak') || source.endsWith('.zip')) {
+      // New ZIP format
+      const zip = new AdmZip(source);
+      closeDB();
+      const dbEntry = zip.getEntry('activeclass.db');
+      if (!dbEntry) { openDB(); return res.status(400).json({ message: 'Invalid backup file' }); }
+      zip.extractEntryTo(dbEntry, dataDir, false, true);
+      openDB();
+      const jsonEntry = zip.getEntry('db.json');
+      if (jsonEntry) zip.extractEntryTo(jsonEntry, path.dirname(dbPath), false, true);
+
+    } else {
+      // Legacy single .db file
+      closeDB();
+      await fs.copyFile(source, liveDbPath);
+      openDB();
+    }
 
     res.json({ success: true });
   } catch (error) {
-    // Make sure we leave a usable connection behind even if the copy failed.
-    try { openDB(); } catch { /* ignore */ }
+    try { openDB(); } catch {}
     res.status(500).json({ message: error.message });
   }
 });
@@ -1671,6 +1782,30 @@ async function readTrialConfig() {
   try { return JSON.parse(await fs.readFile(TRIAL_CONFIG_FILE, 'utf8')); }
   catch { return { ...DEFAULT_TRIAL_CONFIG }; }
 }
+
+// Middleware: block if trial is active and the given feature is disabled/over limit
+function trialGuard(check) {
+  return async (req, res, next) => {
+    const trial = await getActiveTrial();
+    if (!trial) return next();
+    const result = await check(trial, req);
+    if (result) return res.status(403).json({ message: result });
+    next();
+  };
+}
+
+// Returns trial limits object if in an active trial, otherwise null
+async function getActiveTrial() {
+  try {
+    const trialFile = path.join(dataDir, 'ac_trial.json');
+    const t = JSON.parse(await fs.readFile(trialFile, 'utf8'));
+    if (!t || !t.expiresAt) return null;
+    if (new Date(t.expiresAt) < new Date()) return null; // expired
+    const cfg = await readTrialConfig();
+    return { ...DEFAULT_TRIAL_CONFIG, ...cfg };
+  } catch { return null; }
+}
+
 async function readTrialLog() {
   try { return JSON.parse(await fs.readFile(TRIAL_LOG_FILE, 'utf8')); }
   catch { return []; }
@@ -1723,10 +1858,25 @@ app.get('/api/trial-stats', async (req, res) => {
 app.post('/api/trial-log', async (req, res) => {
   try {
     const log = await readTrialLog();
-    log.push({ activatedAt: new Date().toISOString(), machineId: req.body.machineId || '' });
+    const machineId = req.body.machineId || '';
+    if (!log.find(e => e.machineId === machineId)) {
+      log.push({ activatedAt: new Date().toISOString(), machineId });
+    }
     await fs.writeFile(TRIAL_LOG_FILE, JSON.stringify(log, null, 2), 'utf8');
     res.json({ ok: true });
   } catch { res.json({ ok: false }); }
+});
+
+app.delete('/api/trial-log/:machineId', async (req, res) => {
+  try {
+    const id = decodeURIComponent(req.params.machineId);
+    let log = await readTrialLog();
+    log = log.filter(e => e.machineId !== id);
+    await fs.writeFile(TRIAL_LOG_FILE, JSON.stringify(log, null, 2), 'utf8');
+    // Delete local trial file so the app shows activation screen on next launch
+    try { await fs.unlink(path.join(dataDir, 'ac_trial.json')); } catch {}
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 // ──────────────────────────────────────────────────────────────────────────
 

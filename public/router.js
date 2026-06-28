@@ -126,7 +126,6 @@
     '/hero-attack': () => fetchPageContent('/pages/hero-attack.html'),
     '/dino-english': () => fetchPageContent('/pages/dino-english.html'),
     '/duck-race': () => fetchPageContent('/pages/duck-race.html'),
-    '/dot-puzzle': () => fetchPageContent('/pages/dot-puzzle/index.html'),
     '/game-geography-map': () => fetchPageContent('/pages/game_geography_map.html'),
     // Game Engine Routes
     '/external-game': () => fetchPageContent('/pages/external-game.html'),

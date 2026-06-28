@@ -181,6 +181,20 @@ function createWindow() {
     }, 3000); // give the app time to finish loading before any redirect
   }
 
+  // Poll every 30s: if trial file disappears while app is open, redirect to activation
+  if (isTrialValid(trial)) {
+    const trialWatcher = setInterval(() => {
+      if (!mainWindow || mainWindow.isDestroyed()) { clearInterval(trialWatcher); return; }
+      const currentLic = readLicenseFile();
+      if (isLicenseValid(currentLic)) { clearInterval(trialWatcher); return; } // got a real license
+      const currentTrial = readTrialFile();
+      if (!isTrialValid(currentTrial)) {
+        clearInterval(trialWatcher);
+        mainWindow.loadURL(`${APP_URL}/pages/activation.html`);
+      }
+    }, 30000);
+  }
+
   // Block popup windows from embedded games; open external URLs in system browser
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('http://') || url.startsWith('https://')) {
@@ -314,6 +328,8 @@ function startServer() {
 
     // Set env vars the server reads at startup
     process.env.APP_DATA_DIR    = path.join(userDataPath, 'classroom-data');
+    process.env.APP_DB_PATH     = path.join(userDataPath, 'db.json');
+    process.env.APP_UPLOADS_DIR = path.join(userDataPath, 'uploads');
     process.env.SERVER_API_KEY  = SERVER_API_KEY;
 
     // In both packaged and dev mode, require() the server directly in the main process.
@@ -700,7 +716,10 @@ app.whenReady().then(async () => {
   ipcMain.handle('select-backup-file', async () => {
     const result = await dialog.showOpenDialog({
       title: 'اختر ملف النسخة الاحتياطية',
-      filters: [{ name: 'Database Backup', extensions: ['db'] }],
+      filters: [
+        { name: 'Active Class Backup', extensions: ['acbak'] },
+        { name: 'Legacy Backup', extensions: ['db'] },
+      ],
       properties: ['openFile']
     });
     if (result.canceled) return { canceled: true };
@@ -931,6 +950,13 @@ app.whenReady().then(async () => {
     return serverResult || { ok: true, offline: true }; // trust local if offline
   });
 
+  ipcMain.handle('logout-license', () => {
+    try { fs.unlinkSync(LICENSE_FILE()); } catch {}
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.loadURL('http://localhost:5000/pages/activation.html');
+    }
+  });
+
   ipcMain.handle('license-verified', () => {
     // Renderer confirmed license — load the main app
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -943,7 +969,28 @@ app.whenReady().then(async () => {
     if (!lic) return { valid: false, licensed: false };
     if (!isLicenseValid(lic)) return { valid: false, licensed: false, expired: true, expiresAt: lic.expiresAt };
     const daysLeft = Math.ceil((new Date(lic.expiresAt) - new Date()) / 86400000);
-    return { valid: true, licensed: true, name: lic.name || '', plan: lic.plan, expiresAt: lic.expiresAt, daysLeft, totalDays: lic.totalDays || 365 };
+    return { valid: true, licensed: true, name: lic.name || '', plan: lic.plan, expiresAt: lic.expiresAt, daysLeft, totalDays: lic.totalDays || 365, key: lic.key, phone: lic.phone, machineId: lic.machineId };
+  });
+
+  ipcMain.handle('refresh-license', async () => {
+    const lic = readLicenseFile();
+    if (!lic || !lic.key || !lic.machineId) return { valid: false, licensed: false };
+    try {
+      const result = await verifyWithServer(lic.key, lic.machineId);
+      if (result && result.ok === false) {
+        try { fs.unlinkSync(LICENSE_FILE()); } catch {}
+        return { valid: false, licensed: false, revoked: true };
+      }
+      if (result && result.ok) {
+        const updated = { ...lic, ...result, key: lic.key, machineId: lic.machineId, cachedAt: new Date().toISOString() };
+        writeLicenseFile(updated);
+        const daysLeft = Math.ceil((new Date(updated.expiresAt) - new Date()) / 86400000);
+        return { valid: true, licensed: true, name: updated.name, plan: updated.plan, expiresAt: updated.expiresAt, daysLeft, totalDays: updated.totalDays || 365, key: updated.key, phone: updated.phone, machineId: updated.machineId };
+      }
+    } catch {}
+    // Offline — return cached data
+    const daysLeft = Math.ceil((new Date(lic.expiresAt) - new Date()) / 86400000);
+    return { valid: true, licensed: true, name: lic.name, plan: lic.plan, expiresAt: lic.expiresAt, daysLeft, totalDays: lic.totalDays || 365, key: lic.key, phone: lic.phone, machineId: lic.machineId, offline: true };
   });
 
   // ── Trial IPC ────────────────────────────────────────────────────────────
@@ -1276,12 +1323,14 @@ app.whenReady().then(async () => {
   const _existingTrial = readTrialFile();
   if (_existingTrial && isTrialValid(_existingTrial)) {
     try {
-      const _logPath = path.join(__dirname, 'data', 'trial-log.json');
+      const _dataDir = process.env.APP_DATA_DIR || path.join(__dirname, 'data');
+      const _logPath = path.join(_dataDir, 'trial-log.json');
       let _log = [];
       try { _log = JSON.parse(fs.readFileSync(_logPath, 'utf8')); } catch {}
       const _mid = getMachineId();
       if (!_log.some(e => e.machineId === _mid)) {
         _log.push({ activatedAt: _existingTrial.startedAt || new Date().toISOString(), machineId: _mid, backfilled: true });
+        fs.mkdirSync(_dataDir, { recursive: true });
         fs.writeFileSync(_logPath, JSON.stringify(_log, null, 2), 'utf8');
       }
     } catch {}

@@ -56,6 +56,8 @@ contextBridge.exposeInMainWorld('api', {
   verifyLicense:    (key, mid)   => ipcRenderer.invoke('verify-license', key, mid),
   licenseVerified:  ()           => ipcRenderer.invoke('license-verified'),
   getLicenseStatus: ()           => ipcRenderer.invoke('get-license-status'),
+  refreshLicense:   ()           => ipcRenderer.invoke('refresh-license'),
+  logoutLicense:    ()           => ipcRenderer.invoke('logout-license'),
 
   // Window operations
   openToolWindow: (toolName) => ipcRenderer.invoke('open-tool-window', toolName),

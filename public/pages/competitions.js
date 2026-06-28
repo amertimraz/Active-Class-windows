@@ -955,6 +955,9 @@ function addScore(id, pts) {
     showScreen('setup');
     await loadAll();
     filterQuizzesByGroup();
+    const _qtT = document.getElementById('qtToggle_cmp');
+    const _qtM = document.getElementById('qtMenu_cmp');
+    if (_qtT && _qtM && window.initQtWidget) window.initQtWidget(_qtT, _qtM);
   })();
 
 })();

@@ -3,7 +3,6 @@ class SettingsManager {
     constructor() {
         this.settings = {};
         this.defaultSettings = {
-            language: 'ar',
             theme: 'light',
             dbPath: '',
             backupPath: '',
@@ -20,116 +19,14 @@ class SettingsManager {
         };
         
         this.translations = {
-            ar: {
-                // Database tab
-                'database_tab_title': '💾 إعدادات قاعدة البيانات والنسخ الاحتياطي',
-                'database_tab_desc': 'إدارة قاعدة البيانات والنسخ الاحتياطي',
-                'current_db_path': 'المسار الحالي:',
-                'change_db_path': 'تغيير المكان',
-                'backup_folder': 'مجلد النسخ الاحتياطي:',
-                'select_backup_path': 'اختيار مجلد',
-                'backup_now': '📥 نسخ احتياطي الآن',
-                'restore_backup': '📤 استرجاع نسخة',
-                'auto_backup': 'نسخ احتياطي تلقائي عند إغلاق البرنامج',
-                
-                // Appearance tab
-                'appearance_tab_title': '🎨 المظهر واللغة',
-                'appearance_tab_desc': 'تخصيص مظهر البرنامج واللغة',
-                'language_label': '🌐 اللغة',
-                'theme_label': '🌙 الثيم',
-                'dark_mode': 'الوضع الداكن',
-                'reset_settings': 'إعادة ضبط جميع الإعدادات',
-                'reset_warning': '⚠️ سيتم إعادة ضبط جميع الإعدادات إلى القيم الافتراضية',
-                
-                // Interface tab
-                'interface_tab_title': '🖥️ واجهة النظام والتحكم',
-                'interface_tab_desc': 'تحكم في عناصر الواجهة وخيارات العرض',
-                'delete_buttons': '🗑️ أزرار الحذف',
-                'show_delete_students': 'إظهار زر "حذف جميع الطلاب" 👨‍🎓',
-                'show_delete_groups': 'إظهار زر "حذف جميع المجموعات" 🧑‍🤝‍🧑',
-                'display_options': '📊 خيارات العرض',
-                'show_animations': 'تفعيل الرسوم المتحركة',
-                'show_notifications': 'إظهار الإشعارات',
-                
-                // About tab
-                'about_tab_title': 'ℹ️ حول البرنامج',
-                'about_tab_desc': 'معلومات حول Active Class',
-                'version': 'الإصدار 1.0.0',
-                'description': 'برنامج إدارة الفصول الدراسية التفاعلي',
-                'developer': '👨‍💻 المطور',
-                'developer_text': 'تم تطوير هذا البرنامج بواسطة فريق Active Class',
-                'useful_links': '🔗 الروابط المفيدة',
-                
-                // Buttons
-                'cancel': 'إلغاء',
-                'save_settings': 'حفظ الإعدادات',
-                'close': 'إغلاق',
-                
-                // Messages
-                'settings_saved': 'تم حفظ الإعدادات بنجاح',
-                'settings_error': 'حدث خطأ في حفظ الإعدادات',
-                'backup_success': 'تم إنشاء النسخة الاحتياطية بنجاح',
-                'backup_error': 'حدث خطأ في إنشاء النسخة الاحتياطية',
-                'restore_success': 'تم استرجاع النسخة الاحتياطية بنجاح',
-                'restore_error': 'حدث خطأ في استرجاع النسخة الاحتياطية',
-                'reset_confirm': 'هل أنت متأكد من إعادة ضبط جميع الإعدادات؟',
-                'processing': 'جاري المعالجة...'
-            },
-            en: {
-                // Database tab
-                'database_tab_title': '💾 Database & Backup Settings',
-                'database_tab_desc': 'Manage database and backup settings',
-                'current_db_path': 'Current Path:',
-                'change_db_path': 'Change Location',
-                'backup_folder': 'Backup Folder:',
-                'select_backup_path': 'Select Folder',
-                'backup_now': '📥 Backup Now',
-                'restore_backup': '📤 Restore Backup',
-                'auto_backup': 'Auto backup on app close',
-                
-                // Appearance tab
-                'appearance_tab_title': '🎨 Appearance & Language',
-                'appearance_tab_desc': 'Customize app appearance and language',
-                'language_label': '🌐 Language',
-                'theme_label': '🌙 Theme',
-                'dark_mode': 'Dark Mode',
-                'reset_settings': 'Reset All Settings',
-                'reset_warning': '⚠️ All settings will be reset to default values',
-                
-                // Interface tab
-                'interface_tab_title': '🖥️ System Interface & Control',
-                'interface_tab_desc': 'Control interface elements and display options',
-                'delete_buttons': '🗑️ Delete Buttons',
-                'show_delete_students': 'Show "Delete All Students" button 👨‍🎓',
-                'show_delete_groups': 'Show "Delete All Groups" button 🧑‍🤝‍🧑',
-                'display_options': '📊 Display Options',
-                'show_animations': 'Enable animations',
-                'show_notifications': 'Show notifications',
-                
-                // About tab
-                'about_tab_title': 'ℹ️ About',
-                'about_tab_desc': 'Information about Active Class',
-                'version': 'Version 1.0.0',
-                'description': 'Interactive Classroom Management Software',
-                'developer': '👨‍💻 Developer',
-                'developer_text': 'Developed by Active Class Team',
-                'useful_links': '🔗 Useful Links',
-                
-                // Buttons
-                'cancel': 'Cancel',
-                'save_settings': 'Save Settings',
-                'close': 'Close',
-                
-                // Messages
-                'settings_saved': 'Settings saved successfully',
-                'settings_error': 'Error saving settings',
-                'backup_success': 'Backup created successfully',
-                'backup_error': 'Error creating backup',
-                'restore_success': 'Backup restored successfully',
-                'restore_error': 'Error restoring backup',
-                'reset_confirm': 'Are you sure you want to reset all settings?',
-                'processing': 'Processing...'
-            }
+            'restore_backup': 'استرجاع نسخة',
+            'settings_saved': 'تم حفظ الإعدادات بنجاح',
+            'settings_error': 'حدث خطأ في حفظ الإعدادات',
+            'backup_success': 'تم إنشاء النسخة الاحتياطية بنجاح',
+            'backup_error': 'حدث خطأ في إنشاء النسخة الاحتياطية',
+            'restore_success': 'تم استرجاع النسخة الاحتياطية بنجاح',
+            'restore_error': 'حدث خطأ في استرجاع النسخة الاحتياطية',
+            'reset_confirm': 'هل أنت متأكد من إعادة ضبط جميع الإعدادات؟',
         };
         
         this.init();
@@ -140,9 +37,8 @@ class SettingsManager {
         this.setupEventListeners();
         this.updateUI();
         this.applyTheme();
-        this.applyLanguage();
     }
-    
+
     async loadSettings() {
         try {
             const response = await authFetch('/api/settings');
@@ -180,7 +76,6 @@ class SettingsManager {
             
             this.showNotification(this.t('settings_saved'), 'success');
             this.applyTheme();
-            this.applyLanguage();
             setTimeout(() => this.closeModal(), 600);
             
         } catch (error) {
@@ -216,22 +111,17 @@ class SettingsManager {
             });
         });
 
-        // Theme selection - using radio buttons in the new structure
-        document.querySelectorAll('input[name="theme"]').forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                this.settings.theme = e.target.value;
+        // Theme toggle in header
+        const themeToggle = document.getElementById('headerThemeToggle');
+        if (themeToggle) {
+            themeToggle.addEventListener('click', () => {
+                this.settings.theme = this.settings.theme === 'dark' ? 'light' : 'dark';
                 this.applyTheme();
-            });
-        });
-        
-        // Language selection
-        const languageSelect = document.getElementById('languageSelect');
-        if (languageSelect) {
-            languageSelect.addEventListener('change', (e) => {
-                this.settings.language = e.target.value;
-                this.applyLanguage();
+                this._updateHeaderControls();
+                authFetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'theme', value: this.settings.theme }) }).catch(() => {});
             });
         }
+
 
         // ── Export / Restore buttons ────────────────────────────────────────
         const exportDbBtn = document.getElementById('exportDbBtn');
@@ -309,11 +199,7 @@ class SettingsManager {
         localStorage.setItem('cm_theme', this.settings.theme);
     }
 
-    applyLanguage() {
-        localStorage.setItem('cm_language', this.settings.language);
-        // In a real app, this might trigger a reload or use I18n.apply
-        try { window.I18n && window.I18n.apply(document); } catch {}
-    }
+
     
     switchTab(tabName) {
         if (!tabName) return;
@@ -325,8 +211,7 @@ class SettingsManager {
 
         // Update header title/subtitle
         const titles = {
-            appearance: ['المظهر واللغة', 'تخصيص مظهر التطبيق ولغة الواجهة'],
-            database:   ['قاعدة البيانات', 'النسخ الاحتياطي وإحصائيات البيانات'],
+            database:   ['النسخ الاحتياطي', 'حفظ واسترجاع بيانات التطبيق'],
             interface:  ['الذكاء الاصطناعي', 'إعداد مفتاح Groq API'],
             license:    ['الترخيص', 'معلومات المستخدم والترخيص'],
             about:      ['حول البرنامج', 'معلومات عن Active Class'],
@@ -348,24 +233,17 @@ class SettingsManager {
         if (tabContent) tabContent.classList.add('active');
     }
     
+    _updateHeaderControls() {
+        const isDark = this.settings.theme === 'dark';
+        const sunIcon  = document.getElementById('themeIconSun');
+        const moonIcon = document.getElementById('themeIconMoon');
+        if (sunIcon)  sunIcon.style.display  = isDark ? 'none' : '';
+        if (moonIcon) moonIcon.style.display = isDark ? '' : 'none';
+    }
+
     updateUI() {
         try {
-            // Theme selection
-            const themeRadio = document.querySelector(`input[name="theme"][value="${this.settings.theme}"]`);
-            if (themeRadio) {
-                themeRadio.checked = true;
-                // Highlight the selected radio label
-                document.querySelectorAll('input[name="theme"]').forEach(r => {
-                    r.parentElement.style.borderColor = 'var(--border)';
-                });
-                themeRadio.parentElement.style.borderColor = 'var(--primary)';
-            }
-            
-            // Language selection
-            const languageSelect = document.getElementById('languageSelect');
-            if (languageSelect) {
-                languageSelect.value = this.settings.language;
-            }
+            this._updateHeaderControls();
             
             // Groq API Key
             const geminiInput = document.getElementById('groqApiKey');
@@ -574,7 +452,6 @@ class SettingsManager {
             this.settings = { ...this.defaultSettings };
             this.updateUI();
             this.applyTheme();
-            this.applyLanguage();
             this.showNotification('تم إعادة ضبط الإعدادات', 'success');
         }
     }
@@ -591,55 +468,9 @@ class SettingsManager {
         }
     }
     
-    applyLanguage() {
-        const lang = this.settings.language || 'ar';
-        const isRTL = lang === 'ar';
-        // Apply on current document
-        document.documentElement.setAttribute('lang', lang);
-        document.documentElement.setAttribute('dir', isRTL ? 'rtl' : 'ltr');
-        // Persist and broadcast to other pages/windows
-        try { localStorage.setItem('cm_language', lang); } catch {}
-        // Custom event for same-document listeners
-        try { window.dispatchEvent(new CustomEvent('cm-language-changed', { detail: { language: lang } })); } catch {}
-        
-        // Update all translatable elements in this modal
-        this.updateTranslations();
-        
-        // Apply to parent window if in modal/iframe
-        if (window.parent && window.parent !== window) {
-            try {
-                window.parent.document.documentElement.setAttribute('lang', lang);
-                window.parent.document.documentElement.setAttribute('dir', isRTL ? 'rtl' : 'ltr');
-            } catch(_) {}
-        }
-    }
-    
-    updateTranslations() {
-        const updateText = (selector, key) => {
-            const el = document.querySelector(selector);
-            if (el) el.textContent = this.t(key);
-        };
-
-        // Update tab headers & descriptions safely
-        updateText('#database-tab h3', 'database_tab_title');
-        updateText('#database-tab .tab-description', 'database_tab_desc');
-        
-        updateText('#appearance-tab h3', 'appearance_tab_title');
-        updateText('#appearance-tab .tab-description', 'appearance_tab_desc');
-        
-        updateText('#interface-tab h3', 'interface_tab_title');
-        updateText('#interface-tab .tab-description', 'interface_tab_desc');
-        
-        updateText('#about-tab h3', 'about_tab_title');
-        updateText('#about-tab .tab-description', 'about_tab_desc');
-        
-        // Update buttons
-        updateText('#cancelSettings', 'cancel');
-        updateText('#saveSettings', 'save_settings');
-    }
     
     t(key) {
-        return this.translations[this.settings.language]?.[key] || key;
+        return this.translations[key] || key;
     }
 
     _fillGamesTab() {
@@ -722,9 +553,20 @@ class SettingsManager {
         tab.innerHTML = html;
     }
 
-    _fillLicenseTab() {
+    async _fillLicenseTab() {
         try {
-            const lic = JSON.parse(localStorage.getItem('ac_license_v1') || 'null');
+            // Always fetch fresh data from server (catches admin edits to expiry/plan)
+            let lic = null;
+            if (window.api?.refreshLicense) {
+                const fresh = await window.api.refreshLicense();
+                if (fresh?.licensed) lic = fresh;
+            }
+            // Fallback: cached file via IPC
+            if (!lic && window.api?.getLicenseStatus) {
+                const status = await window.api.getLicenseStatus();
+                if (status?.licensed) lic = status;
+            }
+            if (!lic) lic = JSON.parse(localStorage.getItem('ac_license_v1') || 'null');
             const reg = JSON.parse(localStorage.getItem('ac_registration_v1') || 'null');
 
             const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || '—'; };
@@ -764,6 +606,24 @@ class SettingsManager {
             const name = lic?.name || reg?.name;
             if (nameEl && name) nameEl.textContent = name;
 
+        // Logout button
+        const logoutBtn    = document.getElementById('licLogoutBtn');
+        const logoutModal  = document.getElementById('licLogoutModal');
+        const logoutCancel = document.getElementById('licLogoutCancel');
+        const logoutConfirm = document.getElementById('licLogoutConfirm');
+        if (logoutBtn && logoutModal) {
+            logoutBtn.onmouseenter = () => { logoutBtn.style.background = '#fef2f2'; };
+            logoutBtn.onmouseleave = () => { logoutBtn.style.background = 'transparent'; };
+            logoutBtn.onclick = () => { logoutModal.style.display = 'flex'; };
+            logoutCancel.onclick = () => { logoutModal.style.display = 'none'; };
+            logoutModal.onclick = (e) => { if (e.target === logoutModal) logoutModal.style.display = 'none'; };
+            logoutConfirm.onclick = async () => {
+                logoutConfirm.disabled = true;
+                logoutConfirm.textContent = 'جاري الخروج...';
+                if (window.api?.logoutLicense) await window.api.logoutLicense();
+            };
+        }
+
         } catch (e) { console.warn('_fillLicenseTab error', e); }
     }
 
@@ -774,21 +634,60 @@ class SettingsManager {
             modal.style.display = 'flex';
             document.body.style.overflow = 'hidden';
             this.updateUI();
-            // Load DB stats
-            try {
-                const [students, groups, quizzes] = await Promise.all([
-                    window.api?.loadStudents?.() ?? [],
-                    window.api?.loadGroups?.()   ?? [],
-                    window.api?.loadQuizzes?.()  ?? [],
-                ]);
-                const s = document.getElementById('sm-stat-students');
-                const g = document.getElementById('sm-stat-groups');
-                const q = document.getElementById('sm-stat-quizzes');
-                if (s) s.textContent = `${Array.isArray(students) ? students.length : 0} طالب`;
-                if (g) g.textContent = `${Array.isArray(groups)   ? groups.length   : 0} مجموعة`;
-                if (q) q.textContent = `${Array.isArray(quizzes)  ? quizzes.length  : 0} اختبار`;
-            } catch {}
+            this.switchTab('database');
+            this._loadStats();
+            this._initResetAll();
         }
+    }
+
+    async _loadStats() {
+        try {
+            const [groups, quizzes] = await Promise.all([
+                window.api?.loadGroups?.()  ?? [],
+                window.api?.loadQuizzes?.() ?? [],
+            ]);
+            const studentCount = Array.isArray(groups)
+                ? groups.reduce((sum, g) => sum + (g.studentCount ?? g.studentsCount ?? 0), 0)
+                : 0;
+            const s = document.getElementById('sm-stat-students');
+            const g = document.getElementById('sm-stat-groups');
+            const q = document.getElementById('sm-stat-quizzes');
+            if (s) s.textContent = studentCount;
+            if (g) g.textContent = Array.isArray(groups)  ? groups.length  : 0;
+            if (q) q.textContent = Array.isArray(quizzes) ? quizzes.length : 0;
+        } catch(e) { console.error('_loadStats:', e); }
+    }
+
+    _initResetAll() {
+        const btn     = document.getElementById('sm-reset-all-btn');
+        const modal   = document.getElementById('sm-reset-modal');
+        const cancel  = document.getElementById('sm-reset-cancel');
+        const confirm = document.getElementById('sm-reset-confirm');
+        if (!btn || !modal) return;
+
+        btn.onmouseenter = () => { btn.style.background = '#fef2f2'; };
+        btn.onmouseleave = () => { btn.style.background = 'transparent'; };
+
+        btn.onclick = () => { modal.style.display = 'flex'; };
+        cancel.onclick  = () => { modal.style.display = 'none'; };
+        modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
+
+        confirm.onclick = async () => {
+            confirm.disabled = true;
+            confirm.textContent = 'جاري الحذف...';
+            try {
+                const res = await authFetch('/api/reset-all', { method: 'POST' });
+                if (!res.ok) throw new Error('reset failed');
+                modal.style.display = 'none';
+                this._loadStats();
+                this.showNotification('✅ تم تصفير جميع البيانات', 'success');
+            } catch(e) {
+                this.showNotification('❌ حدث خطأ أثناء التصفير', 'error');
+            } finally {
+                confirm.disabled = false;
+                confirm.textContent = 'تأكيد الحذف';
+            }
+        };
     }
     
     closeModal() {

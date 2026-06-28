@@ -84,7 +84,8 @@
   /* annotation — non-PDF (cnt-canvas overlay, content coords) */
   let canvas, ctx;
   let annoMode = false, drawing = false;
-  let tool = 'pen', color = '#ef4444';
+  let tool = 'pen', color = '#ef4444', strokeWidth = 3, strokeDash = 'solid';
+  let activeShape = 'rect'; // last selected shape
   let strokes = [];
   let curStroke = null;
 
@@ -235,8 +236,10 @@
     setText('dStatLessons', lessons);
     setText('dStatFiles',   files);
 
-    /* recent lessons (stored in localStorage, max 5) */
-    const recent = _getRecent();
+    /* recent lessons (stored in localStorage, max 5) — filter out deleted ones */
+    const allLessonIds = new Set(grades.flatMap(g => (g.units || []).flatMap(u => (u.lessons || []).map(l => l.id))));
+    const recent = _getRecent().filter(r => allLessonIds.has(r.lid));
+    localStorage.setItem('cnt_recent', JSON.stringify(recent)); // prune stale entries
     const list = $('cntDashRecent');
     if (!list) return;
     if (!recent.length) {
@@ -1618,8 +1621,12 @@
     openM('mQuiz');
 
     let quizzes = [];
+    let groupMap = {};
     try {
-      quizzes = await api('GET', '/api/quizzes');
+      [quizzes] = await Promise.all([
+        api('GET', '/api/quizzes'),
+        api('GET', '/api/groups').then(gs => { groupMap = Object.fromEntries((gs || []).map(g => [g.id, g.name])); }).catch(() => {})
+      ]);
     } catch {
       if (listEl) listEl.innerHTML = '<div class="cnt-msg">تعذّر تحميل الاختبارات</div>';
       return;
@@ -1628,17 +1635,20 @@
     function renderList(q) {
       if (!listEl) return;
       if (!q.length) { listEl.innerHTML = '<div class="cnt-msg">لا توجد اختبارات محفوظة</div>'; return; }
-      listEl.innerHTML = q.map(quiz => `
+      listEl.innerHTML = q.map(quiz => {
+        const groupName = quiz.groupId && groupMap[quiz.groupId] ? groupMap[quiz.groupId] : null;
+        return `
         <div class="cnt-quiz-row" data-qid="${quiz.id}" data-qtitle="${esc(quiz.title || quiz.name || '')}">
           <span class="cnt-quiz-row-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><circle cx="12" cy="17" r=".5" fill="currentColor"/></svg>
           </span>
           <span class="cnt-quiz-row-info">
-            <span class="cnt-quiz-row-name">${quiz.title || quiz.name || 'اختبار'}</span>
-            <span class="cnt-quiz-row-meta">${quiz.questionsCount || 0} سؤال${quiz.duration ? ' · ' + quiz.duration + ' دقيقة' : ''}</span>
+            <span class="cnt-quiz-row-name">${esc(quiz.title || quiz.name || 'اختبار')}</span>
+            <span class="cnt-quiz-row-meta">${quiz.questionsCount || 0} سؤال${quiz.duration ? ' · ' + quiz.duration + ' دقيقة' : ''}${groupName ? ' · ' + esc(groupName) : ''}</span>
           </span>
           <span class="cnt-quiz-row-check"></span>
-        </div>`).join('');
+        </div>`;
+      }).join('');
 
       listEl.querySelectorAll('.cnt-quiz-row').forEach(row => {
         row.addEventListener('click', () => {
@@ -1652,27 +1662,32 @@
 
     renderList(quizzes);
 
-    searchEl?.addEventListener('input', () => {
-      const q = searchEl.value.trim().toLowerCase();
-      renderList(q ? quizzes.filter(z => (z.title || z.name || '').toLowerCase().includes(q)) : quizzes);
-    });
+    // Replace handler each open to avoid stacking listeners
+    if (searchEl) {
+      searchEl.oninput = () => {
+        const q = searchEl.value.trim().toLowerCase();
+        renderList(q ? quizzes.filter(z => (z.title || z.name || '').toLowerCase().includes(q)) : quizzes);
+      };
+    }
 
-    saveBtn?.addEventListener('click', async () => {
-      if (!_quizPickerSelected || !activeLesson) return;
-      saveBtn.disabled = true;
-      try {
-        const item = await api('POST', '/api/content/quiz', { lessonId: activeLesson.lesson.id, quizId: _quizPickerSelected.id });
-        item.quizTitle = _quizPickerSelected.title;
-        activeLesson.lesson.content = activeLesson.lesson.content || [];
-        activeLesson.lesson.content.push(item);
-        closeM('mQuiz');
-        renderSlides();
-        toast('تمت إضافة الاختبار للدرس ✓', 'success');
-      } catch {
-        toast('حدث خطأ أثناء الإضافة', 'error');
-        saveBtn.disabled = false;
-      }
-    }, { once: true });
+    if (saveBtn) {
+      saveBtn.onclick = async () => {
+        if (!_quizPickerSelected || !activeLesson) return;
+        saveBtn.disabled = true;
+        try {
+          const item = await api('POST', '/api/content/quiz', { lessonId: activeLesson.lesson.id, quizId: _quizPickerSelected.id });
+          item.quizTitle = _quizPickerSelected.title;
+          activeLesson.lesson.content = activeLesson.lesson.content || [];
+          activeLesson.lesson.content.push(item);
+          closeM('mQuiz');
+          renderSlides();
+          toast('تمت إضافة الاختبار للدرس ✓', 'success');
+        } catch {
+          toast('حدث خطأ أثناء الإضافة', 'error');
+          saveBtn.disabled = false;
+        }
+      };
+    }
   }
 
   function renderCurrentSlide() {
@@ -1851,9 +1866,11 @@
     document.addEventListener('fullscreenchange', () => {
       const on  = !!document.fullscreenElement;
       const btn = $('cntFullscreen');
-      if (btn) btn.innerHTML = on
-        ? '<i class="ti ti-minimize"></i>'
-        : '<i class="ti ti-maximize"></i>';
+      if (btn) {
+        btn.querySelector('.fs-icon-expand').style.display = on  ? 'none' : '';
+        btn.querySelector('.fs-icon-shrink').style.display = on  ? ''     : 'none';
+        btn.title = on ? 'خروج من ملء الشاشة' : 'ملء الشاشة';
+      }
       resizeCanvas();
       _resizePdfViewer();   /* resize PDF iframe + canvas to new stage size */
     });
@@ -1905,19 +1922,169 @@
     ctx.restore();
   }
 
+  const SHAPE_TOOLS = new Set(['line', 'arrow', 'rect', 'circle']);
+
   function _drawStroke(s) {
     if (s.pts.length < 2) return;
     ctx.globalCompositeOperation = 'source-over';
-    ctx.globalAlpha  = s.alpha;
-    ctx.strokeStyle  = s.color;
-    ctx.lineWidth    = s.lw;
-    ctx.lineCap      = 'round';
-    ctx.lineJoin     = 'round';
+    ctx.globalAlpha = s.alpha;
+    ctx.strokeStyle = s.color;
+    ctx.lineWidth   = s.lw;
+    ctx.lineCap     = 'round';
+    ctx.lineJoin    = 'round';
+    const lw = s.lw;
+    if (s.dash === 'dashed') ctx.setLineDash([lw * 3, lw * 2]);
+    else if (s.dash === 'dotted') ctx.setLineDash([lw, lw * 2]);
+    else ctx.setLineDash([]);
     ctx.beginPath();
-    ctx.moveTo(s.pts[0].x, s.pts[0].y);
-    for (let i = 1; i < s.pts.length; i++) ctx.lineTo(s.pts[i].x, s.pts[i].y);
-    ctx.stroke();
+
+    if (s.tool === 'line') {
+      ctx.moveTo(s.pts[0].x, s.pts[0].y);
+      ctx.lineTo(s.pts[s.pts.length - 1].x, s.pts[s.pts.length - 1].y);
+      ctx.stroke();
+    } else if (s.tool === 'arrow') {
+      const p1 = s.pts[0], p2 = s.pts[s.pts.length - 1];
+      const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+      const hw = Math.max(8, s.lw * 4);
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(p2.x, p2.y);
+      ctx.lineTo(p2.x - hw * Math.cos(angle - Math.PI / 7), p2.y - hw * Math.sin(angle - Math.PI / 7));
+      ctx.moveTo(p2.x, p2.y);
+      ctx.lineTo(p2.x - hw * Math.cos(angle + Math.PI / 7), p2.y - hw * Math.sin(angle + Math.PI / 7));
+      ctx.stroke();
+    } else if (s.tool === 'rect') {
+      const p1 = s.pts[0], p2 = s.pts[s.pts.length - 1];
+      ctx.strokeRect(p1.x, p1.y, p2.x - p1.x, p2.y - p1.y);
+    } else if (s.tool === 'circle') {
+      const p1 = s.pts[0], p2 = s.pts[s.pts.length - 1];
+      const rx = (p2.x - p1.x) / 2, ry = (p2.y - p1.y) / 2;
+      ctx.ellipse(p1.x + rx, p1.y + ry, Math.abs(rx), Math.abs(ry), 0, 0, Math.PI * 2);
+      ctx.stroke();
+    } else {
+      ctx.moveTo(s.pts[0].x, s.pts[0].y);
+      for (let i = 1; i < s.pts.length; i++) ctx.lineTo(s.pts[i].x, s.pts[i].y);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
   }
+
+  /* position a sub-popup above/below its trigger button */
+  function _placePopup(popup, triggerBtn) {
+    popup.style.visibility = 'hidden';
+    popup.hidden = false;
+    requestAnimationFrame(() => {
+      const r   = triggerBtn.getBoundingClientRect();
+      const pw  = popup.offsetWidth;
+      const ph  = popup.offsetHeight;
+      let left  = r.left + r.width / 2 - pw / 2;
+      left = Math.max(8, Math.min(left, window.innerWidth - pw - 8));
+      const top = r.top > ph + 12 ? r.top - ph - 8 : r.bottom + 8;
+      popup.style.left = `${left}px`;
+      popup.style.top  = `${top}px`;
+      popup.style.visibility = '';
+    });
+  }
+
+  function _closeAllSubPopups(except) {
+    ['cntShapesPopup','cntPalettePopup','cntLwPopup'].forEach(id => {
+      if (id !== except) { const el = $(id); if (el) el.hidden = true; }
+    });
+  }
+
+  const SHAPE_SVGS = {
+    line:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="20" x2="20" y2="4"/></svg>`,
+    arrow:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="19" x2="19" y2="5"/><polyline points="9 5 19 5 19 15"/></svg>`,
+    rect:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="2"/></svg>`,
+    circle: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>`,
+  };
+
+  function _wireShapesPopup(annoBar) {
+    const btn = $('cntShapesBtn'), popup = $('cntShapesPopup'), icon = $('cntShapeIcon');
+    if (!btn || !popup) return;
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const wasHidden = popup.hidden;
+      _closeAllSubPopups('cntShapesPopup');
+      popup.hidden = !wasHidden;
+    });
+    popup.querySelectorAll('.cnt-sub-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const shape = item.dataset.shape;
+        popup.querySelectorAll('.cnt-sub-item').forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+        activeShape = shape;
+        btn.innerHTML = SHAPE_SVGS[shape];
+        // activate shape tool
+        annoBar.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        tool = shape; annoMode = true; _removePointer();
+        _syncPdfAnnoMode();
+        popup.hidden = true;
+      });
+    });
+  }
+
+  function _wirePalettePopup(annoBar) {
+    const btn = $('cntColorBtn'), popup = $('cntPalettePopup'), swatch = $('cntColorSwatch');
+    if (!btn || !popup) return;
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const wasHidden = popup.hidden;
+      _closeAllSubPopups('cntPalettePopup');
+      popup.hidden = !wasHidden;
+    });
+    popup.querySelectorAll('.cnt-pal-dot').forEach(dot => {
+      dot.addEventListener('click', () => {
+        popup.querySelectorAll('.cnt-pal-dot').forEach(d => d.classList.remove('active'));
+        dot.classList.add('active');
+        color = dot.dataset.color;
+        if (swatch) swatch.style.background = color;
+        popup.hidden = true;
+      });
+    });
+    const customInput = $('cntCustomColor');
+    if (customInput) {
+      customInput.addEventListener('input', () => {
+        color = customInput.value;
+        if (swatch) swatch.style.background = color;
+        popup.querySelectorAll('.cnt-pal-dot').forEach(d => d.classList.remove('active'));
+      });
+    }
+  }
+
+  function _wireLwPopup() {
+    const btn = $('cntLwBtn'), popup = $('cntLwPopup');
+    if (!btn || !popup) return;
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const wasHidden = popup.hidden;
+      _closeAllSubPopups('cntLwPopup');
+      popup.hidden = !wasHidden;
+    });
+    popup.querySelectorAll('[data-lw]').forEach(item => {
+      item.addEventListener('click', () => {
+        popup.querySelectorAll('[data-lw]').forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+        strokeWidth = parseInt(item.dataset.lw);
+        popup.hidden = true;
+      });
+    });
+    popup.querySelectorAll('[data-dash]').forEach(item => {
+      item.addEventListener('click', () => {
+        popup.querySelectorAll('[data-dash]').forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+        strokeDash = item.dataset.dash;
+        popup.hidden = true;
+      });
+    });
+  }
+
+  /* close popups on outside click */
+  document.addEventListener('click', () => _closeAllSubPopups(null));
 
   /* erase strokes that pass within radius of pt (content coords) */
   function eraseNear(pt) {
@@ -1937,30 +2104,41 @@
           if (toolBtn.classList.contains('active')) {
             toolBtn.classList.remove('active');
             annoMode = false; drawing = false;
+            canvas?.classList.remove('drawing');
+            _removePointer();
           } else {
             annoBar.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
             toolBtn.classList.add('active');
-            tool = toolBtn.dataset.tool; annoMode = true;
+            tool = toolBtn.dataset.tool;
+            if (tool === 'pointer') { annoMode = false; _initPointer(); }
+            else { annoMode = true; _removePointer(); }
           }
           _syncPdfAnnoMode();
           return;
         }
-        const dotBtn = e.target.closest('.cnt-dot');
-        if (dotBtn) {
-          annoBar.querySelectorAll('.cnt-dot').forEach(d => d.classList.remove('active'));
-          dotBtn.classList.add('active');
-          color = dotBtn.dataset.color;
-          return;
-        }
         if (e.target.closest('#cntClear')) { clearCanvas(); delete _slideState[activeIndex]; }
+        if (e.target.closest('#cntUndo')) {
+          if (strokes.length) { strokes.pop(); redrawCanvas(); }
+        }
       });
 
-      /* collapse / expand the toolbar */
+      /* collapse / expand */
       $('cntAnnoCollapse')?.addEventListener('click', e => {
         e.stopPropagation();
         annoBar.classList.toggle('collapsed');
       });
 
+      /* orient toggle */
+      $('cntAnnoOrient')?.addEventListener('click', e => {
+        e.stopPropagation();
+        annoBar.classList.toggle('vertical');
+        localStorage.setItem('cnt_anno_orient', annoBar.classList.contains('vertical') ? 'v' : 'h');
+      });
+      if (localStorage.getItem('cnt_anno_orient') === 'v') annoBar.classList.add('vertical');
+
+      _wireShapesPopup(annoBar);
+      _wirePalettePopup(annoBar);
+      _wireLwPopup(annoBar);
       _wireQuickTools();
       _wireAnnoBarDrag(annoBar);
     }
@@ -1982,8 +2160,9 @@
         curStroke = {
           tool, color,
           alpha: tool === 'highlighter' ? 0.38 : 1,
-          lw: tool === 'highlighter' ? 20 : 3,
-          pts: [pt]
+          lw: tool === 'highlighter' ? 20 : (strokeWidth || 3),
+          dash: strokeDash || 'solid',
+          pts: [pt, { ...pt }]
         };
         strokes.push(curStroke);
         redrawCanvas();
@@ -1994,7 +2173,14 @@
       if (!drawing) return;
       const pt = toContent(e.offsetX, e.offsetY);
       if (tool === 'erase') { eraseNear(pt); return; }
-      if (curStroke) { curStroke.pts.push(pt); redrawCanvas(); }
+      if (curStroke) {
+        if (SHAPE_TOOLS.has(tool)) {
+          curStroke.pts[curStroke.pts.length - 1] = pt; // update end point only
+        } else {
+          curStroke.pts.push(pt);
+        }
+        redrawCanvas();
+      }
     });
     canvas.addEventListener('pointerup',    () => { drawing = false; curStroke = null; });
     canvas.addEventListener('pointercancel',() => { drawing = false; curStroke = null; });
@@ -2041,6 +2227,35 @@
     });
   }
 
+  /* laser pointer — shows a red dot that follows the mouse on the stage */
+  function _initPointer() {
+    const stage = $('cntStage');
+    if (!stage || stage._pointerDot) return;
+    const dot = document.createElement('div');
+    dot.className = 'cnt-laser-dot';
+    stage.appendChild(dot);
+    stage._pointerDot = dot;
+    stage._pointerMove = e => {
+      const r = stage.getBoundingClientRect();
+      dot.style.left = (e.clientX - r.left) + 'px';
+      dot.style.top  = (e.clientY - r.top)  + 'px';
+      dot.style.opacity = '1';
+    };
+    stage._pointerLeave = () => { dot.style.opacity = '0'; };
+    stage.addEventListener('mousemove',  stage._pointerMove);
+    stage.addEventListener('mouseleave', stage._pointerLeave);
+  }
+  function _removePointer() {
+    const stage = $('cntStage');
+    if (!stage) return;
+    if (stage._pointerMove)  stage.removeEventListener('mousemove',  stage._pointerMove);
+    if (stage._pointerLeave) stage.removeEventListener('mouseleave', stage._pointerLeave);
+    stage._pointerDot?.remove();
+    delete stage._pointerDot;
+    delete stage._pointerMove;
+    delete stage._pointerLeave;
+  }
+
   /* drag the annotation toolbar anywhere inside the stage via its grip */
   function _wireAnnoBarDrag(bar) {
     const grip = $('cntAnnoGrip');
@@ -2071,10 +2286,18 @@
       const br = bar.getBoundingClientRect();
       let nx = ox + (e.clientX - sx);
       let ny = oy + (e.clientY - sy);
-      nx = Math.max(0, Math.min(nx, sr.width  - br.width));   /* keep inside stage */
+      nx = Math.max(0, Math.min(nx, sr.width  - br.width));
       ny = Math.max(0, Math.min(ny, sr.height - br.height));
       bar.style.left = `${nx}px`;
       bar.style.top  = `${ny}px`;
+
+      /* auto-orient: vertical when mouse is in the left/right 20% of stage */
+      const mouseRelX = (e.clientX - sr.left) / sr.width;
+      const shouldBeVertical = mouseRelX < 0.2 || mouseRelX > 0.8;
+      if (shouldBeVertical !== bar.classList.contains('vertical')) {
+        bar.classList.toggle('vertical', shouldBeVertical);
+        localStorage.setItem('cnt_anno_orient', shouldBeVertical ? 'v' : 'h');
+      }
     });
 
     const end = () => { dragging = false; };
@@ -2174,15 +2397,37 @@
   function _drawStrokeOnCtx(ctx, s, W, H) {
     if (s.pts.length < 2) return;
     ctx.globalCompositeOperation = 'source-over';
-    ctx.globalAlpha  = s.alpha;
-    ctx.strokeStyle  = s.color;
-    ctx.lineWidth    = s.lwN * W;
-    ctx.lineCap      = 'round';
-    ctx.lineJoin     = 'round';
+    ctx.globalAlpha = s.alpha;
+    ctx.strokeStyle = s.color;
+    ctx.lineWidth   = s.lwN * W;
+    ctx.lineCap     = 'round';
+    ctx.lineJoin    = 'round';
+    const lw = s.lwN * W;
+    if (s.dash === 'dashed') ctx.setLineDash([lw * 3, lw * 2]);
+    else if (s.dash === 'dotted') ctx.setLineDash([lw, lw * 2]);
+    else ctx.setLineDash([]);
     ctx.beginPath();
-    ctx.moveTo(s.pts[0].x * W, s.pts[0].y * H);
-    for (let i = 1; i < s.pts.length; i++) ctx.lineTo(s.pts[i].x * W, s.pts[i].y * H);
-    ctx.stroke();
+    const p1 = { x: s.pts[0].x * W, y: s.pts[0].y * H };
+    const p2 = { x: s.pts[s.pts.length - 1].x * W, y: s.pts[s.pts.length - 1].y * H };
+    if (s.tool === 'line') {
+      ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+    } else if (s.tool === 'arrow') {
+      const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x), hw = Math.max(8, s.lwN * W * 4);
+      ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke(); ctx.beginPath();
+      ctx.moveTo(p2.x, p2.y); ctx.lineTo(p2.x - hw * Math.cos(angle - Math.PI / 7), p2.y - hw * Math.sin(angle - Math.PI / 7));
+      ctx.moveTo(p2.x, p2.y); ctx.lineTo(p2.x - hw * Math.cos(angle + Math.PI / 7), p2.y - hw * Math.sin(angle + Math.PI / 7));
+      ctx.stroke();
+    } else if (s.tool === 'rect') {
+      ctx.strokeRect(p1.x, p1.y, p2.x - p1.x, p2.y - p1.y);
+    } else if (s.tool === 'circle') {
+      const rx = (p2.x - p1.x) / 2, ry = (p2.y - p1.y) / 2;
+      ctx.ellipse(p1.x + rx, p1.y + ry, Math.abs(rx), Math.abs(ry), 0, 0, Math.PI * 2); ctx.stroke();
+    } else {
+      ctx.moveTo(s.pts[0].x * W, s.pts[0].y * H);
+      for (let i = 1; i < s.pts.length; i++) ctx.lineTo(s.pts[i].x * W, s.pts[i].y * H);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
     ctx.globalAlpha = 1;
   }
 

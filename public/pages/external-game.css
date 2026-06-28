@@ -1,0 +1,103 @@
+.external-game-container {
+  width: 100%;
+  height: calc(100vh - 52px);
+  background: #111;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+.eg-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: #1a1a1a;
+  border-bottom: 1px solid #333;
+  flex-shrink: 0;
+}
+
+.eg-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid #444;
+  background: #222;
+  color: #fff;
+  font-size: .85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.eg-back-btn:hover { background: #333; }
+
+.eg-title {
+  flex: 1;
+  font-size: .9rem;
+  font-weight: 700;
+  color: #fff;
+  text-align: center;
+}
+
+.eg-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.eg-fs-btn {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #444;
+  background: #222;
+  color: #fff;
+  cursor: pointer;
+}
+.eg-fs-btn:hover { background: #333; }
+
+/* Quick-tools toggle overrides for dark toolbar */
+.eg-bar .icon-btn {
+  background: #222;
+  border: 1px solid #444;
+  color: #fff;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+.eg-bar .icon-btn:hover { background: #333; }
+.eg-bar .hqt-menu { direction: rtl; }
+
+.game-wrapper {
+  flex: 1;
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.game-wrapper iframe,
+.game-wrapper webview {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+  position: absolute;
+  inset: 0;
+}
+
+.eg-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #aaa;
+  font-size: .95rem;
+}

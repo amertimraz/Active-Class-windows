@@ -1,6 +1,6 @@
 {
   "name": "active-class",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "Active Class - تطبيق إدارة الفصل التفاعلي باستخدام Electron",
   "main": "main.js",
   "scripts": {
@@ -18,12 +18,12 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "adm-zip": "^0.5.17",
     "better-sqlite3": "^12.10.0",
     "electron-updater": "^6.8.9",
     "express": "^4.21.2",
     "multer": "^2.0.2",
     "pdf-parse": "^2.4.5",
-    "sql.js": "^1.14.1",
     "xlsx": "^0.18.5"
   },
   "build": {
@@ -38,7 +38,7 @@
           ]
         }
       ],
-      "icon": "public/assets/icon.gif"
+      "icon": "public/assets/logo.png"
     },
     "nsis": {
       "oneClick": false,
@@ -59,6 +59,18 @@
       "package.json",
       "!node_modules/.bin",
       "!node_modules/xlsx/dist/cpexcel.full.mjs",
+      "!node_modules/pdfjs-dist/legacy/**",
+      "!node_modules/pdfjs-dist/types/**",
+      "!node_modules/pdfjs-dist/web/**",
+      "!node_modules/pdfjs-dist/wasm/**",
+      "!node_modules/pdfjs-dist/iccs/**",
+      "!node_modules/pdfjs-dist/image_decoders/**",
+      "!node_modules/pdfjs-dist/build/pdf.mjs",
+      "!node_modules/pdfjs-dist/build/pdf.worker.mjs",
+      "!node_modules/pdfjs-dist/build/pdf.sandbox.mjs",
+      "!node_modules/pdfjs-dist/build/pdf.image_decoders.mjs",
+      "!node_modules/pdf-parse/lib/pdf.js/**",
+      "!node_modules/pdf-parse/test/**",
       "!**/*.md",
       "!**/*.map",
       "!**/*.ts",

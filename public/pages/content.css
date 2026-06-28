@@ -93,8 +93,8 @@ body.cnt-page #app {
 }
 
 /* ── Edit mode: show hidden buttons always ── */
-.cnt-edit-mode .cnt-acts,
-.cnt-edit-mode .cnt-add-btn { opacity: 1; }
+.cnt-edit-mode .cnt-acts { opacity: 1; max-width: 120px; }
+.cnt-edit-mode .cnt-add-btn { opacity: 1; max-width: 22px; }
 .cnt-edit-mode .cnt-drag-handle { opacity: .45; }
 
 .cnt-sb-search {
@@ -270,12 +270,14 @@ body.cnt-page #app {
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
-  transition: all .15s;
+  transition: opacity .15s, max-width .15s, background .15s, box-shadow .15s;
   opacity: 0;
+  max-width: 0;
+  overflow: hidden;
   line-height: 1;
 }
 .cnt-grade-row:hover .cnt-add-btn,
-.cnt-unit-row:hover  .cnt-add-btn { opacity: 1; }
+.cnt-unit-row:hover  .cnt-add-btn { opacity: 1; max-width: 22px; }
 .cnt-add-btn:hover {
   background: var(--primary);
   color: #fff;
@@ -288,11 +290,13 @@ body.cnt-page #app {
   display: flex; gap: 2px; align-items: center;
   flex-shrink: 0;
   opacity: 0;
-  transition: opacity .15s;
+  max-width: 0;
+  overflow: hidden;
+  transition: opacity .15s, max-width .15s;
 }
 .cnt-grade-row:hover .cnt-acts,
 .cnt-unit-row:hover  .cnt-acts,
-.cnt-lesson:hover    .cnt-acts { opacity: 1; }
+.cnt-lesson:hover    .cnt-acts { opacity: 1; max-width: 120px; }
 
 .cnt-act {
   width: 22px; height: 22px;
@@ -882,11 +886,124 @@ body.cnt-page #app {
 /* once dragged, the bar is positioned by inline left/top (overrides default + pdf-mode) */
 .cnt-anno-bar.dragged { transition: none; }
 
+/* manual vertical orient */
+.cnt-anno-bar.vertical {
+  flex-direction: column;
+  padding: 10px 8px;
+  border-radius: 16px;
+  gap: 6px;
+  bottom: auto;
+  top: 50%;
+  transform: translateX(-50%) translateY(-50%);
+}
+.cnt-anno-bar.vertical.dragged { transform: none; }
+.cnt-anno-bar.vertical .cnt-sep { width: 100%; height: 1px; min-width: unset; }
+.cnt-anno-bar.vertical .cnt-anno-collapse svg { transform: rotate(90deg); }
+.cnt-anno-bar.vertical.collapsed .cnt-anno-collapse svg { transform: rotate(-90deg); }
+
+/* laser pointer dot */
+.cnt-laser-dot {
+  position: absolute;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ff3030 30%, rgba(255,48,48,.35) 70%, transparent 100%);
+  box-shadow: 0 0 10px 3px rgba(255,0,0,.45);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  transition: opacity .15s;
+  z-index: 50;
+}
+
 /* content card being dragged for reorder */
 .cnt-slide-card[draggable="true"] { cursor: grab; }
 .cnt-slide-card.cnt-card-dragging { opacity: .4; cursor: grabbing; }
 
 /* quick-tools popup inside the presentation toolbar */
+/* ── Sub-popups (shapes / palette / stroke-width) ── */
+.cnt-anno-sub { position: relative; display: flex; align-items: center; }
+.cnt-sub-popup {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 65;
+  background: rgba(15,23,42,.97);
+  border: 1px solid rgba(255,255,255,.13);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.5);
+  backdrop-filter: blur(14px);
+  padding: 8px;
+}
+.cnt-sub-popup[hidden] { display: none !important; }
+/* when toolbar is vertical, popup opens to the right */
+.cnt-anno-bar.vertical .cnt-sub-popup {
+  bottom: auto;
+  top: 50%;
+  left: calc(100% + 8px);
+  transform: translateY(-50%);
+}
+
+/* shapes popup — 2×2 grid */
+#cntShapesPopup { display: grid; grid-template-columns: repeat(2,36px); gap: 4px; }
+.cnt-sub-item {
+  width: 36px; height: 36px;
+  border: 1.5px solid transparent;
+  background: rgba(255,255,255,.06);
+  border-radius: 8px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .12s, border-color .12s;
+  color: rgba(255,255,255,.75);
+}
+.cnt-sub-item svg { width: 18px; height: 18px; }
+.cnt-sub-item:hover { background: rgba(255,255,255,.14); color: #fff; }
+.cnt-sub-item.active { border-color: rgba(255,255,255,.5); background: rgba(255,255,255,.15); color: #fff; }
+
+/* color trigger swatch */
+.cnt-color-swatch {
+  display: block; width: 16px; height: 16px;
+  border-radius: 50%; border: 2px solid rgba(255,255,255,.35);
+}
+
+/* palette popup */
+.cnt-palette-popup { display: flex; flex-direction: column; gap: 8px; }
+.cnt-palette-grid { display: grid; grid-template-columns: repeat(6,26px); gap: 5px; }
+.cnt-pal-dot {
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 2.5px solid transparent;
+  cursor: pointer; transition: transform .12s, border-color .12s;
+  flex-shrink: 0;
+}
+.cnt-pal-dot:hover { transform: scale(1.15); }
+.cnt-pal-dot.active { border-color: #fff; transform: scale(1.12); }
+.cnt-custom-color {
+  width: 100%; height: 28px; border: none; border-radius: 7px;
+  cursor: pointer; background: transparent;
+  padding: 0; display: block;
+}
+
+/* stroke-width popup */
+.cnt-lw-popup { display: flex; flex-direction: column; gap: 4px; min-width: 100px; }
+.cnt-lw-item {
+  width: 100%; padding: 7px 10px;
+  border: 1.5px solid transparent; border-radius: 8px;
+  background: rgba(255,255,255,.05); cursor: pointer;
+  display: flex; align-items: center;
+  transition: background .12s, border-color .12s;
+}
+.cnt-lw-item:hover { background: rgba(255,255,255,.12); }
+.cnt-lw-item.active { border-color: rgba(255,255,255,.45); background: rgba(255,255,255,.12); }
+.cnt-lw-line {
+  display: block; width: 100%; border-radius: 4px;
+  background: rgba(255,255,255,.8);
+}
+.cnt-dash-dashed { background: none; border-top: 3px dashed rgba(255,255,255,.8); height: 0 !important; }
+.cnt-dash-dotted  { background: none; border-top: 3px dotted rgba(255,255,255,.8); height: 0 !important; }
+.cnt-lw-sep { height: 1px; background: rgba(255,255,255,.12); margin: 2px 0; }
+
+/* lw trigger icon */
+.cnt-lw-trigger svg { width: 20px; height: 20px; }
+
 .cnt-qt-menu {
   position: fixed;
   direction: rtl;
@@ -971,13 +1088,14 @@ body.cnt-page #app {
 .cnt-pnav {
   position: absolute; bottom: 0; left: 0; right: 0; z-index: 20;
   display: flex; align-items: center; gap: 8px;
-  padding: 10px 16px;
-  background: linear-gradient(transparent, rgba(0,0,0,.7));
-  height: 80px;
-  opacity: 0;
-  transition: opacity .2s;
+  padding: 0 16px;
+  background: linear-gradient(transparent, rgba(0,0,0,.65));
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+  transition: height .2s, padding .2s;
 }
-.cnt-present:hover .cnt-pnav { opacity: 1; }
+.cnt-present:hover .cnt-pnav { height: 70px; padding: 10px 16px; pointer-events: auto; }
 
 .cnt-pnav-btn {
   width: 40px; height: 40px; border-radius: 10px;

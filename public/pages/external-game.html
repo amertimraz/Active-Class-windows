@@ -1,0 +1,29 @@
+<div class="external-game-container">
+  <div class="eg-bar">
+    <button class="eg-back-btn" onclick="history.back()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+      العودة
+    </button>
+    <span class="eg-title" id="egTitle">لعبة تعليمية</span>
+    <div class="eg-bar-actions">
+      <div class="header-quick-tools page-qt" id="pageQt_eg">
+        <button class="icon-btn hqt-toggle" id="qtToggle_eg" aria-haspopup="true" aria-expanded="false">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        </button>
+        <div class="hqt-menu" id="qtMenu_eg" hidden>
+          <button class="hqt-item" data-qt="timer">⏱ <span>المؤقت الذكي</span></button>
+          <button class="hqt-item" data-qt="wheel">✨ <span>عجلة الحظ</span></button>
+          <button class="hqt-item" data-qt="numbers">🔢 <span>أرقام عشوائية</span></button>
+          <button class="hqt-item" data-qt="names">🎲 <span>اختيار اسم عشوائي</span></button>
+        </div>
+      </div>
+      <button class="eg-fs-btn" id="egFsBtn" title="ملء الشاشة">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="game-wrapper" id="egWrapper">
+    <div class="eg-loading" id="egLoading">⏳ جارٍ تحميل اللعبة…</div>
+  </div>
+</div>
