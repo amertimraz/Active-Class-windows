@@ -95,7 +95,7 @@ let serverProcess;
 // Keep references to tool windows to prevent GC from closing them
 const toolWindows = new Map();
 
-function createWindow() {
+async function createWindow() {
   const { screen } = require('electron');
   const { width: sw, height: sh } = screen.getPrimaryDisplay().workAreaSize;
 
@@ -107,6 +107,9 @@ function createWindow() {
 
   const winW = Math.min(Math.round(sw * 0.92), 1600);
   const winH = Math.min(Math.round(sh * 0.92), 1000);
+
+  // Spoof user-agent so YouTube iframes don't block playback in Electron
+  const chromeUA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36';
 
   mainWindow = new BrowserWindow({
     width: winW,
@@ -126,6 +129,19 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js')
     }
   });
+
+  mainWindow.webContents.setUserAgent(chromeUA);
+
+  // Fix YouTube error 153: spoof Referer/Origin so YouTube accepts the embed
+  mainWindow.webContents.session.webRequest.onBeforeSendHeaders(
+    { urls: ['*://*.youtube.com/*', '*://*.youtube-nocookie.com/*', '*://*.ytimg.com/*'] },
+    (details, callback) => {
+      const headers = { ...details.requestHeaders };
+      headers['Referer'] = 'https://www.youtube.com/';
+      headers['Origin']  = 'https://www.youtube.com';
+      callback({ requestHeaders: headers });
+    }
+  );
 
   // Set CSP header — only for our own server responses so external iframes
   // (YouTube, Vimeo) can still load their own scripts without interference.
@@ -154,9 +170,25 @@ function createWindow() {
   const APP_URL = 'http://localhost:5000';
   const lic   = readLicenseFile();
   const trial = readTrialFile();
-  const startUrl = (isLicenseValid(lic) || isTrialValid(trial))
-    ? APP_URL
-    : `${APP_URL}/pages/activation.html`;
+  let startUrl = `${APP_URL}/pages/activation.html`;
+  if (isLicenseValid(lic)) {
+    startUrl = APP_URL;
+  } else if (isTrialValid(trial)) {
+    // Check revocation on startup before loading the app
+    try {
+      const mid = getMachineId();
+      const r = await fetch(`${APP_URL}/api/trial-status?machineId=${encodeURIComponent(mid)}`,
+        { signal: AbortSignal.timeout(5000) });
+      const data = await r.json();
+      if (data.revoked) {
+        writeTrialFile({ ...trial, expiresAt: new Date(0).toISOString() });
+      } else {
+        startUrl = APP_URL;
+      }
+    } catch {
+      startUrl = APP_URL; // offline — give benefit of the doubt
+    }
+  }
   mainWindow.loadURL(startUrl);
   mainWindow.webContents.on('did-finish-load', () => {
     if (zoom !== 1.0) mainWindow.webContents.setZoomFactor(zoom);
@@ -181,17 +213,29 @@ function createWindow() {
     }, 3000); // give the app time to finish loading before any redirect
   }
 
-  // Poll every 30s: if trial file disappears while app is open, redirect to activation
+  // Poll every 30s: check local trial expiry AND remote revocation
   if (isTrialValid(trial)) {
-    const trialWatcher = setInterval(() => {
+    const trialWatcher = setInterval(async () => {
       if (!mainWindow || mainWindow.isDestroyed()) { clearInterval(trialWatcher); return; }
       const currentLic = readLicenseFile();
-      if (isLicenseValid(currentLic)) { clearInterval(trialWatcher); return; } // got a real license
+      if (isLicenseValid(currentLic)) { clearInterval(trialWatcher); return; }
       const currentTrial = readTrialFile();
       if (!isTrialValid(currentTrial)) {
         clearInterval(trialWatcher);
         mainWindow.loadURL(`${APP_URL}/pages/activation.html`);
+        return;
       }
+      // Check if admin revoked this machine remotely
+      try {
+        const mid = getMachineId();
+        const r = await fetch(`${APP_URL}/api/trial-status?machineId=${encodeURIComponent(mid)}`);
+        const data = await r.json();
+        if (data.revoked) {
+          clearInterval(trialWatcher);
+          writeTrialFile({ ...currentTrial, expiresAt: new Date(0).toISOString() });
+          mainWindow.loadURL(`${APP_URL}/pages/activation.html`);
+        }
+      } catch {}
     }, 30000);
   }
 
@@ -330,6 +374,7 @@ function startServer() {
     process.env.APP_DATA_DIR    = path.join(userDataPath, 'classroom-data');
     process.env.APP_DB_PATH     = path.join(userDataPath, 'db.json');
     process.env.APP_UPLOADS_DIR = path.join(userDataPath, 'uploads');
+    process.env.APP_TRIAL_FILE  = path.join(userDataPath, 'ac_trial.json');
     process.env.SERVER_API_KEY  = SERVER_API_KEY;
 
     // In both packaged and dev mode, require() the server directly in the main process.
@@ -994,10 +1039,11 @@ app.whenReady().then(async () => {
   });
 
   // ── Trial IPC ────────────────────────────────────────────────────────────
-  ipcMain.handle('start-trial', async () => {
+  ipcMain.handle('start-trial', async (_e, name, phone) => {
     const existing = readTrialFile();
     if (existing) {
-      // Trial already started — just navigate to the app
+      if (!isTrialValid(existing)) return { ok: false, message: 'trial_expired' };
+      // Trial already started and still valid — just navigate to the app
       if (mainWindow && !mainWindow.isDestroyed()) mainWindow.loadURL('http://localhost:5000');
       return { ok: true, message: 'already_started' };
     }
@@ -1020,10 +1066,9 @@ app.whenReady().then(async () => {
     writeTrialFile(trialData);
 
     // Log this activation — try local first, then remote (for admin stats)
-    const logBody = JSON.stringify({ machineId: getMachineId() });
+    const logBody = JSON.stringify({ machineId: getMachineId(), name: name || '', phone: phone || '' });
     const logHeaders = { 'Content-Type': 'application/json' };
     try { await fetch(`http://localhost:${SERVER_PORT}/api/trial-log`, { method: 'POST', headers: logHeaders, body: logBody }); } catch {}
-    try { await fetch(`${REMOTE_LICENSE_SERVER}/api/trial-log`, { method: 'POST', headers: logHeaders, body: logBody, signal: AbortSignal.timeout(5000) }); } catch {}
 
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.loadURL('http://localhost:5000');
     return { ok: true };

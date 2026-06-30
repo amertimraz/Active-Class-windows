@@ -10,6 +10,33 @@ const { db, openDB, closeDB } = require('./sqlite');
 const { generateQuizFromPDF } = require('./ai-service');
 const log = require('./logger').create('server');
 
+// ── Firebase Admin (shared Firestore for license requests) ─────────────────
+const SERVICE_ACCOUNT = {
+  type: 'service_account',
+  project_id: 'active-class-windows',
+  private_key_id: '009582df6e931b96d2d9cc913d2e663d1f7917ac',
+  private_key: '-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQD1uIigBNM1QQSL\ny6o6618gQ85rQd87RWBpyeOpVTgnEQjQmBBPgEiZzyFdd44PGMHHi/EsbDzEoIic\n40Jl+s8tosXxfYXt3kKtWRsnTGE0ci1Ji/Uj5xgehWTQ5etVmQIFwEDHA9aWbw6d\noXhJxIUCTCXUwKkE/izYPFVbtgkJLvzmBTMBNC83vH+AjZFowEPrXj+Cfzcs/kSU\nLVSuxDPFc53PDWDJlWUmqURXv6pFJHW865fun2gb95JY4xsBp47LK+i3tjegn2rf\nD/TkcYZW6agNW4UAPSBdbwfCXPIa4U7OXr3kwivfKQgAhtjb3FqoLqjeX4Sq9mjl\nDq7Y2ORZAgMBAAECggEADpy06TkoOzI83DhWDO9qxn8pwwiVhw+K2neiRXNXJcGW\nUds9GxEwoA7od8ewh7bL7Tsl8iOUoIfAX/4GuIxH7jmQBlqV0I2nTuot2nIpFKaW\niVlckFBBh60cj+ygSESTUXa7k2onxGXhy19rCQ357+dJ16NGWdDop0o9NDk4w9Ys\n6BH1GceKCqCsdfEo7bxTEM36GLt3fidH7Y0ZlzK0aRXw9zWBLTHcs9oXQSHAB+rT\nlwgboPOUa1dw1YxjfKFR2Xfy27my4GMw2WGjmF975x3TQs4qFv1e8tR1WAPOMOen\naSj88UgppW+zvMT8tcqEd14cpx+2gt0Cd8w6jZ1KoQKBgQD+o9tIP8CEi7qP78Ve\niLB+XX2qqv3AcbpXsagRGa98Mgl3xdNEFhCzOeig7aoGiW0b+4Lq19X7II1vCoaz\n5qI2Lr90BNmv7I/TELufpjJH6aDl9l64jlS3UG8swj+fiIiYgctM8HiEz6MN04qU\n9TBKKWdhKOZS2pW/bjK/jfRLSQKBgQD3CHuWh2hpvtRLMRm5p/bjpZ7VuifeLmF+\n5wSwKQ4bvxLYwu1UxMqkceGn2Z8QMEFCvcyssORdstKmv0d+1Xh/VMnXf1engb1v\neB2ViKplByy3vEc2fK7jgvrieWFHbIEfNspymFnyoJ7He78HkLz2RvBmJ+jarLlz\nEkdkgWhAkQKBgQCldCRsOnhF52COW9YbiadcRDT+KuJ8I6lXh6jTi6P5h62dNF4E\nlG2/drYPsr1SSAMsNm0nWJzB8rHTX7yMsiPeHtvpb6leZNBC7VFr95oeHdCc+0sq\nkdi7z7idFY4vg5B1v4gwcuNsMFobBsO56+K3nVV9zQxy83JvkxPIYV1FeQKBgExV\nX7Mc9mOupvTxICzhPQYNGG6cjlM2a8QF6MnydbyXJ2C5oxKNmLyFwB/YvDEJaDES\naxt1satOZY9HDfWgSxK1hYVEgTZufbXjHOknCNgdBnFkCXFJx9TflVzD+w5R9fhK\nOvZ8I1c40Ld9goL485r6QrCeZnKj6s4m+M6Suj8xAoGBAKrk8+dN87zUBUBeeq/D\n3lvllBJi6DP70m8MBPY5gMHCaCWEIeSRTZCcOKAzsgpfQ6/UZB5dAVZP5ukjksRS\n0pjlx8aCbGCyAT5oNTqfIFLY27z0vsSPngSUB38BfNGP8kbldEdkPt8LHvX76aWC\nsi+m96AERVpRlHbgihqvLnkf\n-----END PRIVATE KEY-----\n',
+  client_email: 'firebase-adminsdk-fbsvc@active-class-windows.iam.gserviceaccount.com',
+  client_id: '117664907079305617314',
+  auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+  token_uri: 'https://oauth2.googleapis.com/token',
+};
+
+let _firestore = null;
+function getFirestore() {
+  if (_firestore) return _firestore;
+  try {
+    // firebase-admin v14+ uses modular API
+    const { initializeApp, getApps, cert } = require('firebase-admin/app');
+    const { getFirestore: _getFs } = require('firebase-admin/firestore');
+    if (!getApps().length) initializeApp({ credential: cert(SERVICE_ACCOUNT) });
+    _firestore = _getFs();
+  } catch (e) {
+    log.error('Firebase init failed:', e.message);
+  }
+  return _firestore;
+}
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -623,6 +650,10 @@ app.post('/api/grades', authenticateTeacher, contentTrialGuard, async (req, res)
 
   try {
     const content = await readDB();
+    const trial = await getActiveTrial();
+    if (trial && trial.maxGrades > 0 && content.grades.length >= trial.maxGrades) {
+      return res.status(403).json({ message: `الحد الأقصى للصفوف في النسخة التجريبية هو ${trial.maxGrades}` });
+    }
     const newGrade = {
       id: crypto.randomUUID(),
       name,
@@ -649,7 +680,13 @@ app.post('/api/units', authenticateTeacher, contentTrialGuard, async (req, res) 
     if (!grade) {
       return res.status(404).json({ message: 'Grade not found.' });
     }
-
+    const trial = await getActiveTrial();
+    if (trial && trial.maxUnits > 0) {
+      const totalUnits = content.grades.reduce((s, g) => s + (g.units?.length || 0), 0);
+      if (totalUnits >= trial.maxUnits) {
+        return res.status(403).json({ message: `الحد الأقصى للوحدات في النسخة التجريبية هو ${trial.maxUnits}` });
+      }
+    }
     const newUnit = {
       id: crypto.randomUUID(),
       name,
@@ -752,7 +789,13 @@ app.post('/api/lessons', authenticateTeacher, contentTrialGuard, async (req, res
     if (!unit) {
       return res.status(404).json({ message: 'Unit not found.' });
     }
-
+    const trial = await getActiveTrial();
+    if (trial && trial.maxLessons > 0) {
+      const totalLessons = content.grades.reduce((s, g) => s + g.units.reduce((s2, u) => s2 + (u.lessons?.length || 0), 0), 0);
+      if (totalLessons >= trial.maxLessons) {
+        return res.status(403).json({ message: `الحد الأقصى للدروس في النسخة التجريبية هو ${trial.maxLessons}` });
+      }
+    }
     const newLesson = {
       id: crypto.randomUUID(),
       name,
@@ -1776,6 +1819,9 @@ const DEFAULT_TRIAL_CONFIG = {
   allowedGames:   3,
   competitions:   false,
   content:        false,
+  maxGrades:      0,
+  maxUnits:       0,
+  maxLessons:     0,
 };
 
 async function readTrialConfig() {
@@ -1797,7 +1843,7 @@ function trialGuard(check) {
 // Returns trial limits object if in an active trial, otherwise null
 async function getActiveTrial() {
   try {
-    const trialFile = path.join(dataDir, 'ac_trial.json');
+    const trialFile = process.env.APP_TRIAL_FILE || path.join(dataDir, 'ac_trial.json');
     const t = JSON.parse(await fs.readFile(trialFile, 'utf8'));
     if (!t || !t.expiresAt) return null;
     if (new Date(t.expiresAt) < new Date()) return null; // expired
@@ -1807,8 +1853,26 @@ async function getActiveTrial() {
 }
 
 async function readTrialLog() {
+  const db2 = getFirestore();
+  if (db2) {
+    try {
+      const snap = await db2.collection('trial-log').get();
+      const docs = snap.docs.map(d => ({ _docId: d.id, ...d.data() }));
+      return docs.sort((a, b) => (b.activatedAt || '').localeCompare(a.activatedAt || ''));
+    } catch {}
+  }
+  // fallback to local file
   try { return JSON.parse(await fs.readFile(TRIAL_LOG_FILE, 'utf8')); }
   catch { return []; }
+}
+
+async function isMachineRevoked(machineId) {
+  const db2 = getFirestore();
+  if (!db2) return false;
+  try {
+    const snap = await db2.collection('trial-revoked').where('machineId', '==', machineId).limit(1).get();
+    return !snap.empty;
+  } catch { return false; }
 }
 
 app.get('/api/app-info', (req, res) => {
@@ -1844,6 +1908,9 @@ app.post('/api/trial-config', async (req, res) => {
     cfg.allowedGames = Math.max(1,  parseInt(cfg.allowedGames) || 3);
     cfg.competitions = !!cfg.competitions;
     cfg.content      = !!cfg.content;
+    cfg.maxGrades    = Math.max(0,  parseInt(cfg.maxGrades)    || 0);
+    cfg.maxUnits     = Math.max(0,  parseInt(cfg.maxUnits)     || 0);
+    cfg.maxLessons   = Math.max(0,  parseInt(cfg.maxLessons)   || 0);
     await fs.writeFile(TRIAL_CONFIG_FILE, JSON.stringify(cfg, null, 2), 'utf8');
     res.json({ ok: true, config: cfg });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
@@ -1857,12 +1924,27 @@ app.get('/api/trial-stats', async (req, res) => {
 // Called by main.js (via internal fetch) when a trial is started
 app.post('/api/trial-log', async (req, res) => {
   try {
-    const log = await readTrialLog();
     const machineId = req.body.machineId || '';
-    if (!log.find(e => e.machineId === machineId)) {
-      log.push({ activatedAt: new Date().toISOString(), machineId });
+    const name      = (req.body.name  || '').trim();
+    const phone     = (req.body.phone || '').trim();
+    const db2 = getFirestore();
+    if (db2) {
+      const existing = await db2.collection('trial-log').where('machineId', '==', machineId).limit(1).get();
+      if (existing.empty) {
+        await db2.collection('trial-log').add({ machineId, name, phone, activatedAt: new Date().toISOString() });
+      } else if (name) {
+        // update name/phone if missing from an earlier entry
+        const doc = existing.docs[0];
+        if (!doc.data().name) await doc.ref.update({ name, phone });
+      }
+    } else {
+      // fallback local
+      const log = await readTrialLog();
+      if (!log.find(e => e.machineId === machineId)) {
+        log.push({ activatedAt: new Date().toISOString(), machineId, name, phone });
+        await fs.writeFile(TRIAL_LOG_FILE, JSON.stringify(log, null, 2), 'utf8');
+      }
     }
-    await fs.writeFile(TRIAL_LOG_FILE, JSON.stringify(log, null, 2), 'utf8');
     res.json({ ok: true });
   } catch { res.json({ ok: false }); }
 });
@@ -1870,13 +1952,31 @@ app.post('/api/trial-log', async (req, res) => {
 app.delete('/api/trial-log/:machineId', async (req, res) => {
   try {
     const id = decodeURIComponent(req.params.machineId);
-    let log = await readTrialLog();
-    log = log.filter(e => e.machineId !== id);
-    await fs.writeFile(TRIAL_LOG_FILE, JSON.stringify(log, null, 2), 'utf8');
-    // Delete local trial file so the app shows activation screen on next launch
-    try { await fs.unlink(path.join(dataDir, 'ac_trial.json')); } catch {}
+    const db2 = getFirestore();
+    if (db2) {
+      // remove from trial-log
+      const snap = await db2.collection('trial-log').where('machineId', '==', id).get();
+      await Promise.all(snap.docs.map(d => d.ref.delete()));
+      // add to revoked list so the machine knows it's been cut off
+      const alreadyRevoked = await db2.collection('trial-revoked').where('machineId', '==', id).limit(1).get();
+      if (alreadyRevoked.empty) {
+        await db2.collection('trial-revoked').add({ machineId: id, revokedAt: new Date().toISOString() });
+      }
+    } else {
+      let log = await readTrialLog();
+      log = log.filter(e => e.machineId !== id);
+      await fs.writeFile(TRIAL_LOG_FILE, JSON.stringify(log, null, 2), 'utf8');
+    }
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// Called by main.js every 30s to check if admin revoked this machine's trial
+app.get('/api/trial-status', async (req, res) => {
+  const machineId = req.query.machineId || '';
+  if (!machineId) return res.json({ revoked: false });
+  const revoked = await isMachineRevoked(machineId);
+  res.json({ revoked });
 });
 // ──────────────────────────────────────────────────────────────────────────
 
@@ -2005,33 +2105,43 @@ app.post('/api/admin/license/set-pass', licenseAdminAuth, async (req, res) => {
   await fs.writeFile(ADMIN_CFG_FILE, JSON.stringify({ pass: newPass }, null, 2), 'utf8');
   res.json({ ok: true });
 });
-// Submit registration request (called by client app on step 1)
-const REQUESTS_FILE = path.join(dataDir, 'license-requests.json');
-async function readRequests() {
-  try { return JSON.parse(await fs.readFile(REQUESTS_FILE, 'utf8')); }
-  catch { return []; }
-}
+// ── License Requests via Firestore ────────────────────────────────────────
 app.post('/api/license/request', async (req, res) => {
   const { name, phone, machineId } = req.body || {};
   if (!name || !phone) return res.json({ ok: false });
-  const requests = await readRequests();
-  // avoid duplicates by machineId
-  const exists = requests.find(r => r.machineId === machineId && r.status === 'pending');
-  if (exists) { exists.name = name; exists.phone = phone; exists.updatedAt = new Date().toISOString(); }
-  else requests.unshift({ id: crypto.randomUUID(), name, phone, machineId: machineId || '', requestedAt: new Date().toISOString(), status: 'pending' });
-  await fs.mkdir(dataDir, { recursive: true }).catch(() => {});
-  await fs.writeFile(REQUESTS_FILE, JSON.stringify(requests, null, 2), 'utf8');
-  res.json({ ok: true });
+  const db2 = getFirestore();
+  if (!db2) return res.json({ ok: false, error: 'firebase_unavailable' });
+  try {
+    const col = db2.collection('license-requests');
+    // upsert by machineId (pending only)
+    const existing = await col.where('machineId', '==', machineId || '').where('status', '==', 'pending').limit(1).get();
+    if (!existing.empty) {
+      await existing.docs[0].ref.update({ name, phone, updatedAt: new Date().toISOString() });
+    } else {
+      await col.add({ id: crypto.randomUUID(), name, phone, machineId: machineId || '', requestedAt: new Date().toISOString(), status: 'pending' });
+    }
+    res.json({ ok: true });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
 });
+
 app.get('/api/admin/license/requests', licenseAdminAuth, async (req, res) => {
-  res.json({ ok: true, requests: await readRequests() });
+  const db2 = getFirestore();
+  if (!db2) return res.json({ ok: false, requests: [] });
+  try {
+    const snap = await db2.collection('license-requests').orderBy('requestedAt', 'desc').get();
+    const requests = snap.docs.map(d => ({ _docId: d.id, ...d.data() }));
+    res.json({ ok: true, requests });
+  } catch (e) { res.json({ ok: false, requests: [], error: e.message }); }
 });
+
 app.post('/api/admin/license/request-done', licenseAdminAuth, async (req, res) => {
-  const requests = await readRequests();
-  const r = requests.find(r => r.id === req.body.id);
-  if (r) r.status = 'done';
-  await fs.writeFile(REQUESTS_FILE, JSON.stringify(requests, null, 2), 'utf8');
-  res.json({ ok: true });
+  const db2 = getFirestore();
+  if (!db2) return res.json({ ok: false });
+  try {
+    const snap = await db2.collection('license-requests').where('id', '==', req.body.id).limit(1).get();
+    if (!snap.empty) await snap.docs[0].ref.update({ status: 'done' });
+    res.json({ ok: true });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 // ── End License System ─────────────────────────────────────────────────────
 

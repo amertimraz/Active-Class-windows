@@ -77,7 +77,8 @@
 
   /* ── State ── */
   let grades = [];
-  let activeLesson = null;   // { lesson, unit, grade }
+  let activeLesson   = null;   // { lesson, unit, grade }
+  let activeGradeId  = null;   // currently selected grade tab
   let activeIndex  = 0;
   let _prevIndex   = -1;     // slide currently on screen (to save its state when leaving)
 
@@ -210,11 +211,13 @@
     try {
       const data = await api('GET', '/api/educational-content');
       grades = Array.isArray(data) ? data : (data.grades || []);
+      if (activeGradeId && !grades.find(g => g.id === activeGradeId)) activeGradeId = null;
       renderTree();
       enrichQuizTitles();
       renderDashboard();
     } catch (e) {
-      if ($('cntTree')) $('cntTree').innerHTML = `<div class="cnt-msg">تعذّر التحميل: ${e.message}</div>`;
+      const panel = $('cntUnitsPanel');
+      if (panel) panel.innerHTML = `<div class="cnt-msg">تعذّر التحميل: ${e.message}</div>`;
     }
   }
 
@@ -337,107 +340,180 @@
   }
 
   /* ═══════════════════════════════════
-     TREE
+     TABS + UNITS PANEL
      ═══════════════════════════════════ */
+  const SVG_PENCIL = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>`;
+  const SVG_TRASH  = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`;
+  const SVG_COPY   = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+  const SVG_FOLDER = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`;
+  const DRAG_HANDLE = `<span class="cnt-drag-handle" title="اسحب للترتيب">⠿</span>`;
+
+  function _acts(type, id, name) {
+    return `<span class="cnt-acts">
+      <button class="cnt-act" data-rt="${type}" data-ri="${id}" data-rc="${esc(name)}" title="تعديل">${SVG_PENCIL}</button>
+      <button class="cnt-act cnt-act-copy" data-cpt="${type}" data-cpi="${id}" data-cpn="${esc(name)}" title="نسخ">${SVG_COPY}</button>
+      <button class="cnt-act cnt-act-del" data-dt="${type}" data-di="${id}" data-dn="${esc(name)}" title="حذف">${SVG_TRASH}</button>
+    </span>`;
+  }
+
   function renderTree() {
-    const tree = $('cntTree');
-    if (!tree) return;
-    const q = ($('cntSearch')?.value || '').trim().toLowerCase();
+    renderGradeTabs();
+    renderUnitsPanel();
+  }
+
+  function renderGradeTabs() {
+    const tabsEl = $('cntGradeTabs');
+    if (!tabsEl) return;
 
     if (!grades.length) {
-      tree.innerHTML = '<div class="cnt-msg">لا يوجد محتوى — أضف صفاً أولاً</div>';
+      tabsEl.innerHTML = '<div class="cnt-tab-empty">لا يوجد صفوف — اضغط "+ صف"</div>';
       return;
     }
 
-    const SVG_PENCIL = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>`;
-    const SVG_TRASH  = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`;
-    const SVG_COPY   = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
-    const DRAG_HANDLE = `<span class="cnt-drag-handle" title="اسحب للترتيب">⠿</span>`;
-    const acts = (type, id, name) =>
-      `<span class="cnt-acts">
-         <button class="cnt-act" data-rt="${type}" data-ri="${id}" data-rc="${esc(name)}" title="تعديل">${SVG_PENCIL}</button>
-         <button class="cnt-act cnt-act-copy" data-cpt="${type}" data-cpi="${id}" data-cpn="${esc(name)}" title="نسخ">${SVG_COPY}</button>
-         <button class="cnt-act cnt-act-del" data-dt="${type}" data-di="${id}" data-dn="${esc(name)}" title="حذف">${SVG_TRASH}</button>
-       </span>`;
-
-    const SVG_FOLDER = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`;
+    if (!activeGradeId || !grades.find(g => g.id === activeGradeId)) {
+      activeGradeId = grades[0].id;
+    }
 
     let html = '';
-    let gi   = 0;
     for (const g of grades) {
-      gi++;
-      let uHtml = '';
-      for (const u of g.units) {
-        let lHtml = '';
-        for (const l of u.lessons) {
-          if (q && !l.name.toLowerCase().includes(q)) continue;
-          const active = activeLesson?.lesson.id === l.id;
-          const cnt    = l.content?.length || 0;
-          lHtml += `<div class="cnt-lesson${active ? ' active' : ''}" draggable="true"
-              data-lid="${l.id}" data-uid="${u.id}" data-gid="${g.id}">
-            ${DRAG_HANDLE}
-            <span class="cnt-lesson-dot"></span>
-            <span class="cnt-row-name">${l.name}</span>
-            ${cnt ? `<span class="cnt-badge">${cnt}</span>` : ''}
-            ${acts('lesson', l.id, l.name)}
-          </div>`;
-        }
-        if (q && !lHtml) continue;
-        const open = q || u.lessons.some(l => activeLesson?.lesson.id === l.id) ? ' open' : '';
-        uHtml += `<div class="cnt-unit-node${open}" id="un-${u.id}" draggable="true">
-          <div class="cnt-unit-row" data-toggle="un-${u.id}">
-            ${DRAG_HANDLE}
-            <span class="cnt-arr">›</span>
-            <span class="cnt-unit-icon">${SVG_FOLDER}</span>
-            <span class="cnt-row-name">${u.name}</span>
-            ${acts('unit', u.id, u.name)}
-            <button class="cnt-add-btn" data-au="${u.id}" title="إضافة درس">+</button>
-          </div>
-          <div class="cnt-unit-lessons">
-            ${lHtml || '<div class="cnt-msg-sm">لا توجد دروس</div>'}
-          </div>
+      const active = g.id === activeGradeId ? ' active' : '';
+      html += `<div class="cnt-tab-wrap${active}" data-gid="${g.id}">
+        <button class="cnt-tab${active}" data-gid="${g.id}">
+          <span class="cnt-tab-name">${g.name}</span>
+          <span class="cnt-tab-acts">
+            <span class="cnt-tab-act" data-rt="grade" data-ri="${g.id}" data-rc="${esc(g.name)}" title="تعديل">${SVG_PENCIL}</span>
+            <span class="cnt-tab-act cnt-act-del" data-dt="grade" data-di="${g.id}" data-dn="${esc(g.name)}" title="حذف">✕</span>
+          </span>
+        </button>
+      </div>`;
+    }
+    tabsEl.innerHTML = html;
+
+    tabsEl.querySelectorAll('.cnt-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        activeGradeId = btn.dataset.gid;
+        tabsEl.querySelectorAll('.cnt-tab-wrap').forEach(w => w.classList.toggle('active', w.dataset.gid === activeGradeId));
+        tabsEl.querySelectorAll('.cnt-tab').forEach(b => b.classList.toggle('active', b.dataset.gid === activeGradeId));
+        renderUnitsPanel();
+      });
+    });
+
+    tabsEl.querySelectorAll('[data-rt]').forEach(b => {
+      b.addEventListener('click', e => {
+        e.stopPropagation();
+        _renameType = 'grade'; _renameId = b.dataset.ri;
+        $('mRenameTitle').textContent = 'تعديل اسم الصف';
+        $('mRenameInput').value = b.dataset.rc;
+        openM('mRename');
+        setTimeout(() => $('mRenameInput').select(), 80);
+      });
+    });
+
+    tabsEl.querySelectorAll('[data-dt]').forEach(b => {
+      b.addEventListener('click', async e => {
+        e.stopPropagation();
+        e.preventDefault();
+        const id = b.dataset.di, name = b.dataset.dn;
+        const ok = await confirmDialog(`حذف الصف "${name}"؟ سيتم حذف كل وحداته ودروسه.`);
+        if (!ok) return;
+        try {
+          await api('DELETE', `/api/grades/${id}`);
+          grades = grades.filter(g => g.id !== id);
+          if (activeGradeId === id) activeGradeId = grades[0]?.id || null;
+          renderTree();
+        } catch (err) { }
+      });
+    });
+  }
+
+  function renderUnitsPanel() {
+    const panel = $('cntUnitsPanel');
+    if (!panel) return;
+
+    if (!grades.length) {
+      panel.innerHTML = '<div class="cnt-msg">أضف صفاً أولاً</div>';
+      return;
+    }
+
+    const grade = grades.find(g => g.id === activeGradeId);
+    if (!grade) { panel.innerHTML = '<div class="cnt-msg">اختر صفاً</div>'; return; }
+
+    const q = ($('cntSearch')?.value || '').trim().toLowerCase();
+
+    let html = '';
+    for (const u of grade.units) {
+      let lHtml = '';
+      for (const l of u.lessons) {
+        if (q && !l.name.toLowerCase().includes(q)) continue;
+        const active = activeLesson?.lesson.id === l.id;
+        const cnt    = l.content?.length || 0;
+        lHtml += `<div class="cnt-lesson${active ? ' active' : ''}" draggable="true"
+            data-lid="${l.id}" data-uid="${u.id}" data-gid="${grade.id}">
+          ${DRAG_HANDLE}
+          <span class="cnt-lesson-dot"></span>
+          <span class="cnt-row-name">${l.name}</span>
+          ${cnt ? `<span class="cnt-badge">${cnt}</span>` : ''}
+          ${_acts('lesson', l.id, l.name)}
         </div>`;
       }
-      if (q && !uHtml) continue;
-      const open = q || g.units.some(u => u.lessons.some(l => activeLesson?.lesson.id === l.id)) ? ' open' : '';
-      html += `<div class="cnt-grade-node${open}" id="gn-${g.id}" draggable="true">
-        <div class="cnt-grade-row" data-toggle="gn-${g.id}">
+      if (q && !lHtml) continue;
+
+      const lessonCount = u.lessons.length;
+      const badge = lessonCount
+        ? `<span class="cnt-unit-badge">${lessonCount} ${lessonCount === 1 ? 'درس' : 'دروس'}</span>`
+        : `<span class="cnt-unit-badge empty">بدون دروس</span>`;
+      const open = q || u.lessons.some(l => activeLesson?.lesson.id === l.id) ? ' open' : '';
+
+      html += `<div class="cnt-unit-card${open}" id="uc-${u.id}" draggable="true">
+        <div class="cnt-unit-card-head" data-toggle="uc-${u.id}">
           ${DRAG_HANDLE}
+          <div class="cnt-unit-card-icon">${SVG_FOLDER}</div>
+          <span class="cnt-unit-card-name">${u.name}</span>
+          ${badge}
+          ${_acts('unit', u.id, u.name)}
           <span class="cnt-arr">›</span>
-          <span class="cnt-grade-icon">🏫</span>
-          <span class="cnt-row-name">${g.name}</span>
-          ${acts('grade', g.id, g.name)}
-          <button class="cnt-add-btn" data-ag="${g.id}" title="إضافة وحدة">+</button>
         </div>
-        <div class="cnt-grade-units">
-          ${uHtml || '<div class="cnt-msg-sm">لا توجد وحدات</div>'}
+        <div class="cnt-unit-card-lessons">
+          ${lHtml || '<div class="cnt-msg-sm">لا توجد دروس بعد</div>'}
+          <button class="cnt-add-lesson-inline" data-au="${u.id}">+ إضافة درس</button>
         </div>
       </div>`;
     }
 
-    /* Replace the tree node to flush accumulated event listeners from prior renders */
-    const fresh = tree.cloneNode(false);
-    fresh.innerHTML = html || '<div class="cnt-msg">لا نتائج</div>';
-    tree.replaceWith(fresh);
-    bindTree();
+    if (!html && q) {
+      html = '<div class="cnt-msg">لا نتائج</div>';
+    } else if (!html) {
+      html = '<div class="cnt-msg-sm" style="padding:12px 14px">لا توجد وحدات بعد</div>';
+    }
+
+    html += `<button class="cnt-add-unit-card" data-ag="${grade.id}">
+      ${SVG_FOLDER} إضافة وحدة
+    </button>`;
+
+    const fresh = panel.cloneNode(false);
+    fresh.innerHTML = html;
+    panel.replaceWith(fresh);
+
+    bindUnitsPanel();
     initDragDrop();
   }
 
-  function bindTree() {
-    const tree = $('cntTree');
+  function bindUnitsPanel() {
+    const panel = $('cntUnitsPanel');
+    if (!panel) return;
 
-    /* expand / collapse */
-    tree.querySelectorAll('[data-toggle]').forEach(el => {
+    /* expand / collapse unit cards */
+    panel.querySelectorAll('[data-toggle]').forEach(el => {
       el.addEventListener('click', e => {
-        if (e.target.closest('button')) return;
+        if (e.target.closest('button, .cnt-acts')) return;
         document.getElementById(el.dataset.toggle)?.classList.toggle('open');
       });
     });
 
     /* select lesson */
-    tree.querySelectorAll('.cnt-lesson').forEach(el => {
+    panel.querySelectorAll('.cnt-lesson').forEach(el => {
       el.addEventListener('click', e => {
-        if (e.target.closest('button')) return;
+        if (e.target.closest('button, .cnt-acts')) return;
         const g = grades.find(g => g.id === el.dataset.gid);
         const u = g?.units.find(u => u.id === el.dataset.uid);
         const l = u?.lessons.find(l => l.id === el.dataset.lid);
@@ -446,7 +522,7 @@
     });
 
     /* add unit */
-    tree.querySelectorAll('[data-ag]').forEach(b => {
+    panel.querySelectorAll('[data-ag]').forEach(b => {
       b.addEventListener('click', e => {
         e.stopPropagation();
         $('mUnitGid').value = b.dataset.ag;
@@ -456,8 +532,8 @@
       });
     });
 
-    /* add lesson */
-    tree.querySelectorAll('[data-au]').forEach(b => {
+    /* add lesson inline */
+    panel.querySelectorAll('[data-au]').forEach(b => {
       b.addEventListener('click', e => {
         e.stopPropagation();
         $('mLessonUid').value = b.dataset.au;
@@ -468,7 +544,7 @@
     });
 
     /* rename */
-    tree.querySelectorAll('[data-rt]').forEach(b => {
+    panel.querySelectorAll('[data-rt]').forEach(b => {
       b.addEventListener('click', e => {
         e.stopPropagation();
         _renameType = b.dataset.rt; _renameId = b.dataset.ri;
@@ -481,16 +557,13 @@
     });
 
     /* copy */
-    tree.querySelectorAll('[data-cpt]').forEach(b => {
+    panel.querySelectorAll('[data-cpt]').forEach(b => {
       b.addEventListener('click', async e => {
         e.stopPropagation();
         const type = b.dataset.cpt, id = b.dataset.cpi, name = b.dataset.cpn;
         b.disabled = true;
         try {
-          if (type === 'grade') {
-            const g = await api('GET', `/api/grades/${id}`);
-            await api('POST', '/api/grades', { name: `${g.name} - نسخة` });
-          } else if (type === 'unit') {
+          if (type === 'unit') {
             const u = await api('GET', `/api/units/${id}`);
             await api('POST', '/api/units', { name: `${u.name} - نسخة`, gradeId: u.gradeId });
           } else if (type === 'lesson') {
@@ -503,7 +576,7 @@
     });
 
     /* delete */
-    tree.querySelectorAll('[data-dt]').forEach(b => {
+    panel.querySelectorAll('[data-dt]').forEach(b => {
       b.addEventListener('click', e => {
         e.stopPropagation();
         confirmDelete(b.dataset.dt, b.dataset.di, b.dataset.dn, b);
@@ -511,7 +584,7 @@
     });
 
     /* prevent drag from starting on buttons/acts */
-    tree.querySelectorAll('button, .cnt-acts').forEach(el => {
+    panel.querySelectorAll('button, .cnt-acts').forEach(el => {
       el.addEventListener('mousedown', e => e.stopPropagation());
     });
   }
@@ -520,31 +593,25 @@
      DRAG-AND-DROP REORDER
      ═══════════════════════════════════ */
   function initDragDrop() {
-    const tree = $('cntTree');
-    if (!tree) return;
+    const panel = $('cntUnitsPanel');
+    if (!panel) return;
 
-    let dragEl        = null;
-    let dragType      = null;
-    let dropLine      = null;
-    let _fromHandle   = false;   // flag: drag started from the ⠿ handle
+    let dragEl      = null;
+    let dragType    = null;
+    let dropLine    = null;
+    let _fromHandle = false;
 
     const getType = el =>
-      el.classList.contains('cnt-grade-node') ? 'grade' :
-      el.classList.contains('cnt-unit-node')  ? 'unit'  :
-      el.classList.contains('cnt-lesson')     ? 'lesson': null;
+      el.classList.contains('cnt-unit-card') ? 'unit' :
+      el.classList.contains('cnt-lesson')    ? 'lesson' : null;
 
-    const sel = {
-      grade:  '.cnt-grade-node',
-      unit:   '.cnt-unit-node',
-      lesson: '.cnt-lesson',
-    };
+    const sel = { unit: '.cnt-unit-card', lesson: '.cnt-lesson' };
 
-    /* track whether mousedown was on a handle */
-    tree.addEventListener('mousedown', e => {
+    panel.addEventListener('mousedown', e => {
       _fromHandle = !!e.target.closest('.cnt-drag-handle');
     });
 
-    tree.querySelectorAll('[draggable="true"]').forEach(node => {
+    panel.querySelectorAll('[draggable="true"]').forEach(node => {
       node.addEventListener('dragstart', e => {
         if (!_fromHandle) { e.preventDefault(); return; }
         _fromHandle = false;
@@ -564,39 +631,33 @@
 
     const removeDropLine = () => { dropLine?.remove(); dropLine = null; };
 
-    tree.addEventListener('dragover', e => {
+    panel.addEventListener('dragover', e => {
       if (!dragEl || !dragType) return;
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
-
       const target = e.target.closest(sel[dragType]);
       if (!target || target === dragEl) { removeDropLine(); return; }
-
       const rect = target.getBoundingClientRect();
       const before = e.clientY < rect.top + rect.height / 2;
-
       removeDropLine();
       dropLine = document.createElement('div');
       dropLine.className = 'cnt-drop-line';
       target.parentNode.insertBefore(dropLine, before ? target : target.nextSibling);
     });
 
-    tree.addEventListener('dragleave', e => {
-      if (!e.relatedTarget || !tree.contains(e.relatedTarget)) removeDropLine();
+    panel.addEventListener('dragleave', e => {
+      if (!e.relatedTarget || !panel.contains(e.relatedTarget)) removeDropLine();
     });
 
-    tree.addEventListener('drop', async e => {
+    panel.addEventListener('drop', async e => {
       e.preventDefault();
       if (!dragEl || !dropLine) { removeDropLine(); return; }
-
-      const parent   = dropLine.parentNode;
-      const refNode  = dropLine.nextSibling;
+      const parent  = dropLine.parentNode;
+      const refNode = dropLine.nextSibling;
       removeDropLine();
-
       if (refNode !== dragEl && refNode !== dragEl?.nextSibling) {
         parent.insertBefore(dragEl, refNode);
       }
-
       dragEl.classList.remove('cnt-dragging');
       await _saveOrder(dragType, dragEl, parent);
       dragEl = null; dragType = null;
@@ -612,17 +673,15 @@
         grades.sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
 
       } else if (type === 'unit') {
-        const gradeNode = el.closest('.cnt-grade-node');
-        const gradeId   = gradeNode?.id.replace('gn-', '');
-        const ids = [...parent.querySelectorAll(':scope > .cnt-unit-node')]
-          .map(n => n.id.replace('un-', ''));
-        await api('POST', '/api/units/reorder', { gradeId, orderedUnitIds: ids });
-        const grade = grades.find(g => g.id === gradeId);
+        const ids = [...parent.querySelectorAll(':scope > .cnt-unit-card')]
+          .map(n => n.id.replace('uc-', ''));
+        await api('POST', '/api/units/reorder', { gradeId: activeGradeId, orderedUnitIds: ids });
+        const grade = grades.find(g => g.id === activeGradeId);
         if (grade) grade.units.sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
 
       } else {
-        const unitNode = el.closest('.cnt-unit-node');
-        const unitId   = unitNode?.id.replace('un-', '');
+        const unitCard = el.closest('.cnt-unit-card');
+        const unitId   = unitCard?.id.replace('uc-', '');
         const ids = [...parent.querySelectorAll(':scope > .cnt-lesson')]
           .map(n => n.dataset.lid);
         await api('POST', '/api/lessons/reorder', { unitId, orderedLessonIds: ids });
@@ -914,10 +973,10 @@
 
   /* ── Edit mode toggle ── */
   $('cntEditToggle')?.addEventListener('click', () => {
-    const tree = $('cntTree');
-    const btn  = $('cntEditToggle');
-    if (!tree || !btn) return;
-    const on = tree.classList.toggle('cnt-edit-mode');
+    const sb  = $('cntSb');
+    const btn = $('cntEditToggle');
+    if (!sb || !btn) return;
+    const on = sb.classList.toggle('cnt-edit-mode');
     btn.classList.toggle('active', on);
     btn.title = on ? 'إيقاف وضع التعديل' : 'وضع التعديل';
   });
@@ -1715,16 +1774,48 @@
     document.getElementById('pdfNavBar')?.remove();
     $('cntViewer').innerHTML = buildViewer(item);
 
+    /* YouTube webview: inject CSS to hide everything except the player */
+    if (item.type === 'link' && getMeta(item).kind === 'youtube') {
+      const wv = $('cntViewer').querySelector('webview');
+      if (wv) {
+        wv.addEventListener('dom-ready', () => {
+          wv.insertCSS(`
+            * { box-sizing: border-box; }
+            html, body { margin:0; padding:0; overflow:hidden; background:#000; width:100vw; height:100vh; }
+            #masthead-container, ytd-watch-metadata, #secondary,
+            #below, ytd-comments, #chat-container, #related,
+            tp-yt-app-drawer, ytd-miniplayer, .ytp-chrome-top,
+            .ytp-watermark, ytd-popup-container, tp-yt-paper-dialog,
+            ytd-enforcement-message-view-model,
+            yt-mealbar-promo-renderer, #mealbar-promo-renderer,
+            .ytd-mealbar-promo-renderer { display:none!important; }
+            ytd-app { --ytd-masthead-height:0px!important; }
+            #page-manager, ytd-watch-flexy, #columns, #primary, #primary-inner {
+              margin:0!important; padding:0!important; max-width:100vw!important;
+            }
+            #movie_player {
+              position:fixed!important;
+              top:2vh!important; left:2vw!important;
+              width:96vw!important; height:84vh!important;
+              z-index:9999!important;
+            }
+          `);
+        });
+      }
+    }
+
     /* in quiz mode: hide drawing tools + canvas + stage overlays */
     const annoBar = $('cntAnnoBar');
     const canvas  = $('cntCanvas');
     const exitBtn = $('cntExit');
     const counter = $('cntCounter');
     const pnav    = document.querySelector('.cnt-pnav');
-    const isQuiz  = item.type === 'quiz';
+    const isQuiz    = item.type === 'quiz';
+    const isYoutube = getMeta(item).kind === 'youtube';
+    const hideTools = isQuiz || isYoutube;
     const _applyQuizMode = () => {
-      if (annoBar) annoBar.style.display = isQuiz ? 'none' : '';
-      if (canvas)  canvas.style.display  = isQuiz ? 'none' : '';
+      if (annoBar) annoBar.style.display = hideTools ? 'none' : '';
+      if (canvas)  canvas.style.display  = hideTools ? 'none' : '';
       if (exitBtn) exitBtn.style.display  = isQuiz ? 'none' : '';
       if (counter) counter.style.display  = isQuiz ? 'none' : '';
       /* pnav (thumbnail strip) stays visible — user needs it to navigate between slides */
@@ -1762,7 +1853,8 @@
 
       case 'youtube': {
         const id = ytId(item.url);
-        return `<iframe src="https://www.youtube-nocookie.com/embed/${id}?rel=0" style="width:100%;height:100%;border:none;border-radius:4px" allowfullscreen allow="autoplay; encrypted-media"></iframe>`;
+        const ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36';
+        return `<webview id="yt-webview-${id}" src="https://www.youtube.com/watch?v=${id}&hl=ar" useragent="${ua}" style="width:100%;height:100%;border-radius:4px"></webview>`;
       }
 
       case 'vimeo': {

@@ -86,7 +86,7 @@
   }
 
   // ── STEP 1: Registration ──────────────────────────────────────────────────
-  $('btnSendRequest')?.addEventListener('click', () => {
+  $('btnSendRequest')?.addEventListener('click', async () => {
     const nameVal  = $('regName')?.value.trim();
     const phoneVal = $('regPhone')?.value.trim();
 
@@ -111,7 +111,7 @@
     regPhone = phoneVal;
     saveRegistration(regName, regPhone);
 
-    // Send registration request to local server (shows up in admin panel)
+    // Send registration request to local server — best effort (don't block on failure)
     fetch('/api/license/request', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -127,8 +127,12 @@
     if (btn) { btn.disabled = true; btn.textContent = 'جاري التفعيل...'; }
     try {
       if (hasAPI && window.api.startTrial) {
-        await window.api.startTrial();
-        // main.js redirects automatically after startTrial
+        const result = await window.api.startTrial(regName, regPhone);
+        if (result && result.message === 'trial_expired') {
+          showMsg('trialMsg', 'انتهت فترة التجربة المجانية. يرجى التواصل مع المطوّر للحصول على ترخيص.', 'error');
+          if (btn) { btn.disabled = false; btn.textContent = 'جرّب مجاناً لمدة 7 أيام'; }
+        }
+        // main.js redirects automatically after successful startTrial
       } else {
         // Web fallback — store in localStorage
         const exp = new Date(); exp.setDate(exp.getDate() + 7);

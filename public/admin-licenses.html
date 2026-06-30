@@ -235,8 +235,20 @@ tbody tr:hover{background:var(--sl-50);}
               <input type="checkbox" id="trialCompetitions"> المسابقات
             </label>
             <label style="display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--sl-600);cursor:pointer">
-              <input type="checkbox" id="trialContent"> المحتوى التعليمي
+              <input type="checkbox" id="trialContent"> تفعيل المحتوى التعليمي
             </label>
+          </div>
+          <div class="field">
+            <label class="field-label">حد الصفوف <span style="color:var(--sl-400);font-size:.75rem">(0 = بلا حد)</span></label>
+            <input id="trialMaxGrades" class="field-input" type="number" min="0" value="0">
+          </div>
+          <div class="field">
+            <label class="field-label">حد الوحدات <span style="color:var(--sl-400);font-size:.75rem">(0 = بلا حد)</span></label>
+            <input id="trialMaxUnits" class="field-input" type="number" min="0" value="0">
+          </div>
+          <div class="field">
+            <label class="field-label">حد الدروس <span style="color:var(--sl-400);font-size:.75rem">(0 = بلا حد)</span></label>
+            <input id="trialMaxLessons" class="field-input" type="number" min="0" value="0">
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:10px;margin-top:4px">
@@ -967,8 +979,11 @@ async function loadTrialConfig() {
     document.getElementById('trialMaxStudents').value  = cfg.maxStudents    ?? 10;
     document.getElementById('trialMaxQuizzes').value   = cfg.maxQuizzes     ?? 2;
     document.getElementById('trialAllowedGames').value = cfg.allowedGames   ?? 3;
-    document.getElementById('trialCompetitions').checked = !!cfg.competitions;
-    document.getElementById('trialContent').checked      = !!cfg.content;
+    document.getElementById('trialCompetitions').checked    = !!cfg.competitions;
+    document.getElementById('trialContent').checked          = !!cfg.content;
+    document.getElementById('trialMaxGrades').value          = cfg.maxGrades  ?? 0;
+    document.getElementById('trialMaxUnits').value           = cfg.maxUnits   ?? 0;
+    document.getElementById('trialMaxLessons').value         = cfg.maxLessons ?? 0;
   } catch {}
 }
 
@@ -981,6 +996,9 @@ async function saveTrialConfig() {
     allowedGames: parseInt(document.getElementById('trialAllowedGames').value) || 3,
     competitions: document.getElementById('trialCompetitions').checked,
     content:      document.getElementById('trialContent').checked,
+    maxGrades:    parseInt(document.getElementById('trialMaxGrades').value)  || 0,
+    maxUnits:     parseInt(document.getElementById('trialMaxUnits').value)   || 0,
+    maxLessons:   parseInt(document.getElementById('trialMaxLessons').value) || 0,
   };
   const status = document.getElementById('trialConfigStatus');
   try {
@@ -1016,8 +1034,10 @@ async function loadTrialStats() {
       container.innerHTML = `<div style="text-align:center;font-size:.78rem;color:var(--sl-400);padding:16px">لا توجد تجارب مسجّلة بعد</div>`;
       return;
     }
-    container.innerHTML = [...entries].reverse().map(e => {
+    container.innerHTML = entries.map(e => {
       const mid = escHtml(e.machineId || '—');
+      const eName = escHtml(e.name  || '');
+      const ePhone = escHtml(e.phone || '');
       const startDate = new Date(e.activatedAt);
       const endDate = new Date(startDate.getTime() + daysLimit * 86400000);
       const now = new Date();
@@ -1028,10 +1048,15 @@ async function loadTrialStats() {
       const badge = expired
         ? `<span style="padding:2px 7px;border-radius:99px;background:#fee2e2;color:#ef4444;font-size:.65rem;font-weight:700;white-space:nowrap">منتهية</span>`
         : `<span style="padding:2px 7px;border-radius:99px;background:#ede9fe;color:#7c3aed;font-size:.65rem;font-weight:700;white-space:nowrap">باقي ${daysLeft} يوم</span>`;
+      const nameRow = (eName || ePhone) ? `
+        <div style="display:flex;gap:12px;font-size:.68rem;color:var(--sl-600);margin-bottom:5px">
+          ${eName  ? `<span>👤 ${eName}</span>`  : ''}
+          ${ePhone ? `<span>📱 ${ePhone}</span>` : ''}
+        </div>` : '';
 
       return `
       <div style="background:var(--sl-50);border-radius:10px;padding:10px 12px;font-size:.75rem">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:${eName || ePhone ? 4 : 7}px">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4"/></svg>
           <span style="font-family:monospace;color:var(--sl-700);font-size:.68rem;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${mid}">${mid}</span>
           ${badge}
@@ -1039,6 +1064,7 @@ async function loadTrialStats() {
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6m4-6v6"/><path d="M9 6V4h6v2"/></svg>
           </button>
         </div>
+        ${nameRow}
         <div style="display:flex;justify-content:space-between;font-size:.65rem;color:var(--sl-400);margin-bottom:4px">
           <span>بدأت ${startDate.toLocaleDateString('ar-EG')}</span>
           <span>تنتهي ${endDate.toLocaleDateString('ar-EG')}</span>

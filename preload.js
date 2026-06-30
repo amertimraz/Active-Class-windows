@@ -86,7 +86,7 @@ contextBridge.exposeInMainWorld('api', {
   getApiKey: () => ipcRenderer.invoke('get-api-key'),
 
   // Trial
-  startTrial:      () => ipcRenderer.invoke('start-trial'),
+  startTrial:      (name, phone) => ipcRenderer.invoke('start-trial', name, phone),
   getTrialStatus:  () => ipcRenderer.invoke('get-trial-status'),
 
   // Auto-update
