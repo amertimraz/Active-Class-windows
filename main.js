@@ -1,5 +1,5 @@
 // Simple Electron main process
-const { app, BrowserWindow, ipcMain, dialog, session, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, session, shell, desktopCapturer } = require('electron');
 
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 const path = require('path');
@@ -16,7 +16,7 @@ const LICENSE_FILE = () => path.join(app.getPath('userData'), 'ac_license.json')
 // ── Trial helpers ──────────────────────────────────────────────────────────
 const TRIAL_DAYS   = 7;
 const TRIAL_FILE   = () => path.join(app.getPath('userData'), 'ac_trial.json');
-const TRIAL_LIMITS = { maxGroups: 1, maxStudents: 10, maxQuizzes: 2, allowedGames: 3, competitions: false, content: false };
+const TRIAL_LIMITS = { maxGroups: 1, maxStudents: 10, maxQuizzes: 2, allowedGames: 3, competitions: false, content: true, maxGrades: 1, maxUnits: 2, maxLessons: 3 };
 
 function readTrialFile()  { try { return JSON.parse(fs.readFileSync(TRIAL_FILE(), 'utf8')); } catch { return null; } }
 function writeTrialFile(d){ try { fs.writeFileSync(TRIAL_FILE(), JSON.stringify(d, null, 2), 'utf8'); } catch {} }
@@ -51,31 +51,25 @@ function isLicenseValid(lic) {
 }
 
 // License verification — tries remote server first (for client machines),
-// then falls back to local server (admin's machine).
-const REMOTE_LICENSE_SERVER = 'https://twisting-energy-applied.ngrok-free.dev';
-
 async function verifyWithServer(key, machineId) {
-  // Try local server first (admin's machine), then remote (client's machine)
-  const urls = [`http://localhost:${SERVER_PORT}`, REMOTE_LICENSE_SERVER];
-  for (const base of urls) {
-    try {
-      const res = await fetch(`${base}/api/license/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key, machineId }),
-        signal: AbortSignal.timeout(6000)
-      });
-      const data = await res.json();
-      if (data && (data.ok || data.ok === false)) return data; // valid server response
-    } catch { /* try next */ }
-  }
-  return null; // all servers unreachable — caller uses local cache
+  // Licenses are stored in Firestore — the local server reads from it directly.
+  try {
+    const res = await fetch(`http://localhost:${SERVER_PORT}/api/license/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key, machineId }),
+      signal: AbortSignal.timeout(8000)
+    });
+    const data = await res.json();
+    if (data && (data.ok === true || data.ok === false)) return data;
+  } catch { /* server not ready */ }
+  return null;
 }
 // ──────────────────────────────────────────────────────────────────────────
 
 // Single source of truth for the renderer Content-Security-Policy (was
 // duplicated across every BrowserWindow). Update here only.
-const CSP_VALUE = `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' http://localhost:* https://twisting-energy-applied.ngrok-free.dev https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://script.google.com https://script.googleusercontent.com; media-src 'self' data: blob:; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://wordwall.net https://*.wordwall.net https://learningapps.org https://*.learningapps.org https://cokogames.com https://*.cokogames.com; worker-src 'self' blob: https://cdnjs.cloudflare.com;`;
+const CSP_VALUE = `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' http://localhost:* https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://script.google.com https://script.googleusercontent.com; media-src 'self' data: blob:; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://wordwall.net https://*.wordwall.net https://learningapps.org https://*.learningapps.org https://cokogames.com https://*.cokogames.com; worker-src 'self' blob: https://cdnjs.cloudflare.com;`;
 
 // Uniform in-place shuffle (Fisher–Yates). Replaces the biased
 // `arr.sort(() => Math.random() - 0.5)` idiom, which does not produce a
@@ -126,7 +120,12 @@ async function createWindow() {
       webSecurity: true,
       sandbox: false,
       webviewTag: true,
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, 'preload.js'),
+      // Needed so window.api is available inside same-origin <iframe>s (e.g. the
+      // whiteboard embedded as a lesson-content slide). preload.js guards the
+      // actual exposeInMainWorld calls to our own localhost origin, so arbitrary
+      // external sites loaded via the "web link" content type still get nothing.
+      nodeIntegrationInSubFrames: true
     }
   });
 
@@ -181,7 +180,7 @@ async function createWindow() {
         { signal: AbortSignal.timeout(5000) });
       const data = await r.json();
       if (data.revoked) {
-        writeTrialFile({ ...trial, expiresAt: new Date(0).toISOString() });
+        writeTrialFile({ ...trial, expiresAt: new Date(0).toISOString(), revokedByAdmin: true });
       } else {
         startUrl = APP_URL;
       }
@@ -232,7 +231,7 @@ async function createWindow() {
         const data = await r.json();
         if (data.revoked) {
           clearInterval(trialWatcher);
-          writeTrialFile({ ...currentTrial, expiresAt: new Date(0).toISOString() });
+          writeTrialFile({ ...currentTrial, expiresAt: new Date(0).toISOString(), revokedByAdmin: true });
           mainWindow.loadURL(`${APP_URL}/pages/activation.html`);
         }
       } catch {}
@@ -278,7 +277,7 @@ function createNumbersWindow() {
 
   const win = new BrowserWindow({
     width: 418,
-    height: 640,
+    height: 460, // fitWindowToContent() in numbers-standalone.html corrects this to the real content height right after load
     frame: false,
     transparent: true,
     resizable: true,
@@ -969,6 +968,27 @@ app.whenReady().then(async () => {
 
   ipcMain.handle('get-api-key', () => SERVER_API_KEY);
 
+  // ── Screen sources for full-screen whiteboard recording ────────────────
+  ipcMain.handle('get-screen-sources', async () => {
+    const sources = await desktopCapturer.getSources({ types: ['screen', 'window'], thumbnailSize: { width: 200, height: 120 } });
+    return sources.map(s => ({ id: s.id, name: s.name, thumbnail: s.thumbnail.toDataURL() }));
+  });
+
+  // Resolves the capture-source id for this app's own window only — used so
+  // "record screen" grabs the app (toolbar included) without showing the
+  // teacher a picker full of unrelated desktop windows.
+  ipcMain.handle('get-own-window-source', async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win) return null;
+    if (typeof win.getMediaSourceId === 'function') {
+      try { return { id: win.getMediaSourceId() }; } catch { /* fall through to matching below */ }
+    }
+    const title = win.getTitle();
+    const sources = await desktopCapturer.getSources({ types: ['window'], thumbnailSize: { width: 1, height: 1 } });
+    const match = sources.find(s => s.name === title);
+    return match ? { id: match.id } : null;
+  });
+
   // ── License IPC Handlers ───────────────────────────────────────────────
   ipcMain.handle('get-machine-id', () => getMachineId());
 
@@ -1042,10 +1062,30 @@ app.whenReady().then(async () => {
   ipcMain.handle('start-trial', async (_e, name, phone) => {
     const existing = readTrialFile();
     if (existing) {
-      if (!isTrialValid(existing)) return { ok: false, message: 'trial_expired' };
-      // Trial already started and still valid — just navigate to the app
-      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.loadURL('http://localhost:5000');
-      return { ok: true, message: 'already_started' };
+      if (!isTrialValid(existing)) {
+        // A naturally-expired trial stays blocked (expected behavior). But if
+        // this machine was cut off by an admin and has since been restored
+        // from the admin panel, let it start a fresh trial instead of being
+        // stuck forever on a local file that predates the restore.
+        if (existing.revokedByAdmin) {
+          try {
+            const mid = getMachineId();
+            const r = await fetch(`http://localhost:${SERVER_PORT}/api/trial-status?machineId=${encodeURIComponent(mid)}`,
+              { signal: AbortSignal.timeout(5000) });
+            const data = await r.json();
+            if (data.revoked) return { ok: false, message: 'trial_expired' };
+            // no longer revoked — fall through and issue a new trial period
+          } catch {
+            return { ok: false, message: 'trial_expired' }; // can't confirm restore while offline
+          }
+        } else {
+          return { ok: false, message: 'trial_expired' };
+        }
+      } else {
+        // Trial already started and still valid — just navigate to the app
+        if (mainWindow && !mainWindow.isDestroyed()) mainWindow.loadURL('http://localhost:5000');
+        return { ok: true, message: 'already_started' };
+      }
     }
 
     // Read config from server (may have been updated via admin panel)

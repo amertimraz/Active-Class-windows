@@ -87,6 +87,13 @@ body {
   color: white;
 }
 
+.fold-btn svg {
+  transition: transform 0.2s;
+}
+.fold-btn.is-folded svg {
+  transform: rotate(180deg);
+}
+
 /* Body */
 .tool-body {
   flex: 1;

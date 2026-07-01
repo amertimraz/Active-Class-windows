@@ -1810,14 +1810,19 @@
     const exitBtn = $('cntExit');
     const counter = $('cntCounter');
     const pnav    = document.querySelector('.cnt-pnav');
-    const isQuiz    = item.type === 'quiz';
-    const isYoutube = getMeta(item).kind === 'youtube';
-    const hideTools = isQuiz || isYoutube;
+    const isQuiz      = item.type === 'quiz';
+    const isYoutube    = getMeta(item).kind === 'youtube';
+    const isWhiteboard = item.type === 'whiteboard';
+    const hideTools = isQuiz || isYoutube || isWhiteboard;
     const _applyQuizMode = () => {
       if (annoBar) annoBar.style.display = hideTools ? 'none' : '';
       if (canvas)  canvas.style.display  = hideTools ? 'none' : '';
       if (exitBtn) exitBtn.style.display  = isQuiz ? 'none' : '';
       if (counter) counter.style.display  = isQuiz ? 'none' : '';
+      /* the embedded whiteboard has its own fullscreen button sitting at the
+         top-left of its topbar — move the exit button to the opposite
+         corner so the two don't overlap */
+      if (exitBtn) exitBtn.classList.toggle('cnt-exit-right', isWhiteboard);
       /* pnav (thumbnail strip) stays visible — user needs it to navigate between slides */
     };
     _applyQuizMode();
@@ -1872,8 +1877,10 @@
         </div>`;
 
       case 'whiteboard':
-        setTimeout(() => { annoMode = true; canvas?.classList.add('drawing'); }, 0);
-        return `<div style="width:100%;height:100%;background:#fff;border-radius:4px"></div>`;
+        /* full interactive whiteboard (shapes, camera, recording, etc.) embedded
+           directly in the slide — its own toolbar replaces the lightweight
+           anno-bar for this slide type (see hideTools in renderCurrentSlide) */
+        return `<iframe src="/pages/whiteboard-standalone.html" style="width:100%;height:100%;border:none;border-radius:4px;background:#fff"></iframe>`;
 
       case 'quiz':
         setTimeout(() => renderQuizPlayer(item), 0);
@@ -2016,6 +2023,31 @@
 
   const SHAPE_TOOLS = new Set(['line', 'arrow', 'rect', 'circle']);
 
+  /* custom per-tool cursors — same idea as the standalone whiteboard: a small
+     SVG icon with a hotspot at the actual drawing point, instead of a single
+     generic crosshair for every tool. */
+  function _svgCursor(svgBody, w, h, hx, hy) {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${svgBody}</svg>`;
+    return `url("data:image/svg+xml,${encodeURIComponent(svg)}") ${hx} ${hy}`;
+  }
+  const _CURSOR_MAP = {
+    pen: _svgCursor(
+      `<g transform="rotate(45 16 16)"><path d="M14 3a2 2 0 0 1 4 0v16l-2 5-2-5Z" fill="#3b82f6" stroke="#1e3a8a" stroke-width="1"/></g>`,
+      32, 32, 4, 28) + ', crosshair',
+    highlighter: _svgCursor(
+      `<rect x="3" y="12" width="20" height="10" rx="2" fill="#eab308" opacity=".55" stroke="#a16207" stroke-width="1"/>`,
+      28, 28, 4, 17) + ', crosshair',
+    erase: _svgCursor(
+      `<rect x="4" y="10" width="20" height="12" rx="3" fill="#fff" stroke="#f43f5e" stroke-width="2"/><line x1="4" y1="16" x2="24" y2="16" stroke="#f43f5e" stroke-width="1.5"/>`,
+      28, 28, 14, 16) + ', cell',
+    pointer: 'none', // the laser dot itself already shows position
+    line:   _svgCursor(`<line x1="4" y1="20" x2="20" y2="4" stroke="#64748b" stroke-width="2.5" stroke-linecap="round"/>`, 24, 24, 4, 20) + ', crosshair',
+    arrow:  _svgCursor(`<line x1="4" y1="20" x2="20" y2="4" stroke="#f97316" stroke-width="2.5" stroke-linecap="round"/><path d="M20 4 12 6l6 6Z" fill="#f97316"/>`, 24, 24, 4, 20) + ', crosshair',
+    rect:   _svgCursor(`<rect x="3" y="6" width="18" height="14" rx="2" fill="none" stroke="#0ea5e9" stroke-width="2.5"/>`, 24, 24, 3, 6) + ', crosshair',
+    circle: _svgCursor(`<circle cx="12" cy="12" r="9" fill="none" stroke="#14b8a6" stroke-width="2.5"/>`, 24, 24, 3, 3) + ', crosshair',
+  };
+  function _cursorForTool(t) { return _CURSOR_MAP[t] || 'crosshair'; }
+
   function _drawStroke(s) {
     if (s.pts.length < 2) return;
     ctx.globalCompositeOperation = 'source-over';
@@ -2114,6 +2146,7 @@
         annoBar.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         tool = shape; annoMode = true; _removePointer();
+        if (canvas) canvas.style.cursor = _cursorForTool(tool);
         _syncPdfAnnoMode();
         popup.hidden = true;
       });
@@ -2197,6 +2230,7 @@
             toolBtn.classList.remove('active');
             annoMode = false; drawing = false;
             canvas?.classList.remove('drawing');
+            if (canvas) canvas.style.cursor = '';
             _removePointer();
           } else {
             annoBar.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
@@ -2204,6 +2238,7 @@
             tool = toolBtn.dataset.tool;
             if (tool === 'pointer') { annoMode = false; _initPointer(); }
             else { annoMode = true; _removePointer(); }
+            if (canvas) canvas.style.cursor = _cursorForTool(tool);
           }
           _syncPdfAnnoMode();
           return;
@@ -2413,7 +2448,7 @@
       /* always capture: pen ON → draw (1 finger) / pan+zoom (2 fingers);
          pen OFF → 1-finger pan, 2-finger pan+zoom. */
       annoCvs.style.pointerEvents = 'all';
-      annoCvs.style.cursor        = annoMode ? 'crosshair' : 'grab';
+      annoCvs.style.cursor        = annoMode ? _cursorForTool(tool) : 'grab';
     }
   }
 

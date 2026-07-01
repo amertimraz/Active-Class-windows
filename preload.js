@@ -2,6 +2,14 @@
 const { contextBridge, ipcRenderer } = require('electron');
 const path = require('path');
 
+// This preload also runs inside same-origin <iframe>s (nodeIntegrationInSubFrames
+// is on, so the whiteboard embedded as a lesson-content slide gets window.api).
+// Guard against exposing it to anything else — e.g. an arbitrary external site
+// loaded via the "web link" content type — by only running for our own server.
+const isTrustedFrame = location.origin === 'http://localhost:5000';
+
+if (isTrustedFrame) {
+
 contextBridge.exposeInMainWorld('electronPaths', {
   gamePreload: 'file://' + path.join(__dirname, 'public', 'preloads', 'game-preload.js').replace(/\\/g, '/'),
 });
@@ -85,6 +93,10 @@ contextBridge.exposeInMainWorld('api', {
   // Security
   getApiKey: () => ipcRenderer.invoke('get-api-key'),
 
+  // Screen sources (full-screen whiteboard recording)
+  getScreenSources: () => ipcRenderer.invoke('get-screen-sources'),
+  getOwnWindowSource: () => ipcRenderer.invoke('get-own-window-source'),
+
   // Trial
   startTrial:      (name, phone) => ipcRenderer.invoke('start-trial', name, phone),
   getTrialStatus:  () => ipcRenderer.invoke('get-trial-status'),
@@ -96,3 +108,5 @@ contextBridge.exposeInMainWorld('api', {
   installUpdate:   () => ipcRenderer.invoke('install-update'),
   onUpdateMessage: (cb) => ipcRenderer.on('update-message', (_e, data) => cb(data))
 });
+
+} // isTrustedFrame

@@ -940,6 +940,10 @@ body.cnt-page #app {
 }
 .cnt-exit-btn:hover { background: rgba(239,68,68,.85); border-color: rgba(239,68,68,.85); }
 
+/* whiteboard slides: their own embedded fullscreen button sits at top-left,
+   so move the exit button to the other corner to avoid overlapping it */
+.cnt-exit-btn.cnt-exit-right { left: auto; right: 16px; }
+
 .cnt-slide-counter {
   position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
   background: rgba(255,255,255,.1);

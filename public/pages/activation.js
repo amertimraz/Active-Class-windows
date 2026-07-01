@@ -261,8 +261,8 @@
       if (hasAPI && window.api.activateLicense) {
         result = await window.api.activateLicense(key, machineId, regName, regPhone);
       } else {
-        // Web fallback: try remote license server
-        const r = await fetch('https://twisting-energy-applied.ngrok-free.dev/api/license/verify', {
+        // Web fallback: verify via local server (reads from Firestore)
+        const r = await fetch('/api/license/verify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ key, machineId }),

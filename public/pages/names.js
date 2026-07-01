@@ -110,7 +110,7 @@
     if (isFirstPick) {
       if (!shell.classList.contains('compact-mode')) {
         shell.classList.add('compact-mode');
-        if (foldBtn) foldBtn.textContent = '▼';
+        if (foldBtn) foldBtn.classList.add('is-folded');
         if (window.api && window.api.resizeWindow) {
           window.api.resizeWindow(400, 320);
         }
@@ -222,7 +222,7 @@
   foldBtn?.addEventListener('click', () => {
     shell.classList.toggle('compact-mode');
     const isCompact = shell.classList.contains('compact-mode');
-    foldBtn.textContent = isCompact ? '▼' : '▲';
+    foldBtn.classList.toggle('is-folded', isCompact);
     
     // Resize window if standalone (Compact height is smaller)
     if (window.api && window.api.resizeWindow) {

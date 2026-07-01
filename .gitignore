@@ -39,3 +39,5 @@ temp_quizzes.json
 # Env / secrets
 .env
 .env.local
+*firebase-adminsdk*.json
+*serviceAccountKey*.json

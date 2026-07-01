@@ -5,7 +5,7 @@
  * Sets window.TRIAL_STATUS on load so all pages can check limits.
  */
 (async function () {
-  const DEFAULT_LIMITS = { maxGroups: 1, maxStudents: 10, maxQuizzes: 2, allowedGames: 3, competitions: false, content: false };
+  const DEFAULT_LIMITS = { maxGroups: 1, maxStudents: 10, maxQuizzes: 2, allowedGames: 3, competitions: false, content: true, maxGrades: 1, maxUnits: 2, maxLessons: 3 };
 
   async function fetchStatus() {
     // Electron path

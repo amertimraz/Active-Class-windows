@@ -100,7 +100,8 @@
     '/ai-generator': () => fetchPageContent('/pages/ai-generator.html'),
     '/competitions': () => fetchPageContent('/pages/competitions.html'),
     '/games': () => fetchPageContent('/pages/games.html'),
-    '/content': () => fetchPageContent('/pages/content.html'),
+    '/content':     () => fetchPageContent('/pages/content.html'),
+    '/whiteboard':  () => fetchPageContent('/pages/whiteboard.html'),
     '/settings': () => {
        if (window.openSettings) {
          window.openSettings();
@@ -194,6 +195,13 @@
 
         const newScript = document.createElement('script');
         Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+        // Cache-bust page-local scripts (e.g. content.js) so edits show up on the
+        // next navigation instead of being served from a stale cached copy —
+        // matches the cache-busting already done for auto-loaded CSS/JS below.
+        if (newScript.src && newScript.getAttribute('src').startsWith('/pages/')) {
+          const sep = newScript.src.includes('?') ? '&' : '?';
+          newScript.src = newScript.src + sep + 't=' + Date.now();
+        }
         if (oldScript.innerHTML) {
           newScript.appendChild(document.createTextNode(oldScript.innerHTML));
         }
@@ -290,6 +298,7 @@
           ${featureCardV2('#/groups',     '#3b82f6', 'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75', 'المجموعات والطلاب', 'أدر مجموعاتك واعرف أداء كل طالب بنظرة واحدة.',         'إدارة المجموعات', '#eff6ff', '#3b82f6', true)}
           ${featureCardV2('#/games',      '#ec4899', 'M8 21h8m-4-4v4M7 4H4v6a8 8 0 0 0 16 0V4h-3 M4 4a16 16 0 0 0 16 0',                                 'الألعاب التعليمية',  '<span id="_gamesCountLabel">...</span> لعبة تفاعلية تحوّل المراجعة إلى تنافس ممتع.',       'ابدأ لعبة',       '#fdf2f8', '#ec4899')}
           ${featureCardV2('#/content',    '#14b8a6', 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20 M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z', 'المحتوى التعليمي',  'ارفع دروسك وعرضها بشكل احترافي داخل الفصل.',          'تصفح المحتوى',    '#f0fdfa', '#14b8a6')}
+          ${featureCardV2('#/whiteboard', '#6366f1', 'M2 3h20v15H2z M8 21h8m-4-3v3 M7 8l3 3-3 3 M13 11h4',                                                   'السبورة التفاعلية', 'اشرح وارسم وكتّب على سبورة ذكية مع أدوات احترافية.',   'افتح السبورة',    '#eef2ff', '#6366f1')}
           <!-- ai-generator hidden temporarily -->
           ${featureCardV2('#/competitions','#eab308','M8 21h8m-4-4v4M7 4H4v6a8 8 0 0 0 16 0V4h-3 M4 4a16 16 0 0 0 16 0',                                  'المسابقات',          'نظّم مسابقات بين الطلاب وتابع النتائج فورياً.',        'ابدأ مسابقة',     '#fefce8', '#eab308')}
         </div>

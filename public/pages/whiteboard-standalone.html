@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>السبورة التفاعلية</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/pages/whiteboard.css" />
+  <style>html,body{margin:0;padding:0;height:100%;overflow:hidden}</style>
+</head>
+<body>
+  <!--
+    This page exists so the whiteboard can be embedded standalone (e.g. in an
+    <iframe>, like the "whiteboard" lesson-content item type) — whiteboard.html
+    itself is just a body fragment meant to be injected by the SPA router,
+    which is what normally supplies styles.css/whiteboard.css/the Cairo font.
+    Outside that router context (a bare iframe) none of that ambient styling
+    exists, so this wrapper fetches the fragment and its script explicitly.
+  -->
+  <script>
+    (async function () {
+      const res  = await fetch('/pages/whiteboard.html');
+      const html = await res.text();
+      const doc  = new DOMParser().parseFromString(html, 'text/html');
+      document.body.innerHTML = doc.body.innerHTML;
+
+      // <script src> tags inserted via innerHTML don't execute — load it explicitly
+      const oldScript = doc.querySelector('script[src]');
+      if (oldScript) {
+        const script = document.createElement('script');
+        script.src = oldScript.getAttribute('src');
+        document.body.appendChild(script);
+      }
+    })();
+  </script>
+</body>
+</html>

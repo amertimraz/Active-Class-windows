@@ -1,0 +1,388 @@
+<div class="wb-root">
+
+  <!-- ══ TOP BAR ══ -->
+  <div class="wb-topbar">
+
+    <!-- ── سطر واحد: كل الأقسام ── -->
+    <div class="wb-tb-line">
+
+      <!-- ملف -->
+      <div class="wb-tb-grp">
+        <div class="wb-tb-label">ملف</div>
+        <div class="wb-tb-row">
+          <button class="wb-btn" id="wbSave"      title="حفظ (Ctrl+S)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          </button>
+          <button class="wb-btn" id="wbLoad"      title="فتح">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          </button>
+          <input type="file" id="wbLoadInput" accept=".wb,.json" style="display:none">
+          <button class="wb-btn" id="wbImgBtn"    title="إدراج صورة">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          </button>
+          <input type="file" id="wbImgInput" accept="image/*" style="display:none">
+          <button class="wb-btn" id="wbExportPng" title="تصدير PNG">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          </button>
+          <button class="wb-btn" id="wbExportJpg" title="تصدير JPG">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><polyline points="21 15 16 10 5 21"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="wb-tb-sep"></div>
+
+      <!-- تحرير -->
+      <div class="wb-tb-grp">
+        <div class="wb-tb-label">تحرير</div>
+        <div class="wb-tb-row">
+          <button class="wb-btn" id="wbUndo"  title="تراجع (Ctrl+Z)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.89"/></svg>
+          </button>
+          <button class="wb-btn" id="wbRedo"  title="إعادة (Ctrl+Y)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-3.89"/></svg>
+          </button>
+          <button class="wb-btn wb-btn--danger" id="wbClear" title="مسح الكل">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6m4-6v6"/><path d="M9 6V4h6v2"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="wb-tb-sep"></div>
+
+      <!-- الزوم -->
+      <div class="wb-tb-grp">
+        <div class="wb-tb-label">تكبير</div>
+        <div class="wb-tb-row">
+          <button class="wb-btn" id="wbZoomOut"   title="تصغير (-)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+          </button>
+          <span id="wbZoomLabel" class="wb-zoom-lbl">100%</span>
+          <button class="wb-btn" id="wbZoomIn"    title="تكبير (+)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+          </button>
+          <button class="wb-btn" id="wbZoomReset" title="ضبط (0)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.51 15a9 9 0 1 0 .49-3.89"/><polyline points="1 4 1 10 7 10"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="wb-tb-sep"></div>
+
+      <!-- تسجيل -->
+      <div class="wb-tb-grp">
+        <div class="wb-tb-label">تسجيل</div>
+        <div class="wb-tb-row">
+          <button class="wb-btn" id="wbMicToggle" title="تفعيل المايك أثناء التسجيل" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+              <line x1="12" y1="19" x2="12" y2="23"/>
+              <line x1="8" y1="23" x2="16" y2="23"/>
+            </svg>
+          </button>
+          <button class="wb-btn" id="wbCamToggle" title="تفعيل كاميرا المعلم" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M23 7l-7 5 7 5V7z"/>
+              <rect x="1" y="5" width="15" height="14" rx="2"/>
+            </svg>
+          </button>
+          <button class="wb-btn" id="wbCamShapeToggle" title="شكل صورة الكاميرا: دائرة" type="button">
+            <svg id="wbCamShapeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>
+          </button>
+          <button class="wb-btn wb-rec-fmt-btn" id="wbRecFormatToggle" title="صيغة الفيديو" type="button">
+            <span id="wbRecFormatLabel">WEBM</span>
+          </button>
+          <button class="wb-btn wb-rec-fmt-btn" id="wbRecModeToggle" title="السبورة فقط" type="button">
+            <span id="wbRecModeLabel">سبورة</span>
+          </button>
+          <button class="wb-btn" id="wbRecToggle" title="بدء التسجيل" type="button">
+            <svg id="wbRecToggleIcon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="#ef4444"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- أدوات سريعة — نسخة تظهر بس أثناء ملء الشاشة، لأن نسخة الهيدر الأصلية بتختفي -->
+      <div class="header-quick-tools wb-tb-fs" id="wbQuickTools" style="display:none">
+        <button class="icon-btn hqt-toggle" id="wbQtToggle" aria-haspopup="true" aria-expanded="false" title="أدوات سريعة">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        </button>
+        <div class="hqt-menu" id="wbQtMenu" hidden>
+          <button class="hqt-item" data-qt="timer">⏱ <span>المؤقت الذكي</span></button>
+          <button class="hqt-item" data-qt="wheel">✨ <span>عجلة الحظ</span></button>
+          <button class="hqt-item" data-qt="numbers">🔢 <span>أرقام عشوائية</span></button>
+          <button class="hqt-item" data-qt="names">🎲 <span>اختيار اسم عشوائي</span></button>
+        </div>
+      </div>
+
+      <!-- ملء الشاشة (آخر عنصر = يسار في RTL) -->
+      <button class="wb-btn wb-tb-fs" id="wbFullscreen" title="ملء الشاشة (F11)">
+        <svg id="wbFsIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+      </button>
+
+    </div><!-- /wb-tb-line -->
+
+  </div><!-- /wb-topbar -->
+
+  <!-- ══ MAIN (sidebar + canvas) ══ -->
+  <div class="wb-main">
+
+    <!-- SIDEBAR الأدوات -->
+    <div class="wb-sidebar">
+
+      <!-- تنقل -->
+      <div class="wb-sb-section">
+        <div class="wb-sb-label">تنقل</div>
+        <button class="wb-btn wb-tool" data-tool="hand" title="يد — تحريك اللوح (H)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 11V6a2 2 0 0 0-4 0v0m0 5V5a2 2 0 0 0-4 0v6m0-4a2 2 0 0 0-4 0v8"/>
+            <path d="M18 8a2 2 0 0 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="wb-sb-div"></div>
+
+      <!-- رسم حر -->
+      <div class="wb-sb-section">
+        <div class="wb-sb-label">رسم</div>
+        <button class="wb-btn wb-tool active" data-tool="pen" title="قلم (P)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+          </svg>
+        </button>
+        <button class="wb-btn wb-tool" data-tool="highlight" title="تظليل (M)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="10" width="18" height="6" rx="1" fill="currentColor" opacity=".35"/>
+            <line x1="4" y1="19" x2="20" y2="19"/>
+          </svg>
+        </button>
+        <button class="wb-btn wb-tool" data-tool="eraser" title="ممحاة (E)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 20H7L3 16l9.5-9.5 7.5 7.5-3 3"/>
+            <path d="m6 11 4-4"/>
+          </svg>
+        </button>
+
+        <!-- اللون -->
+        <div class="wb-prop-wrap">
+          <button class="wb-btn wb-prop-btn" id="wbColorBtn" type="button" title="اللون">
+            <svg id="wbColorBtnIcon" viewBox="0 0 22 22"><circle cx="11" cy="11" r="8" fill="#1e293b"/></svg>
+          </button>
+          <div class="wb-prop-pop wb-color-pop" id="wbColorPop">
+            <button class="wb-color active" style="--c:#1e293b" data-color="#1e293b" title="أسود"></button>
+            <button class="wb-color"        style="--c:#ef4444" data-color="#ef4444" title="أحمر"></button>
+            <button class="wb-color"        style="--c:#f97316" data-color="#f97316" title="برتقالي"></button>
+            <button class="wb-color"        style="--c:#eab308" data-color="#eab308" title="أصفر"></button>
+            <button class="wb-color"        style="--c:#22c55e" data-color="#22c55e" title="أخضر"></button>
+            <button class="wb-color"        style="--c:#3b82f6" data-color="#3b82f6" title="أزرق"></button>
+            <button class="wb-color"        style="--c:#8b5cf6" data-color="#8b5cf6" title="بنفسجي"></button>
+            <button class="wb-color"        style="--c:#ec4899" data-color="#ec4899" title="وردي"></button>
+            <input  type="color" id="wbColorPicker" value="#1e293b" title="لون مخصص">
+          </div>
+        </div>
+      </div>
+
+      <div class="wb-sb-div"></div>
+
+      <!-- أشكال -->
+      <div class="wb-sb-section">
+        <div class="wb-sb-label">أشكال</div>
+
+        <!-- زر واحد يفتح شبكة اختيار الشكل -->
+        <div class="wb-prop-wrap">
+          <button class="wb-btn wb-prop-btn" id="wbShapeBtn" type="button" title="اختر شكلاً">
+            <svg id="wbShapeBtnIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="5" width="18" height="14" rx="2"/>
+            </svg>
+          </button>
+          <div class="wb-prop-pop wb-shape-pop" id="wbShapePop">
+            <button class="wb-btn wb-tool wb-shape-opt" data-tool="line" title="خط مستقيم (L)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                <line x1="5" y1="19" x2="19" y2="5"/>
+              </svg>
+            </button>
+            <button class="wb-btn wb-tool wb-shape-opt" data-tool="arrow" title="سهم (A)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="19" x2="19" y2="5"/>
+                <polyline points="10 5 19 5 19 14"/>
+              </svg>
+            </button>
+            <button class="wb-btn wb-tool wb-shape-opt active" data-tool="rect" title="مستطيل (R)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="5" width="18" height="14" rx="2"/>
+              </svg>
+            </button>
+            <button class="wb-btn wb-tool wb-shape-opt" data-tool="circle" title="دائرة (C)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="9"/>
+              </svg>
+            </button>
+            <button class="wb-btn wb-tool wb-shape-opt" data-tool="triangle" title="مثلث">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 4 21 20H3Z"/>
+              </svg>
+            </button>
+            <button class="wb-btn wb-tool wb-shape-opt" data-tool="diamond" title="معين">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3 21 12 12 21 3 12Z"/>
+              </svg>
+            </button>
+            <button class="wb-btn wb-tool wb-shape-opt" data-tool="star" title="نجمة">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2.5 14.9 9 22 9.9l-5.1 4.7L18.2 21.5 12 17.9 5.8 21.5 7.1 14.6 2 9.9 9.1 9Z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- خصائص الأشكال -->
+        <div class="wb-shape-props">
+          <!-- تعبئة -->
+          <button class="wb-fill-toggle active" id="wbFillToggle" title="تعبئة">
+            <svg viewBox="0 0 22 22">
+              <rect x="2.5" y="2.5" width="17" height="17" rx="3" fill="currentColor" opacity=".18" stroke="currentColor" stroke-width="1.8"/>
+              <rect x="6" y="6" width="10" height="10" rx="2" fill="currentColor"/>
+            </svg>
+          </button>
+          <!-- السُّمك -->
+          <div class="wb-prop-wrap">
+            <button class="wb-prop-btn" id="wbSizeBtn" type="button" title="سُمك الفرشاة">
+              <svg viewBox="0 0 18 18"><circle cx="9" cy="9" r="4.5" fill="currentColor"/></svg>
+            </button>
+            <div class="wb-prop-pop wb-size-pop" id="wbSizePop">
+              <button class="wb-size-opt" data-size="2" title="رفيع">
+                <svg viewBox="0 0 22 22"><circle cx="11" cy="11" r="2" fill="currentColor"/></svg>
+              </button>
+              <button class="wb-size-opt active" data-size="5" title="متوسط">
+                <svg viewBox="0 0 22 22"><circle cx="11" cy="11" r="4" fill="currentColor"/></svg>
+              </button>
+              <button class="wb-size-opt" data-size="10" title="سميك">
+                <svg viewBox="0 0 22 22"><circle cx="11" cy="11" r="6.5" fill="currentColor"/></svg>
+              </button>
+              <button class="wb-size-opt" data-size="18" title="سميك جدًا">
+                <svg viewBox="0 0 22 22"><circle cx="11" cy="11" r="9" fill="currentColor"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="wb-sb-div"></div>
+
+      <!-- نص -->
+      <div class="wb-sb-section">
+        <div class="wb-sb-label">نص</div>
+        <button class="wb-btn wb-tool" data-tool="text" title="إدراج نص (T)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="4 7 4 4 20 4 20 7"/>
+            <line x1="9" y1="20" x2="15" y2="20"/>
+            <line x1="12" y1="4" x2="12" y2="20"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="wb-sb-div"></div>
+
+      <!-- خيارات اللوح: اللون + التسطير -->
+      <div class="wb-sb-section">
+        <div class="wb-sb-label">اللوح</div>
+
+        <!-- لون اللوح -->
+        <div class="wb-prop-wrap">
+          <button class="wb-btn wb-prop-btn" id="wbBoardColBtn" type="button" title="لون اللوح">
+            <svg id="wbBoardColBtnIcon" viewBox="0 0 22 22"><rect x="3" y="3" width="16" height="16" rx="4" fill="#ffffff" stroke="currentColor" stroke-width="1.5"/></svg>
+          </button>
+          <div class="wb-prop-pop wb-shape-pop" id="wbBoardColPop">
+            <button class="wb-board-col active" data-board-col="#ffffff" style="--bc:#ffffff" title="أبيض"></button>
+            <button class="wb-board-col"        data-board-col="#1e293b" style="--bc:#1e293b" title="داكن"></button>
+            <button class="wb-board-col"        data-board-col="#fef9c3" style="--bc:#fef9c3" title="أصفر فاتح"></button>
+            <button class="wb-board-col"        data-board-col="#dcfce7" style="--bc:#dcfce7" title="أخضر فاتح"></button>
+            <button class="wb-board-col"        data-board-col="#dbeafe" style="--bc:#dbeafe" title="أزرق فاتح"></button>
+          </div>
+        </div>
+
+        <!-- تسطير السبورة -->
+        <div class="wb-prop-wrap">
+          <button class="wb-btn wb-prop-btn" id="wbSbBgBtn" type="button" title="تسطير السبورة">
+            <svg id="wbSbBgBtnIcon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" fill="currentColor" opacity=".18" stroke="currentColor" stroke-width="1.5"/></svg>
+          </button>
+          <div class="wb-prop-pop wb-shape-pop" id="wbSbBgPop">
+            <button class="wb-btn wb-bg wb-shape-opt active" data-bg="plain" title="سادة">
+              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" fill="currentColor" opacity=".18" stroke="currentColor" stroke-width="1.5"/></svg>
+            </button>
+            <button class="wb-btn wb-bg wb-shape-opt" data-bg="lines" title="مسطّر">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+            </button>
+            <button class="wb-btn wb-bg wb-shape-opt" data-bg="grid" title="شبكة">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
+            </button>
+            <button class="wb-btn wb-bg wb-shape-opt" data-bg="dots" title="نقاط">
+              <svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="1.5" fill="currentColor"/><circle cx="12" cy="6" r="1.5" fill="currentColor"/><circle cx="18" cy="6" r="1.5" fill="currentColor"/><circle cx="6" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="18" cy="12" r="1.5" fill="currentColor"/><circle cx="6" cy="18" r="1.5" fill="currentColor"/><circle cx="12" cy="18" r="1.5" fill="currentColor"/><circle cx="18" cy="18" r="1.5" fill="currentColor"/></svg>
+            </button>
+            <button class="wb-btn wb-bg wb-shape-opt" data-bg="iso" title="أيزومتري">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 3 3 8v8l9 5 9-5V8Z"/><line x1="12" y1="3" x2="12" y2="21"/><line x1="3" y1="8" x2="21" y2="8"/><line x1="3" y1="16" x2="21" y2="16"/></svg>
+            </button>
+            <button class="wb-btn wb-bg wb-shape-opt" data-bg="graph" title="بياني">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path stroke-width="1" opacity=".4" d="M3 8h18M3 13h18M3 18h18M8 3v18M13 3v18M18 3v18"/><path stroke-width="1.8" d="M3 3h18M3 13h18M13 3v18"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /wb-sidebar -->
+
+    <!-- منطقة الرسم -->
+    <div class="wb-canvas-wrap" id="wbCanvasWrap">
+      <canvas id="wbBg"></canvas>
+      <canvas id="wbCanvas"></canvas>
+      <canvas id="wbOverlay"></canvas>
+      <div id="wbTextBox" contenteditable="true" style="display:none"></div>
+
+      <!-- floating image: move + resize before committing -->
+      <div id="wbImgOverlay">
+        <img id="wbImgFloat" draggable="false" alt="">
+        <div class="wb-img-h" data-dir="nw"></div>
+        <div class="wb-img-h" data-dir="ne"></div>
+        <div class="wb-img-h" data-dir="sw"></div>
+        <div class="wb-img-h" data-dir="se"></div>
+        <div class="wb-img-toolbar">
+          <button id="wbImgConfirm" title="تأكيد (Enter)">✓</button>
+          <button id="wbImgCancel"  title="إلغاء (Esc)">✕</button>
+        </div>
+      </div>
+
+      <!-- كاميرا المعلم: معاينة عائمة قابلة للسحب والتكبير -->
+      <div id="wbCamBox" style="display:none">
+        <video id="wbCamPreview" autoplay muted playsinline></video>
+        <button id="wbCamZoomOut" type="button" title="تصغير الكاميرا">−</button>
+        <button id="wbCamZoomIn"  type="button" title="تكبير الكاميرا">+</button>
+      </div>
+    </div>
+
+  </div><!-- /wb-main -->
+
+  <!-- منتقي مصدر تسجيل الشاشة الكاملة -->
+  <div id="wbScreenPicker" style="display:none">
+    <div class="wb-screen-picker-card">
+      <div class="wb-screen-picker-title">اختر ما تريد تسجيله</div>
+      <div class="wb-screen-picker-grid" id="wbScreenPickerGrid"></div>
+      <button class="wb-btn wb-btn--danger" id="wbScreenPickerCancel" type="button">إلغاء</button>
+    </div>
+  </div>
+
+  <!-- شريط الحالة -->
+  <div class="wb-status">
+    <span id="wbToolLabel">قلم</span>
+    <span class="wb-dot-sep">·</span>
+    <span id="wbZoomStatus">100%</span>
+    <span class="wb-dot-sep">·</span>
+    <span id="wbCoordsLabel">0, 0</span>
+    <span id="wbRecStatus" class="wb-rec-status" style="display:none">
+      <span class="wb-rec-dot"></span>
+      <span id="wbRecTime">00:00</span>
+    </span>
+  </div>
+
+</div>
+<script src="/pages/whiteboard.js"></script>

@@ -1818,10 +1818,10 @@ const DEFAULT_TRIAL_CONFIG = {
   maxQuizzes:     2,
   allowedGames:   3,
   competitions:   false,
-  content:        false,
-  maxGrades:      0,
-  maxUnits:       0,
-  maxLessons:     0,
+  content:        true,
+  maxGrades:      1,
+  maxUnits:       2,
+  maxLessons:     3,
 };
 
 async function readTrialConfig() {
@@ -1954,18 +1954,51 @@ app.delete('/api/trial-log/:machineId', async (req, res) => {
     const id = decodeURIComponent(req.params.machineId);
     const db2 = getFirestore();
     if (db2) {
-      // remove from trial-log
+      // remove from trial-log, keeping name/phone so the revoked list stays readable
       const snap = await db2.collection('trial-log').where('machineId', '==', id).get();
+      const meta = snap.docs[0] ? snap.docs[0].data() : {};
       await Promise.all(snap.docs.map(d => d.ref.delete()));
       // add to revoked list so the machine knows it's been cut off
       const alreadyRevoked = await db2.collection('trial-revoked').where('machineId', '==', id).limit(1).get();
       if (alreadyRevoked.empty) {
-        await db2.collection('trial-revoked').add({ machineId: id, revokedAt: new Date().toISOString() });
+        await db2.collection('trial-revoked').add({
+          machineId: id, revokedAt: new Date().toISOString(),
+          name: meta.name || '', phone: meta.phone || '',
+        });
       }
     } else {
       let log = await readTrialLog();
       log = log.filter(e => e.machineId !== id);
       await fs.writeFile(TRIAL_LOG_FILE, JSON.stringify(log, null, 2), 'utf8');
+    }
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// List blocked devices so the admin panel can offer one-click restore
+// without anyone having to copy/paste a machine ID.
+app.get('/api/trial-revoked', async (req, res) => {
+  try {
+    const db2 = getFirestore();
+    if (!db2) return res.json({ entries: [] });
+    const snap = await db2.collection('trial-revoked').get();
+    const entries = snap.docs.map(d => d.data())
+      .sort((a, b) => (b.revokedAt || '').localeCompare(a.revokedAt || ''));
+    res.json({ entries });
+  } catch (e) { res.status(500).json({ entries: [], error: e.message }); }
+});
+
+// Un-block a machine that was previously revoked via the DELETE endpoint above.
+// Only clears the revocation flag — it does not restore the deleted trial-log
+// entry. The teacher's machine will be able to start a fresh trial once its
+// own local ac_trial.json no longer blocks it (see start-trial in main.js).
+app.post('/api/trial-log/:machineId/restore', async (req, res) => {
+  try {
+    const id = decodeURIComponent(req.params.machineId);
+    const db2 = getFirestore();
+    if (db2) {
+      const snap = await db2.collection('trial-revoked').where('machineId', '==', id).get();
+      await Promise.all(snap.docs.map(d => d.ref.delete()));
     }
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
@@ -1995,13 +2028,73 @@ function licenseAdminAuth(req, res, next) {
   next();
 }
 
+// ── Firestore-backed license storage (falls back to local JSON) ───────────
+const FS_COLL = 'licenses';
+
 async function readLicenses() {
+  const db = getFirestore();
+  if (db) {
+    try {
+      const snap = await db.collection(FS_COLL).get();
+      return snap.docs.map(d => ({ _docId: d.id, ...d.data() }));
+    } catch (e) { log.error('readLicenses Firestore error:', e.message); }
+  }
+  // fallback: local file
   try { return JSON.parse(await fs.readFile(LICENSES_FILE, 'utf8')); }
   catch { return []; }
 }
-async function writeLicenses(data) {
+
+async function writeLicenses(licenses) {
+  const db = getFirestore();
+  if (db) {
+    try {
+      const batch = db.batch();
+      // write each license as its own doc keyed by id
+      for (const lic of licenses) {
+        const docId = lic._docId || lic.id;
+        const ref = db.collection(FS_COLL).doc(docId);
+        const { _docId, ...data } = lic;
+        batch.set(ref, data, { merge: true });
+      }
+      await batch.commit();
+    } catch (e) { log.error('writeLicenses Firestore error:', e.message); }
+  }
+  // always mirror locally as backup
   await fs.mkdir(dataDir, { recursive: true }).catch(() => {});
-  await fs.writeFile(LICENSES_FILE, JSON.stringify(data, null, 2), 'utf8');
+  await fs.writeFile(LICENSES_FILE, JSON.stringify(licenses, null, 2), 'utf8');
+}
+
+// Single-license write helpers (for verify binding + admin edits)
+async function writeLicenseDoc(lic) {
+  const db = getFirestore();
+  if (db) {
+    try {
+      const docId = lic._docId || lic.id;
+      const { _docId, ...data } = lic;
+      await db.collection(FS_COLL).doc(docId).set(data, { merge: true });
+    } catch (e) { log.error('writeLicenseDoc Firestore error:', e.message); }
+  }
+  // mirror to local file
+  const all = await readLicensesLocal();
+  const idx = all.findIndex(l => l.id === lic.id);
+  if (idx >= 0) all[idx] = lic; else all.unshift(lic);
+  await fs.mkdir(dataDir, { recursive: true }).catch(() => {});
+  await fs.writeFile(LICENSES_FILE, JSON.stringify(all, null, 2), 'utf8');
+}
+
+async function deleteLicenseDoc(id) {
+  const db = getFirestore();
+  if (db) {
+    try {
+      const snap = await db.collection(FS_COLL).where('id', '==', id).limit(1).get();
+      if (!snap.empty) await snap.docs[0].ref.delete();
+    } catch (e) { log.error('deleteLicenseDoc Firestore error:', e.message); }
+  }
+}
+
+async function readLicensesLocal() {
+  try { return JSON.parse(await fs.readFile(LICENSES_FILE, 'utf8')); }
+  catch { return []; }
 }
 
 // Verify — called by the client app on activation/startup
@@ -2017,7 +2110,7 @@ app.post('/api/license/verify', async (req, res) => {
   if (!lic.machineId) {
     lic.machineId   = machineId;
     lic.activatedAt = new Date().toISOString();
-    await writeLicenses(licenses);
+    await writeLicenseDoc(lic); // single-doc write — fast and atomic
   } else if (lic.machineId !== machineId) {
     return res.json({ ok: false, message: 'هذا المفتاح مفعّل على جهاز آخر — تواصل مع الدعم' });
   }
@@ -2042,9 +2135,7 @@ app.post('/api/admin/license/create', licenseAdminAuth, async (req, res) => {
     expiresAt: expiresAt.toISOString().split('T')[0],
     machineId: null, activatedAt: null, revoked: false,
   };
-  const licenses = await readLicenses();
-  licenses.unshift(record);
-  await writeLicenses(licenses);
+  await writeLicenseDoc(record); // saves to Firestore + local file
   res.json({ ok: true, key, expiresAt: record.expiresAt, id: record.id });
 });
 
@@ -2059,7 +2150,7 @@ app.post('/api/admin/license/revoke', licenseAdminAuth, async (req, res) => {
   const lic = licenses.find(l => l.id === req.body.id);
   if (!lic) return res.json({ ok: false });
   lic.revoked = !req.body.restore;
-  await writeLicenses(licenses);
+  await writeLicenseDoc(lic);
   res.json({ ok: true });
 });
 
@@ -2070,7 +2161,7 @@ app.post('/api/admin/license/reset', licenseAdminAuth, async (req, res) => {
   if (!lic) return res.json({ ok: false });
   lic.machineId = null;
   lic.activatedAt = null;
-  await writeLicenses(licenses);
+  await writeLicenseDoc(lic);
   res.json({ ok: true });
 });
 
@@ -2085,15 +2176,16 @@ app.put('/api/admin/license/:id', licenseAdminAuth, async (req, res) => {
   if (plan)      lic.plan      = plan;
   if (expiresAt) lic.expiresAt = expiresAt;
   if (totalDays) lic.totalDays = parseInt(totalDays);
-  await writeLicenses(licenses);
+  await writeLicenseDoc(lic);
   res.json({ ok: true });
 });
 
 // Delete
 app.delete('/api/admin/license/:id', licenseAdminAuth, async (req, res) => {
-  let licenses = await readLicenses();
-  licenses = licenses.filter(l => l.id !== req.params.id);
-  await writeLicenses(licenses);
+  await deleteLicenseDoc(req.params.id);
+  // also remove from local file
+  const licenses = await readLicensesLocal();
+  await fs.writeFile(LICENSES_FILE, JSON.stringify(licenses.filter(l => l.id !== req.params.id), null, 2), 'utf8').catch(() => {});
   res.json({ ok: true });
 });
 

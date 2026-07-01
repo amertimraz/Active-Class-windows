@@ -107,11 +107,19 @@
         <h3 id="numbers-modal-title">مولد الأرقام العشوائية</h3>
         <div class="numbers-modal-toolbar">
           <button type="button" class="numbers-icon-btn numbers-collapse-btn" data-toggle-form aria-label="طي خيارات التوليد" aria-expanded="true">
-            <span aria-hidden="true">⌄</span>
+            <span aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </span>
           </button>
-          <button type="button" class="numbers-icon-btn numbers-pin-btn" data-pin aria-label="تثبيت النافذة" aria-pressed="false">📌</button>
-          <button type="button" class="numbers-icon-btn" data-minimize aria-label="تصغير">—</button>
-          <button type="button" class="numbers-icon-btn" data-close aria-label="إغلاق">×</button>
+          <button type="button" class="numbers-icon-btn numbers-pin-btn" data-pin aria-label="تثبيت النافذة" aria-pressed="false">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg>
+          </button>
+          <button type="button" class="numbers-icon-btn" data-minimize aria-label="تصغير">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+          <button type="button" class="numbers-icon-btn" data-close aria-label="إغلاق">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+          </button>
         </div>
       </div>
       <div class="numbers-form-wrapper" data-form-wrapper>
@@ -320,6 +328,7 @@
 
         state.generateButton.disabled = false;
         state.generateButton.textContent = 'اختيار الآن';
+        fitWindowToContent(); // the results list can change the card's height
       }, 1200);
     }
 
@@ -432,9 +441,9 @@
     function toggleNumbersForm(){
       const state = numbersModalState;
       if (!state) return;
-      
+
       const isCollapsed = state.formWrapper.classList.contains('is-collapsed');
-      
+
       if (isCollapsed) {
         state.formWrapper.style.maxHeight = state.formWrapper.scrollHeight + 'px';
         state.formWrapper.classList.remove('is-collapsed');
@@ -455,6 +464,7 @@
           state.isCollapsed = true;
         });
       }
+      setTimeout(fitWindowToContent, 320); // after the .3s max-height transition
     }
 
     function setupNumbersRunner(){
@@ -624,6 +634,16 @@
       }
     }
 
+    /* the window opens at a fixed 418×640 size (see main.js), but the card's
+       actual content is usually much shorter — resize the real OS window down
+       to match it instead of leaving a big blank area under the card. Called
+       again whenever content height changes (collapse toggle, results shown). */
+    function fitWindowToContent(){
+      if (!numbersModalState || !window.api?.resizeWindow) return;
+      const h = Math.min(760, Math.max(260, Math.round(numbersModalState.modalCard.scrollHeight)));
+      window.api.resizeWindow(418, h);
+    }
+
     // تهيئة التطبيق عند تحميل الصفحة
     document.addEventListener('DOMContentLoaded', () => {
       initializeStandaloneNumbers();
@@ -632,6 +652,7 @@
         numbersModalState.minInput.focus();
         numbersModalState.minInput.select();
       }
+      requestAnimationFrame(fitWindowToContent);
     });
   </script>
   <div id="_resizeGrip" style="position:fixed;bottom:0;right:0;width:52px;height:52px;cursor:nwse-resize;z-index:99999;display:flex;align-items:flex-end;justify-content:flex-end;padding:8px;opacity:.4;touch-action:none" title="اسحب لتغيير الحجم">
