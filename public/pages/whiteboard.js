@@ -679,6 +679,115 @@
   document.getElementById('wbZoomOut').addEventListener('click',   () => doZoom(0.8, wrap.clientWidth/2, wrap.clientHeight/2));
   document.getElementById('wbZoomReset').addEventListener('click', () => { centerBoard(); });
 
+  /* ── Spotlight: dims the whole board except a circle around the cursor —
+     pure CSS (box-shadow spread as the dim layer), pointer-events:none so
+     drawing/panning underneath still works exactly as before while it's on. */
+  (function setupSpotlight() {
+    const spot       = document.getElementById('wbSpotlight');
+    const toggleBtn  = document.getElementById('wbSpotlightToggle');
+    const biggerBtn  = document.getElementById('wbSpotlightBigger');
+    const smallerBtn = document.getElementById('wbSpotlightSmaller');
+    if (!spot || !toggleBtn) return;
+
+    let active = false;
+    let size   = 220;
+
+    function moveSpot(e) {
+      const cl = e.touches ? e.touches[0] : e;
+      spot.style.left = (cl.clientX - wrapRect.left) + 'px';
+      spot.style.top  = (cl.clientY - wrapRect.top)  + 'px';
+    }
+    function setSize(px) {
+      size = Math.min(600, Math.max(80, px));
+      spot.style.setProperty('--wb-spot-size', size + 'px');
+    }
+
+    toggleBtn.addEventListener('click', () => {
+      active = !active;
+      toggleBtn.classList.toggle('active', active);
+      spot.style.display = active ? 'block' : 'none';
+      if (active) { setSize(size); wrap.addEventListener('mousemove', moveSpot); wrap.addEventListener('touchmove', moveSpot); }
+      else { wrap.removeEventListener('mousemove', moveSpot); wrap.removeEventListener('touchmove', moveSpot); }
+    });
+    biggerBtn?.addEventListener('click',  () => setSize(size + 40));
+    smallerBtn?.addEventListener('click', () => setSize(size - 40));
+  })();
+
+  /* ── Scientific calculator: floating draggable panel, powered by math.js
+     (served locally at /vendor/mathjs, same "no CDN" approach as pdf.js)
+     loaded lazily on first open so pages that never touch it pay nothing. */
+  (function setupCalculator() {
+    const panel     = document.getElementById('wbCalc');
+    const toggleBtn = document.getElementById('wbCalcToggle');
+    const closeBtn  = document.getElementById('wbCalcClose');
+    const head      = document.getElementById('wbCalcHead');
+    const exprEl    = document.getElementById('wbCalcExpr');
+    const resultEl  = document.getElementById('wbCalcResult');
+    if (!panel || !toggleBtn) return;
+
+    let expr = '';
+    let mathLib = null;
+    function loadMathLib() {
+      if (mathLib) return Promise.resolve(mathLib);
+      if (window.math) { mathLib = window.math; return Promise.resolve(mathLib); }
+      return new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'http://localhost:5000/vendor/mathjs/math.js';
+        s.onload = () => { mathLib = window.math; resolve(mathLib); };
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    }
+
+    function render() {
+      exprEl.textContent = expr;
+      if (!expr) { resultEl.textContent = '0'; return; }
+      try {
+        const val = mathLib.evaluate(expr);
+        resultEl.textContent = mathLib.format(val, { precision: 10 });
+      } catch { resultEl.textContent = '…'; }
+    }
+
+    panel.querySelectorAll('.wb-calc-pad button').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        await loadMathLib();
+        const k = btn.dataset.k;
+        if (k === 'AC') { expr = ''; }
+        else if (k === 'DEL') { expr = expr.slice(0, -1); }
+        else if (k === '=') {
+          try { expr = mathLib.format(mathLib.evaluate(expr), { precision: 10 }); }
+          catch { /* keep expr as-is on invalid expression */ }
+        } else {
+          expr += k;
+        }
+        render();
+      });
+    });
+
+    toggleBtn.addEventListener('click', async () => {
+      const opening = panel.style.display === 'none';
+      panel.style.display = opening ? 'block' : 'none';
+      toggleBtn.classList.toggle('active', opening);
+      if (opening) await loadMathLib();
+    });
+    closeBtn?.addEventListener('click', () => { panel.style.display = 'none'; toggleBtn.classList.remove('active'); });
+
+    /* drag by the header, position kept in px relative to wrap */
+    let dragOffset = null;
+    function dragMove(e) {
+      if (!dragOffset) return;
+      const cl = e.touches ? e.touches[0] : e;
+      panel.style.left = Math.max(0, cl.clientX - wrapRect.left - dragOffset.x) + 'px';
+      panel.style.top  = Math.max(0, cl.clientY - wrapRect.top  - dragOffset.y) + 'px';
+    }
+    head?.addEventListener('mousedown', e => {
+      const r = panel.getBoundingClientRect();
+      dragOffset = { x: e.clientX - r.left, y: e.clientY - r.top };
+    });
+    document.addEventListener('mousemove', dragMove);
+    document.addEventListener('mouseup', () => { dragOffset = null; });
+  })();
+
   /* ── Encouragement toast: one button, random phrase + confetti + spoken aloud ── */
   (function setupEncouragement(){
     const btn = document.getElementById('wbEncourage');
@@ -942,6 +1051,16 @@
     c.closePath();
   }
 
+  /* Shared by both the canvas-sizing step and the drawing step below, so
+     the two can never disagree about how much room each node needs — that
+     mismatch is what let tree/horizontal nodes overlap each other before:
+     the canvas was sized from a flat per-layout formula while the actual
+     node box size depended on `count` separately. */
+  function mmNodeSize(count) {
+    return count <= 4 ? { w: 190, h: 80 } : count <= 6 ? { w: 175, h: 72 } : { w: 150, h: 62 };
+  }
+  const MM_NODE_GAP = 20; // minimum clear space between adjacent node boxes
+
   /* Builds the template as its own small canvas (not drawn straight onto
      the board) so it can be dropped into the existing floating-image
      move/resize flow below — same drag handles + confirm/cancel the user
@@ -950,6 +1069,7 @@
   function buildTemplateCanvas(name, opts = {}) {
     const layout = opts.layout || 'radial';
     const count  = opts.count  || 6;
+    const mmNode = mmNodeSize(count);
     let w, h;
     if (name === 'mult')      { w = 13 * 80; h = 13 * 80; }
     else if (name === 'timeline')  { w = 1200; h = 140; }
@@ -960,8 +1080,15 @@
     else if (name === 'letters')   { w = 780;  h = 780; }
     else if (name === 'timetable') { w = 840;  h = 480; }
     else if (layout === 'radial')      { w = h = 620 + count * 40; }
-    else if (layout === 'tree')        { w = 170 * count + 60; h = 420; }
-    else /* horizontal */              { w = 620; h = 110 * count + 60; }
+    else if (layout === 'tree') {
+      const margin = mmNode.w / 2 + 20;
+      w = Math.round(margin * 2 + Math.max(count - 1, 0) * (mmNode.w + MM_NODE_GAP));
+      h = 420;
+    } else /* horizontal */ {
+      const marginY = mmNode.h / 2 + 20;
+      h = Math.round(marginY * 2 + Math.max(count - 1, 0) * (mmNode.h + MM_NODE_GAP));
+      w = 620;
+    }
 
     const oc = document.createElement('canvas');
     /* store at DPR density (like the board canvases) so the raster still
@@ -1102,7 +1229,7 @@
     } else if (name === 'mindmap') {
       const rw = 210, rh = 90;
       const accent = ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#ec4899','#06b6d4'];
-      const nodeSize = count <= 4 ? { w: 190, h: 80 } : count <= 6 ? { w: 175, h: 72 } : { w: 150, h: 62 };
+      const nodeSize = mmNodeSize(count);
 
       const drawNode = (x, y, nw, nh, color, text, big) => {
         c.fillStyle = boardCol;
@@ -1135,8 +1262,11 @@
         nodes.forEach(p => drawNode(p.x, p.y, nodeSize.w, nodeSize.h, p.color, ''));
       } else if (layout === 'tree') {
         const rootX = w / 2, rootY = 70, childY = h - 90;
-        const step = (w - 80) / Math.max(count - 1, 1);
-        const xs = []; for (let i = 0; i < count; i++) xs.push(count === 1 ? w / 2 : 40 + step * i);
+        // margin must clear half a node's own width, not just a flat gap —
+        // otherwise the outermost nodes' far edge overflows past the canvas
+        const margin = nodeSize.w / 2 + 20;
+        const step = (w - margin * 2) / Math.max(count - 1, 1);
+        const xs = []; for (let i = 0; i < count; i++) xs.push(count === 1 ? w / 2 : margin + step * i);
         xs.forEach((x, i) => {
           const color = accent[i % accent.length];
           const a = edgeStop(rootX, rootY, x, childY, nodeSize.w, nodeSize.h);
@@ -1148,8 +1278,10 @@
         xs.forEach((x, i) => drawNode(x, childY, nodeSize.w, nodeSize.h, accent[i % accent.length], ''));
       } else { /* horizontal */
         const rootX = 110, rootY = h / 2, childX = w - 130;
-        const stepY = (h - 80) / Math.max(count - 1, 1);
-        const ys = []; for (let i = 0; i < count; i++) ys.push(count === 1 ? h / 2 : 40 + stepY * i);
+        // same fix as tree layout above, on the vertical axis this time
+        const marginY = nodeSize.h / 2 + 20;
+        const stepY = (h - marginY * 2) / Math.max(count - 1, 1);
+        const ys = []; for (let i = 0; i < count; i++) ys.push(count === 1 ? h / 2 : marginY + stepY * i);
         ys.forEach((y, i) => {
           const color = accent[i % accent.length];
           const a = edgeStop(rootX, rootY, childX, y, nodeSize.w, nodeSize.h);

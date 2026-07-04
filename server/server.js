@@ -96,6 +96,8 @@ app.use('/assets', express.static(assetsDir));
 app.use('/pdfjs-build', express.static(path.join(__dirname, '../node_modules/pdfjs-dist/build')));
 app.use('/pdfjs-cmaps', express.static(path.join(__dirname, '../node_modules/pdfjs-dist/cmaps')));
 app.use('/pdfjs-fonts', express.static(path.join(__dirname, '../node_modules/pdfjs-dist/standard_fonts')));
+/* math.js (local) — scientific-calculator engine used by the whiteboard's calculator tool */
+app.use('/vendor/mathjs', express.static(path.join(__dirname, '../node_modules/mathjs/lib/browser')));
 app.use(express.json({ limit: '5mb' }));
 
 // Security Middleware

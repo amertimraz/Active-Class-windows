@@ -4,6 +4,19 @@
 
 /* ── Root ── */
 .wb-root {
+  /* Responsive sizing tokens — scale toolbar/sidebar buttons, icons and
+     bars with viewport size automatically (clamp(min, preferred, max)),
+     so the whiteboard's controls fit comfortably on anything from a small
+     laptop screen to a large classroom display without any manual
+     "zoom UI" control. Preferred value mixes vw and vh so both very wide
+     and very short (or very narrow and very tall) windows scale sensibly. */
+  --wb-tb-h:        clamp(50px, 4.4vh + 1.6vw, 64px);
+  --wb-tb-btn:      clamp(34px, 2.6vh + 1.6vw, 46px);
+  --wb-tb-icon:     clamp(17px, 1.3vh + 0.9vw, 24px);
+  --wb-sidebar-w:    clamp(58px, 3.6vw + 1.6vh, 76px);
+  --wb-sidebar-btn:  clamp(38px, 2.8vw + 1.6vh, 54px);
+  --wb-sidebar-icon: clamp(18px, 1.5vw + 0.9vh, 25px);
+
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -32,7 +45,7 @@
 .wb-tb-outer {
   display: flex;
   align-items: center;
-  height: 62px;
+  height: var(--wb-tb-h);
 }
 
 /* السطر الرئيسي في الشريط العلوي */
@@ -95,9 +108,9 @@
 
 /* Buttons inside topbar — compact icon-only */
 .wb-topbar .wb-btn {
-  width: 44px;
-  height: 44px;
-  min-width: 44px;
+  width: var(--wb-tb-btn);
+  height: var(--wb-tb-btn);
+  min-width: var(--wb-tb-btn);
   border-radius: 10px;
   padding: 0;
   display: flex;
@@ -112,7 +125,7 @@
   position: relative;
 }
 .wb-topbar .wb-btn span { display: none; }
-.wb-topbar .wb-btn svg { width: 23px; height: 23px; flex-shrink: 0; }
+.wb-topbar .wb-btn svg { width: var(--wb-tb-icon); height: var(--wb-tb-icon); flex-shrink: 0; }
 .wb-topbar .wb-btn:hover { background: var(--bg); color: var(--text); }
 .wb-topbar .wb-btn:active { transform: scale(.92); }
 
@@ -173,8 +186,8 @@
    SIDEBAR (left — tool palette)
    ══════════════════════════════════════ */
 .wb-sidebar {
-  width: 72px;
-  min-width: 72px;
+  width: var(--wb-sidebar-w);
+  min-width: var(--wb-sidebar-w);
   background: var(--card);
   border-right: 1.5px solid var(--border);
   display: flex;
@@ -225,9 +238,9 @@
 
 /* Tool buttons in sidebar — large icons */
 .wb-sidebar .wb-btn {
-  width: 52px;
-  height: 52px;
-  min-width: 52px;
+  width: var(--wb-sidebar-btn);
+  height: var(--wb-sidebar-btn);
+  min-width: var(--wb-sidebar-btn);
   border-radius: 14px;
   padding: 0;
   display: flex;
@@ -241,7 +254,7 @@
   position: relative;
 }
 .wb-sidebar .wb-btn span { display: none; }
-.wb-sidebar .wb-btn svg { width: 24px; height: 24px; flex-shrink: 0; transition: transform .12s; }
+.wb-sidebar .wb-btn svg { width: var(--wb-sidebar-icon); height: var(--wb-sidebar-icon); flex-shrink: 0; transition: transform .12s; }
 .wb-sidebar .wb-btn:active { transform: scale(.9); }
 
 /* Per-tool colors in sidebar */
@@ -325,8 +338,8 @@
 }
 
 .wb-fill-toggle {
-  width: 52px;
-  height: 52px;
+  width: var(--wb-sidebar-btn);
+  height: var(--wb-sidebar-btn);
   border-radius: 14px;
   border: 1.5px solid var(--border);
   background: transparent;
@@ -338,19 +351,19 @@
   transition: background .12s, color .12s, border-color .12s;
   flex-shrink: 0;
 }
-.wb-fill-toggle svg { width: 22px; height: 22px; }
+.wb-fill-toggle svg { width: var(--wb-sidebar-icon); height: var(--wb-sidebar-icon); }
 .wb-fill-toggle:hover { background: #f5f3ff; color: #7c3aed; border-color: #c4b5fd; }
 .wb-fill-toggle.active { background: #ede9fe; color: #7c3aed; border-color: #c4b5fd; }
 
 /* icon button that opens a popover slider (size / opacity) — matches sidebar tool-button size for column alignment */
 .wb-prop-wrap {
   position: relative;
-  width: 52px;
+  width: var(--wb-sidebar-btn);
 }
 
 .wb-prop-btn {
-  width: 52px;
-  height: 52px;
+  width: var(--wb-sidebar-btn);
+  height: var(--wb-sidebar-btn);
   border-radius: 14px;
   border: 1.5px solid var(--border);
   background: transparent;
@@ -361,7 +374,7 @@
   justify-content: center;
   transition: background .12s, color .12s, border-color .12s;
 }
-.wb-prop-btn svg { width: 21px; height: 21px; pointer-events: none; }
+.wb-prop-btn svg { width: var(--wb-sidebar-icon); height: var(--wb-sidebar-icon); pointer-events: none; }
 .wb-prop-btn:hover { background: #eef2ff; color: #4f46e5; border-color: #c7d2fe; }
 .wb-prop-btn.open { background: #e0e7ff; color: #4f46e5; border-color: #4f46e5; }
 
@@ -952,6 +965,121 @@
   margin-top: 2px;
 }
 .wb-mm-insert:hover { background: #4338ca !important; }
+
+/* ══════════════════════════════════════
+   SPOTLIGHT — dims everything except a circle around the cursor
+   ══════════════════════════════════════ */
+#wbSpotlight {
+  position: absolute;
+  top: 0; left: 0;
+  width: var(--wb-spot-size, 220px);
+  height: var(--wb-spot-size, 220px);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  /* the "hole" is just the circle itself — everything outside it is
+     covered by this box-shadow's spread, which acts as the dim overlay */
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, .72);
+  pointer-events: none;
+  z-index: 400;
+  transition: width .12s, height .12s;
+}
+#wbSpotlightToggle.active {
+  background: #1e293b;
+  color: #fff;
+}
+#wbCalcToggle.active {
+  background: #e0e7ff;
+  color: #4f46e5;
+}
+
+/* ══════════════════════════════════════
+   SCIENTIFIC CALCULATOR — floating, draggable panel
+   ══════════════════════════════════════ */
+#wbCalc {
+  position: absolute;
+  top: 80px;
+  left: 80px;
+  width: 300px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 12px 36px rgba(0,0,0,.22);
+  z-index: 450;
+  overflow: hidden;
+  direction: ltr;
+  font-family: Cairo, sans-serif;
+}
+.wb-calc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #1e293b;
+  color: #fff;
+  cursor: move;
+  font-size: 12px;
+  font-weight: 700;
+  direction: rtl;
+}
+.wb-calc-head button {
+  background: transparent;
+  border: none;
+  color: #fff;
+  opacity: .75;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 2px 4px;
+}
+.wb-calc-head button:hover { opacity: 1; }
+
+.wb-calc-display {
+  padding: 10px 14px;
+  background: #0f172a;
+  color: #fff;
+  text-align: right;
+  min-height: 56px;
+}
+.wb-calc-expr {
+  font-size: 12px;
+  color: #94a3b8;
+  min-height: 15px;
+  overflow-x: auto;
+  white-space: nowrap;
+  direction: ltr;
+}
+.wb-calc-result {
+  font-size: 24px;
+  font-weight: 700;
+  direction: ltr;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.wb-calc-pad {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+  padding: 8px;
+}
+.wb-calc-pad button {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px 0;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .1s, transform .1s;
+  direction: ltr;
+}
+.wb-calc-pad button:hover { background: #eef2ff; color: #4f46e5; }
+.wb-calc-pad button:active { transform: scale(.94); }
+.wb-calc-pad .wb-calc-op { background: #eef2ff; color: #4f46e5; }
+.wb-calc-pad .wb-calc-eq { background: #4f46e5; color: #fff; grid-column: span 3; }
+.wb-calc-pad .wb-calc-eq:hover { background: #4338ca; color: #fff; }
+.wb-calc-pad .wb-calc-zero { grid-column: span 2; }
 
 /* ══════════════════════════════════════
    ENCOURAGEMENT TOAST — big phrase + confetti burst, auto-dismisses
