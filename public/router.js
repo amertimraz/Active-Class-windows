@@ -314,10 +314,29 @@
   async function updateGamesCount() {
     try {
       const vis = await fetch('http://localhost:5000/api/games-visibility').then(r => r.ok ? r.json() : {}).catch(() => ({}));
-      const builtIn = 7;
+      // 5 local cards actually rendered in #localGamesGrid on games.html
+      // (dino-arabic, dino-english, duck-race, million, game-engine) — the
+      // "ألعاب الإنترنت" hub tile is a navigation entry, not a game, so it's
+      // excluded here too, matching the counting fix already applied there.
+      const builtIn = 5;
       const onlineTotal = 22;
-      const disabledCount = Object.values(vis).filter(v => v === false).length;
-      const total = builtIn + (onlineTotal - disabledCount);
+
+      const s = window.TRIAL_STATUS;
+      const isTrial = s && s.trial && !s.licensed && !s.expired;
+      let total;
+      if (isTrial) {
+        // A trial user can't actually reach the admin's full catalog — show
+        // what's really unlocked for them (same numbers games.html enforces),
+        // not the full total, which is what was showing "10" here regardless
+        // of the trial's own games limit.
+        const allowedLocal = Math.min(s.limits?.allowedGames ?? 3, builtIn);
+        const enabledOnline = Object.values(vis).filter(v => v === true).length;
+        total = allowedLocal + enabledOnline;
+      } else {
+        const disabledCount = Object.values(vis).filter(v => v === false).length;
+        total = builtIn + (onlineTotal - disabledCount);
+      }
+
       const el1 = document.getElementById('_gamesCountLabel');
       const el2 = document.getElementById('_heroGamesNum');
       if (el1) el1.textContent = total;
@@ -1197,6 +1216,27 @@
        console.log('Loading AI Player');
        fetchPageContent('/pages/quiz-player.html');
        return;
+    }
+
+    // Trial enforcement for the local games grid — the lock icons on the
+    // games.html cards are cosmetic (they only intercept clicks on that
+    // specific page); a trial user hitting one of these routes directly
+    // (typed hash, deep link, browser back/forward into history, etc.)
+    // previously bypassed the limit entirely. This mirrors the exact same
+    // order/allowedGames logic games.html uses to decide which cards get
+    // the lock overlay, so both stay in sync.
+    const LOCAL_GAME_ROUTE_ORDER = ['/dino-arabic', '/dino-english', '/duck-race', '/million', '/game-engine'];
+    const localGameIndex = LOCAL_GAME_ROUTE_ORDER.indexOf(hashPath);
+    if (localGameIndex !== -1) {
+      const s = window.TRIAL_STATUS;
+      if (s && s.trial && !s.licensed && !s.expired) {
+        const allowed = s.limits?.allowedGames ?? 3;
+        if (localGameIndex >= allowed) {
+          window.trialBlock && window.trialBlock('games');
+          location.hash = '#/games';
+          return;
+        }
+      }
     }
 
     if (view) {

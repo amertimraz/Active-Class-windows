@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>إعدادات عجلة الحظ</title>
+  <link rel="stylesheet" href="/shared-design.css">
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/pages/wheel-settings.css">
+  <script nonce="ac">
+    (function(){
+      try {
+        var theme = localStorage.getItem('cm_theme') || 'light';
+        document.documentElement.setAttribute('data-theme', theme);
+      } catch(_){ }
+    })();
+  </script>
+</head>
+<body>
+  <div class="tool-shell">
+    <div class="tool-header">
+      <button class="tool-btn close-btn" title="إغلاق">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+      </button>
+      <h2 class="tool-title">إعدادات العجلة</h2>
+    </div>
+
+    <div class="controls-section">
+      <div class="form-group">
+        <label>إضافة مشارك</label>
+        <div class="input-row">
+          <input type="text" id="nameInput" placeholder="اكتب اسمًا..." maxlength="50">
+          <button id="addNameBtn" class="icon-add-btn" title="إضافة">+</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>تحميل من مجموعة</label>
+        <div class="input-row">
+          <select id="groupSelect" class="custom-select">
+            <option value="">— اختر مجموعة —</option>
+          </select>
+          <button id="loadGroupBtn" class="action-link">تحميل</button>
+        </div>
+      </div>
+
+      <div class="participants-header">
+        <label>المشاركون (<span id="participantsCount">0</span>)</label>
+        <div class="participants-actions">
+          <button id="shuffleBtn" class="action-link">خلط</button>
+          <button id="clearAllBtn" class="action-link danger">مسح</button>
+        </div>
+      </div>
+      <div class="participants-list" id="participantsList">
+        <div class="empty-state">لا يوجد مشاركون بعد</div>
+      </div>
+
+      <div class="toggle-group">
+        <label class="toggle-item">
+          <span class="toggle-label">استثناء الفائز</span>
+          <input type="checkbox" id="excludeWinner">
+          <span class="toggle-slider"></span>
+        </label>
+        <label class="toggle-item">
+          <span class="toggle-label">صوت</span>
+          <input type="checkbox" id="soundToggle" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <script src="/pages/wheel-settings.js"></script>
+</body>
+</html>

@@ -233,8 +233,8 @@ tbody tr:hover{background:var(--sl-50);}
             <input id="trialMaxQuizzes" class="field-input" type="number" min="1" value="2">
           </div>
           <div class="field">
-            <label class="field-label">عدد الألعاب المتاحة</label>
-            <input id="trialAllowedGames" class="field-input" type="number" min="1" max="11" value="3">
+            <label class="field-label">عدد الألعاب المحلية المتاحة <span style="color:var(--sl-400);font-size:.75rem">(الشبكة الرئيسية فقط — ألعاب الإنترنت لها تفعيل مستقل أسفل الصفحة)</span></label>
+            <input id="trialAllowedGames" class="field-input" type="number" min="1" max="5" value="3">
           </div>
           <div class="field" style="align-self:flex-end;display:flex;flex-direction:column;gap:8px">
             <label style="display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--sl-600);cursor:pointer">
@@ -277,7 +277,7 @@ tbody tr:hover{background:var(--sl-50);}
       </div>
       <div>
         <div class="card-title">صلاحيات الألعاب الأونلاين</div>
-        <div class="card-sub">تحكم في الألعاب الظاهرة داخل التطبيق</div>
+        <div class="card-sub">لكل لعبة أونلاين مفتاح تفعيل مستقل للنسخة التجريبية — منفصل عن "عدد الألعاب المحلية المتاحة" أعلاه</div>
       </div>
       <button class="btn btn-ghost btn-sm" style="margin-right:auto" onclick="loadGamesVis()">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.89"/></svg>
@@ -1066,6 +1066,9 @@ async function loadTrialStats() {
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4"/></svg>
           <span style="font-family:monospace;color:var(--sl-700);font-size:.68rem;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${mid}">${mid}</span>
           ${badge}
+          <button onclick="resetTrialDevice('${mid}', this)" title="إعادة تعيين تجربة جديدة عن بُعد" style="border:none;background:transparent;cursor:pointer;padding:2px 4px;color:#16a34a;line-height:1">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.89"/></svg>
+          </button>
           <button onclick="deleteTrial('${mid}')" title="حذف" style="border:none;background:transparent;cursor:pointer;padding:2px 4px;color:#ef4444;line-height:1">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6m4-6v6"/><path d="M9 6V4h6v2"/></svg>
           </button>
@@ -1090,6 +1093,26 @@ async function deleteTrial(machineId) {
     loadTrialStats();
     loadRevokedDevices();
   } catch {}
+}
+
+// Grants the device a brand-new trial period remotely — works even after
+// the previous trial ran out naturally (unlike "فك الحظر", which only
+// un-blocks a device the admin actively revoked). The app on that machine
+// picks this up next time it tries to start a trial (see start-trial in
+// main.js), so it applies to remote devices with no local access needed.
+async function resetTrialDevice(machineId, btn) {
+  if (!confirm('إعطاء هذا الجهاز فترة تجربة جديدة بالكامل؟')) return;
+  if (btn) { btn.disabled = true; }
+  try {
+    const r = await fetch(`/api/trial-log/${encodeURIComponent(machineId)}/reset`, { method: 'POST' });
+    const res = await r.json();
+    if (!res.ok) throw new Error(res.error || 'failed');
+    loadTrialStats();
+    loadRevokedDevices();
+  } catch {
+    alert('فشلت إعادة التعيين — حاول تاني');
+    if (btn) { btn.disabled = false; }
+  }
 }
 
 async function loadRevokedDevices() {

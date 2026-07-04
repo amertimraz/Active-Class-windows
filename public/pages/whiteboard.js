@@ -5,6 +5,11 @@
   'use strict';
 
   /* ── Board dimensions ── */
+  /* Reverted from the enlarged 2880×1620 back to 1920×1080 — combined with
+     the DPR floor below, the bigger backing store measurably lagged pen
+     drawing (huge canvas textures being recomposited on every stroke).
+     Panning-room and always-crisp-on-fullscreen were nice-to-haves; smooth
+     drawing isn't. */
   const BOARD_W = 1920;
   const BOARD_H = 1080;
 
@@ -22,9 +27,10 @@
   let tool    = 'pen';
   let color   = '#1e293b';
   let size    = 5;
+  let textSize = 32; // CSS px — dedicated font-size for the text tool, independent of brush size
   let opacity = 1; // fixed — the opacity control was removed from the UI
   let fill    = true;
-  let bgType  = 'plain';
+  let bgType  = 'grid';
   let boardCol = '#ffffff';
 
   /* zoom / pan */
@@ -32,61 +38,130 @@
   let panX  = 0;
   let panY  = 0;
 
+  /* Backing-store resolution multiplier for the board bitmap (board-units ->
+     physical pixels). Fixed at 2x regardless of the screen's real
+     devicePixelRatio (usually 1 on ordinary external monitors) — the actual
+     lag culprits turned out to be elsewhere (PNG-encoding full-board undo
+     snapshots, and recomputing wrap's bounding rect on every mousemove),
+     both fixed separately. With those gone, the extra resolution here is a
+     clear win for line crispness with no measured drawing-speed cost, at
+     the board's normal 1920×1080 size. Capped at 2x so very high actual-DPR
+     displays don't blow memory/perf up further for no visible benefit. */
+  const DPR = 2;
+
+  /* The three canvases (#wbBg/#wbCanvas/#wbOverlay) are sized ONCE to the
+     full board at a fixed resolution (BOARD_W/H * DPR) and NEVER resized
+     again after that — panning/zooming/window-resizing is done purely via
+     CSS (width/height/left/top), which the browser scales non-destructively.
+     Previously the backing store was resized to match the *viewport* on
+     every window/fullscreen resize, which — because resizing a canvas's
+     width/height property clears it — required capturing+repasting a raster
+     snapshot each time. Any content outside the new (often smaller) canvas
+     bounds was silently and permanently cropped, and the repeated
+     raster round-trips blurred everything a little more each cycle. Fixing
+     the backing store means neither of those can happen again. */
+  let canvasesSized = false;
+  function ensureCanvasesSized() {
+    if (canvasesSized) return;
+    canvasesSized = true;
+    const bw = Math.round(BOARD_W * DPR), bh = Math.round(BOARD_H * DPR);
+    [bgCvs, canvas, overlay].forEach(c => { c.width = bw; c.height = bh; });
+    [ctx, octx].forEach(c => c.setTransform(DPR, 0, 0, DPR, 0, 0));
+    drawBg();
+  }
+
   /* drawing */
   let drawing   = false;
   let isPanning = false;
   let panStart  = { x: 0, y: 0 };
   let startX = 0, startY = 0, lastX = 0, lastY = 0;
+  /* freehand-stroke smoothing (pen/highlight/eraser) — quadratic curve through
+     the midpoints of consecutive raw pointer samples, instead of straight
+     lineTo segments between them, which look faceted on fast/curved strokes */
+  let smoothRawX = 0, smoothRawY = 0, smoothMidX = 0, smoothMidY = 0;
 
-  /* history */
+  /* history — kept lower than before (was 50) because each snapshot is now
+     a full in-memory canvas clone at the board's (fairly large) backing-store
+     resolution rather than a compressed PNG string; trades some undo depth
+     for a lot less memory pressure. */
   let history   = [];
   let redoStack = [];
-  const MAX_HIST = 50;
+  const MAX_HIST = 20;
 
   /* floating image */
   let floatImg  = null;
   let floatRect = { x: 0, y: 0, w: 0, h: 0 }; // CSS px relative to wrap
   let _imgDrag  = null; // { type:'move'|'resize', dir, startX, startY, startRect }
 
-  /* ── Resize all canvases ── */
+  /* Cached wrap rect — getBoundingClientRect() forces a synchronous layout
+     flush, and getScreen() (below) used to call it on every single
+     mousemove while drawing. At high pointer-event rates that layout
+     thrashing was a real, continuous source of pen lag, separate from the
+     history/backing-store cost fixed earlier. Refreshed only when wrap
+     actually changes size/position (resize/fullscreen). */
+  let wrapRect = wrap.getBoundingClientRect();
+  function updateWrapRect() { wrapRect = wrap.getBoundingClientRect(); }
+
+  /* ── Resize: purely a CSS re-layout now — see ensureCanvasesSized() above
+     for why the canvas bitmaps themselves are never touched here. ── */
   function resize() {
-    const w = wrap.clientWidth;
-    const h = wrap.clientHeight;
-    const snap = canvas.width ? canvas.toDataURL() : null;
-
-    [bgCvs, canvas, overlay].forEach(c => { c.width = w; c.height = h; });
-
+    ensureCanvasesSized();
+    // Safe to re-fit to the viewport on every resize now — the canvas
+    // bitmaps themselves are never touched here, only CSS positioning, so
+    // window/fullscreen size changes just re-frame the same fixed board
+    // bitmap with zero risk of losing or blurring anything.
     centerBoard();
-    drawBg();
-
-    if (snap) {
-      const img = new Image();
-      img.onload = () => {
-        ctx.save();
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.drawImage(img, 0, 0);
-        ctx.restore();
-      };
-      img.src = snap;
-    }
+    updateWrapRect();
   }
 
   function centerBoard() {
-    scale = Math.min(
+    // "cover" (not "contain") — the board must always fill wrap completely
+    // with no empty margin, in both windowed and fullscreen states, even if
+    // that means the shorter axis overflows slightly off-screen.
+    const coverScale = Math.max(
       wrap.clientWidth  / BOARD_W,
       wrap.clientHeight / BOARD_H
     );
+    /* The board's aspect ratio (16:9) often matches the window's almost
+       exactly, which makes strict "cover" scale fill both axes with zero
+       slack — panning would have nowhere to go. Starting slightly zoomed in
+       beyond that minimum guarantees room to pan in every direction by
+       default; doZoom()'s own minScale still allows zooming back out to the
+       exact cover fit if the user wants the whole board on screen. Fullscreen
+       gets extra padding since that's the main place panning around a big
+       board is actually useful. */
+    scale = coverScale * (document.fullscreenElement ? 1.6 : 1.2);
     panX = (wrap.clientWidth  - BOARD_W * scale) / 2;
     panY = (wrap.clientHeight - BOARD_H * scale) / 2;
     applyTransform();
     updateZoomLabel();
   }
 
+  /* Keeps panX/panY from dragging the board past its own edges — the board
+     is a fixed size (not an infinite canvas), so panning/zooming should
+     stop there instead of revealing blank wrap background beyond it. */
+  function clampPan() {
+    const bw = BOARD_W * scale, bh = BOARD_H * scale;
+    panX = bw <= wrap.clientWidth
+      ? (wrap.clientWidth - bw) / 2
+      : Math.min(0, Math.max(wrap.clientWidth - bw, panX));
+    panY = bh <= wrap.clientHeight
+      ? (wrap.clientHeight - bh) / 2
+      : Math.min(0, Math.max(wrap.clientHeight - bh, panY));
+  }
+
   new ResizeObserver(resize).observe(wrap);
 
-  /* ── Transform ── */
+  /* ── Transform: purely CSS — the canvas bitmaps are fixed-resolution and
+     never redrawn/rescaled by this, so panning/zooming can't lose or blur
+     content no matter how many times it's called. ── */
   function applyTransform() {
-    [ctx, octx].forEach(c => c.setTransform(scale, 0, 0, scale, panX, panY));
+    [bgCvs, canvas, overlay].forEach(c => {
+      c.style.left   = panX + 'px';
+      c.style.top    = panY + 'px';
+      c.style.width  = (BOARD_W * scale) + 'px';
+      c.style.height = (BOARD_H * scale) + 'px';
+    });
   }
 
   function screenToBoard(sx, sy) {
@@ -112,10 +187,14 @@
     const isDark  = boardCol === '#1e293b';
     const lineCol = isDark ? 'rgba(255,255,255,.10)' : 'rgba(0,0,0,.09)';
     const dotCol  = isDark ? 'rgba(255,255,255,.20)' : 'rgba(0,0,0,.18)';
-    const step    = 40 * scale;
+    const step    = 40 * DPR;
 
     bgCtx.strokeStyle = lineCol;
-    bgCtx.lineWidth   = 0.5;
+    /* physical-pixel widths, scaled by DPR so the on-screen thickness stays
+       constant regardless of DPR (which is now floored at 2x for sharpness
+       — without this, raising DPR made these lines/dots proportionally
+       thinner/fainter on screen) */
+    bgCtx.lineWidth   = 0.5 * DPR;
     bgCtx.fillStyle   = dotCol;
 
     const bx = 0, by = 0;
@@ -135,7 +214,7 @@
     } else if (bgType === 'dots') {
       for (let y = by + step; y < by + bh; y += step)
         for (let x = bx + step; x < bx + bw; x += step) {
-          bgCtx.beginPath(); bgCtx.arc(x, y, 1.5, 0, Math.PI * 2); bgCtx.fill();
+          bgCtx.beginPath(); bgCtx.arc(x, y, 1.5 * DPR, 0, Math.PI * 2); bgCtx.fill();
         }
     } else if (bgType === 'iso') {
       const h2 = step * Math.sin(Math.PI / 3);
@@ -148,7 +227,7 @@
       }
       bgCtx.stroke();
     } else if (bgType === 'graph') {
-      const sm = 10 * scale;
+      const sm = 10 * DPR;
       bgCtx.strokeStyle = isDark ? 'rgba(255,255,255,.04)' : 'rgba(0,0,0,.04)';
       bgCtx.beginPath();
       for (let y = by; y < by + bh; y += sm) { bgCtx.moveTo(bx, y); bgCtx.lineTo(bx + bw, y); }
@@ -164,25 +243,121 @@
   }
 
   /* ── History ── */
+  /* Snapshots are plain canvas clones (a direct pixel copy), not
+     canvas.toDataURL() strings — PNG-encoding/decoding the board on every
+     single stroke's mousedown (and every undo/redo) was real, measurable
+     lag once the backing store got bigger this session, since that encode
+     is CPU-bound and scales with pixel count. A canvas-to-canvas drawImage
+     copy has no encode step and is effectively instant. */
+  function snapshotCanvas() {
+    const snap = document.createElement('canvas');
+    snap.width = canvas.width;
+    snap.height = canvas.height;
+    snap.getContext('2d').drawImage(canvas, 0, 0);
+    return snap;
+  }
+
   function saveHistory() {
-    history.push(canvas.toDataURL());
+    history.push(snapshotCanvas());
     if (history.length > MAX_HIST) history.shift();
     redoStack = [];
   }
 
-  function restoreSnap(dataURL) {
-    const img = new Image();
-    img.onload = () => {
-      ctx.save(); ctx.setTransform(1,0,0,1,0,0);
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0);
-      ctx.restore();
-    };
-    img.src = dataURL;
+  function restoreSnap(snap) {
+    ctx.save(); ctx.setTransform(1,0,0,1,0,0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(snap, 0, 0);
+    ctx.restore();
   }
 
-  function undo() { if (!history.length) return; redoStack.push(canvas.toDataURL()); restoreSnap(history.pop()); }
-  function redo() { if (!redoStack.length) return; history.push(canvas.toDataURL()); restoreSnap(redoStack.pop()); }
+  function undo() { if (!history.length) return; redoStack.push(snapshotCanvas()); restoreSnap(history.pop()); }
+  function redo() { if (!redoStack.length) return; history.push(snapshotCanvas()); restoreSnap(redoStack.pop()); }
+
+  /* ── Pages ── */
+  /* The alternative to one giant board: several normal-sized (1920×1080)
+     pages instead. Switching pages just swaps which snapshot is drawn onto
+     the one real canvas — no extra backing stores, so drawing performance
+     is unaffected by how many pages exist. Each page keeps its own
+     undo/redo history. */
+  let pagesData     = [{ name: 'سبورة 1', snap: null, history: [], redoStack: [] }];
+  let currentPageIdx = 0;
+  const pageLabelEl = document.getElementById('wbPageLabel');
+
+  function updatePageLabel() {
+    if (pageLabelEl) pageLabelEl.textContent = pagesData[currentPageIdx].name;
+    const delBtn = document.getElementById('wbPageDelete');
+    if (delBtn) delBtn.disabled = pagesData.length <= 1;
+    const prevBtn = document.getElementById('wbPagePrev');
+    if (prevBtn) prevBtn.disabled = currentPageIdx === 0;
+  }
+
+  // click-to-rename: the label itself is contenteditable (see whiteboard.html)
+  pageLabelEl?.addEventListener('blur', () => {
+    const txt = pageLabelEl.textContent.trim();
+    pagesData[currentPageIdx].name = txt || pagesData[currentPageIdx].name;
+    updatePageLabel(); // re-render in case it was left empty
+  });
+  pageLabelEl?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); pageLabelEl.blur(); }
+  });
+  pageLabelEl?.addEventListener('click', e => e.stopPropagation());
+
+  function loadPage(idx) {
+    if (idx < 0 || idx >= pagesData.length || idx === currentPageIdx) return;
+    // persist whatever the current page's live canvas/history look like now
+    pagesData[currentPageIdx] = { ...pagesData[currentPageIdx], snap: snapshotCanvas(), history, redoStack };
+    currentPageIdx = idx;
+    const pd = pagesData[idx];
+    history = pd.history;
+    redoStack = pd.redoStack;
+    ctx.save(); ctx.setTransform(1,0,0,1,0,0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (pd.snap) ctx.drawImage(pd.snap, 0, 0);
+    ctx.restore();
+    // defensive: any leftover shape-tool preview or selection marquee on the
+    // overlay layer must never carry over onto a different page
+    octx.save(); octx.setTransform(1,0,0,1,0,0);
+    octx.clearRect(0, 0, overlay.width, overlay.height);
+    octx.restore();
+    updatePageLabel();
+  }
+
+  function addPage() {
+    pagesData.push({ name: `سبورة ${pagesData.length + 1}`, snap: null, history: [], redoStack: [] });
+    loadPage(pagesData.length - 1);
+  }
+
+  function deletePage() {
+    if (pagesData.length <= 1) return;
+    pagesData.splice(currentPageIdx, 1);
+    const target = Math.min(currentPageIdx, pagesData.length - 1);
+    // currentPageIdx no longer points at a real (just-deleted) page, so
+    // loadPage's "persist current" step must not run for it — jump straight
+    // to loading the target page's own state instead.
+    currentPageIdx = target;
+    const pd = pagesData[target];
+    history = pd.history;
+    redoStack = pd.redoStack;
+    ctx.save(); ctx.setTransform(1,0,0,1,0,0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (pd.snap) ctx.drawImage(pd.snap, 0, 0);
+    ctx.restore();
+    // defensive: any leftover shape-tool preview or selection marquee on the
+    // overlay layer must never carry over onto a different page
+    octx.save(); octx.setTransform(1,0,0,1,0,0);
+    octx.clearRect(0, 0, overlay.width, overlay.height);
+    octx.restore();
+    updatePageLabel();
+  }
+
+  document.getElementById('wbPagePrev')?.addEventListener('click', () => loadPage(currentPageIdx - 1));
+  document.getElementById('wbPageNext')?.addEventListener('click', () => {
+    if (currentPageIdx < pagesData.length - 1) loadPage(currentPageIdx + 1);
+    else addPage();
+  });
+  document.getElementById('wbPageAdd')?.addEventListener('click', addPage);
+  document.getElementById('wbPageDelete')?.addEventListener('click', deletePage);
+  updatePageLabel();
 
   /* ── Drawing helpers ── */
   function applyStroke(c) {
@@ -201,7 +376,7 @@
 
   function drawShape(c, x1, y1, x2, y2) {
     c.save();
-    c.setTransform(scale, 0, 0, scale, panX, panY);
+    c.setTransform(DPR, 0, 0, DPR, 0, 0);
     applyStroke(c);
     c.beginPath();
     if (tool === 'line') {
@@ -264,9 +439,13 @@
 
   /* ── Pointer helpers ── */
   function getScreen(e) {
-    const r  = overlay.getBoundingClientRect();
+    // Must be measured against wrap, not overlay/canvas — those are now
+    // CSS-positioned at (panX, panY) inside wrap, so using their own rect
+    // would double-count the pan offset once screenToBoard subtracts panX/panY.
+    // Uses the cached wrapRect (see updateWrapRect) instead of calling
+    // getBoundingClientRect() here directly — this runs on every mousemove.
     const cl = e.touches ? e.touches[0] : e;
-    return { x: cl.clientX - r.left, y: cl.clientY - r.top };
+    return { x: cl.clientX - wrapRect.left, y: cl.clientY - wrapRect.top };
   }
   function getBoard(e) { const s = getScreen(e); return screenToBoard(s.x, s.y); }
 
@@ -283,6 +462,7 @@
       return;
     }
     if (tool === 'text') { placeText(bd.x, bd.y); return; }
+    if (tool === 'select' && floatImg) return; // finish the current floating selection first
 
     drawing = true;
     const p = clampToBoard(bd.x, bd.y);
@@ -292,7 +472,7 @@
 
     if (['pen','highlight','eraser'].includes(tool)) {
       ctx.save();
-      ctx.setTransform(scale, 0, 0, scale, panX, panY);
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
       applyStroke(ctx);
       if (tool === 'eraser') {
         ctx.globalCompositeOperation = 'destination-out';
@@ -305,24 +485,26 @@
       ctx.beginPath();
       ctx.moveTo(p.x, p.y);
       ctx.restore();
+      smoothRawX = smoothMidX = p.x;
+      smoothRawY = smoothMidY = p.y;
     }
   }
 
   /* ── Pointer move ── */
+  const coordsLabel = document.getElementById('wbCoordsLabel');
   function onMove(e) {
     e.preventDefault();
     const sc = getScreen(e);
     const bd = screenToBoard(sc.x, sc.y);
     const cl = clampToBoard(bd.x, bd.y);
 
-    document.getElementById('wbCoordsLabel').textContent =
-      `${Math.round(cl.x)}, ${Math.round(cl.y)}`;
+    coordsLabel.textContent = `${Math.round(cl.x)}, ${Math.round(cl.y)}`;
 
     if (isPanning) {
       panX = sc.x - panStart.x;
       panY = sc.y - panStart.y;
+      clampPan();
       applyTransform();
-      drawBg();
       return;
     }
 
@@ -330,7 +512,7 @@
 
     if (['pen','highlight','eraser'].includes(tool)) {
       ctx.save();
-      ctx.setTransform(scale, 0, 0, scale, panX, panY);
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
       applyStroke(ctx);
       if (tool === 'eraser') {
         ctx.globalCompositeOperation = 'destination-out';
@@ -340,11 +522,26 @@
         ctx.globalAlpha = 0.35;
         ctx.lineWidth   = (size * 6) / scale;
       }
-      ctx.lineTo(cl.x, cl.y);
-      ctx.stroke();
+      /* quadratic curve through midpoints, using the previous raw sample as
+         the control point — smooths out the faceted look of raw lineTo
+         segments on fast or curved strokes */
+      const newMidX = (smoothRawX + cl.x) / 2;
+      const newMidY = (smoothRawY + cl.y) / 2;
       ctx.beginPath();
-      ctx.moveTo(cl.x, cl.y);
+      ctx.moveTo(smoothMidX, smoothMidY);
+      ctx.quadraticCurveTo(smoothRawX, smoothRawY, newMidX, newMidY);
+      ctx.stroke();
+      smoothMidX = newMidX;
+      smoothMidY = newMidY;
+      smoothRawX = cl.x;
+      smoothRawY = cl.y;
       ctx.restore();
+    } else if (tool === 'select') {
+      octx.save();
+      octx.setTransform(1, 0, 0, 1, 0, 0);
+      octx.clearRect(0, 0, overlay.width, overlay.height);
+      octx.restore();
+      drawSelectionRect(startX, startY, cl.x, cl.y);
     } else {
       octx.save();
       octx.setTransform(1, 0, 0, 1, 0, 0);
@@ -353,6 +550,20 @@
       drawShape(octx, startX, startY, cl.x, cl.y);
     }
     lastX = cl.x; lastY = cl.y;
+  }
+
+  function drawSelectionRect(x1, y1, x2, y2) {
+    octx.save();
+    octx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    const x = Math.min(x1, x2), y = Math.min(y1, y2);
+    const w = Math.abs(x2 - x1), h = Math.abs(y2 - y1);
+    octx.fillStyle = 'rgba(79,70,229,.08)';
+    octx.fillRect(x, y, w, h);
+    octx.strokeStyle = '#4f46e5';
+    octx.lineWidth = 1.5 / scale;
+    octx.setLineDash([6 / scale, 4 / scale]);
+    octx.strokeRect(x, y, w, h);
+    octx.restore();
   }
 
   /* ── Pointer up ── */
@@ -368,7 +579,7 @@
     ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = 1;
 
-    if (['line','arrow','rect','circle'].includes(tool)) {
+    if (['line','arrow','rect','circle','triangle','diamond','star'].includes(tool)) {
       const bd = getBoard(e);
       const cl = clampToBoard(bd.x || lastX, bd.y || lastY);
       drawShape(ctx, startX, startY, cl.x, cl.y);
@@ -376,7 +587,44 @@
       octx.setTransform(1, 0, 0, 1, 0, 0);
       octx.clearRect(0, 0, overlay.width, overlay.height);
       octx.restore();
+    } else if (tool === 'select') {
+      const bd = getBoard(e);
+      const cl = clampToBoard(bd.x || lastX, bd.y || lastY);
+      octx.save();
+      octx.setTransform(1, 0, 0, 1, 0, 0);
+      octx.clearRect(0, 0, overlay.width, overlay.height);
+      octx.restore();
+      liftSelection(startX, startY, cl.x, cl.y);
     }
+  }
+
+  /* Lifts a rectangular region of already-drawn content (freehand strokes,
+     shapes, pasted images, templates — it's all just pixels) into the same
+     floating move/resize overlay used for images and templates, clearing it
+     from the board in the meantime. cancelFloatImg() restores it if the
+     user backs out instead of confirming or deleting. */
+  function liftSelection(x1, y1, x2, y2) {
+    const bx = Math.min(x1, x2), by = Math.min(y1, y2);
+    const bw = Math.abs(x2 - x1), bh = Math.abs(y2 - y1);
+    if (bw < 6 || bh < 6) return; // ignore accidental clicks/tiny drags
+
+    const oc = document.createElement('canvas');
+    oc.width  = Math.round(bw * DPR);
+    oc.height = Math.round(bh * DPR);
+    const c = oc.getContext('2d');
+    c.drawImage(canvas, bx * DPR, by * DPR, bw * DPR, bh * DPR, 0, 0, oc.width, oc.height);
+
+    ctx.save();
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.clearRect(bx, by, bw, bh);
+    ctx.restore();
+
+    liftedFrom = { bx, by, bw, bh };
+    const img = new Image();
+    img.onload = () => {
+      showFloatImg(img, bx * scale + panX, by * scale + panY, bw * scale, bh * scale);
+    };
+    img.src = oc.toDataURL('image/png');
   }
 
   overlay.addEventListener('mousedown',  onDown, { passive:false });
@@ -390,7 +638,7 @@
   /* ── Wheel zoom ── */
   overlay.addEventListener('wheel', e => {
     e.preventDefault();
-    doZoom(e.deltaY < 0 ? 1.1 : 0.9, e.clientX - overlay.getBoundingClientRect().left, e.clientY - overlay.getBoundingClientRect().top);
+    doZoom(e.deltaY < 0 ? 1.1 : 0.9, e.clientX - wrapRect.left, e.clientY - wrapRect.top);
   }, { passive:false });
 
   /* ── Pinch zoom ── */
@@ -402,20 +650,22 @@
   overlay.addEventListener('touchmove', e => {
     if (e.touches.length !== 2) return;
     const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-    const r = overlay.getBoundingClientRect();
-    const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - r.left;
-    const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2 - r.top;
+    const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - wrapRect.left;
+    const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2 - wrapRect.top;
     doZoom(d / lastPinch, cx, cy);
     lastPinch = d;
   }, { passive:true });
 
   function doZoom(factor, cx, cy) {
-    const ns = Math.min(Math.max(scale * factor, 0.05), 8);
+    // never zoom out past the "cover" fit — below that, the board can't
+    // fill wrap anymore and blank margins show no matter how panning is clamped
+    const minScale = Math.max(wrap.clientWidth / BOARD_W, wrap.clientHeight / BOARD_H);
+    const ns = Math.min(Math.max(scale * factor, minScale), 8);
     panX = cx - (cx - panX) * (ns / scale);
     panY = cy - (cy - panY) * (ns / scale);
     scale = ns;
+    clampPan();
     applyTransform();
-    drawBg();
     updateZoomLabel();
   }
 
@@ -427,7 +677,86 @@
 
   document.getElementById('wbZoomIn').addEventListener('click',    () => doZoom(1.2, wrap.clientWidth/2, wrap.clientHeight/2));
   document.getElementById('wbZoomOut').addEventListener('click',   () => doZoom(0.8, wrap.clientWidth/2, wrap.clientHeight/2));
-  document.getElementById('wbZoomReset').addEventListener('click', () => { centerBoard(); drawBg(); });
+  document.getElementById('wbZoomReset').addEventListener('click', () => { centerBoard(); });
+
+  /* ── Encouragement toast: one button, random phrase + confetti + spoken aloud ── */
+  (function setupEncouragement(){
+    const btn = document.getElementById('wbEncourage');
+    if (!btn) return;
+
+    const PHRASES = [
+      { text: 'برافو!',      emoji: '👏' },
+      { text: 'ممتاز!',      emoji: '🌟' },
+      { text: 'أحسنت!',      emoji: '👍' },
+      { text: 'رائع!',       emoji: '🎉' },
+      { text: 'شاطر!',       emoji: '💪' },
+      { text: 'تألقت!',      emoji: '✨' },
+      { text: 'عاش!',        emoji: '🔥' },
+      { text: 'ممتاز جدًا!', emoji: '🏆' }
+    ];
+    const CONFETTI_COLORS = ['#f59e0b', '#ef4444', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'];
+
+    let audioCtx;
+    function ensureAudio() {
+      if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(_) {} }
+    }
+    function playChime() {
+      ensureAudio();
+      if (!audioCtx) return;
+      const notes = [523.25, 659.25, 783.99, 1046.5];
+      notes.forEach((freq, i) => {
+        const t = audioCtx.currentTime + i * 0.09;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, t);
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.linearRampToValueAtTime(0.18, t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+        osc.start(t); osc.stop(t + 0.35);
+      });
+    }
+    function spawnConfetti(container, count) {
+      for (let i = 0; i < count; i++) {
+        const piece = document.createElement('div');
+        piece.className = 'wb-encourage-confetti';
+        const left = Math.random() * 100;
+        const drift = (Math.random() - 0.5) * 200;
+        const duration = 1.4 + Math.random() * 1.2;
+        const delay = Math.random() * 0.3;
+        piece.style.left = left + 'vw';
+        piece.style.background = CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)];
+        piece.style.setProperty('--drift', drift + 'px');
+        piece.style.animationDuration = duration + 's';
+        piece.style.animationDelay = delay + 's';
+        container.appendChild(piece);
+      }
+    }
+
+    btn.addEventListener('click', () => {
+      const pick = PHRASES[Math.floor(Math.random() * PHRASES.length)];
+
+      const overlay = document.createElement('div');
+      overlay.className = 'wb-encourage-overlay';
+      const card = document.createElement('div');
+      card.className = 'wb-encourage-card';
+      card.innerHTML = `<span class="wb-encourage-emoji">${pick.emoji}</span><span>${pick.text}</span>`;
+      overlay.appendChild(card);
+      spawnConfetti(overlay, 40);
+      // Append inside the whiteboard's own fullscreen element (.wb-root),
+      // not document.body — the Fullscreen API only renders the fullscreen
+      // element and its descendants, so anything appended to body (an
+      // ancestor of .wb-root, not a descendant) was invisible whenever the
+      // teacher had the whiteboard in fullscreen mode.
+      const mountPoint = document.querySelector('.wb-root') || document.body;
+      mountPoint.appendChild(overlay);
+
+      playChime();
+
+      setTimeout(() => overlay.remove(), 2300);
+    });
+  })();
 
   /* ── Text tool ── */
   function placeText(bx, by) {
@@ -437,7 +766,7 @@
     textBox.style.left     = sx + 'px';
     textBox.style.top      = sy + 'px';
     textBox.style.color    = color;
-    textBox.style.fontSize = (size * 5 + 14) + 'px';
+    textBox.style.fontSize = textSize + 'px';
     textBox.style.opacity  = opacity;
     textBox.textContent    = '';
     textBox.focus();
@@ -447,12 +776,16 @@
     if (txt) {
       saveHistory();
       const bd = screenToBoard(parseInt(textBox.style.left), parseInt(textBox.style.top));
+      // font-size (like stroke width) is specified in board-space units
+      // divided by scale, so the committed text keeps the same on-screen
+      // CSS-px size the editable textbox showed, regardless of zoom level
+      const fontSizeCss = parseInt(textBox.style.fontSize);
       ctx.save();
-      ctx.setTransform(scale, 0, 0, scale, panX, panY);
-      ctx.font        = `700 ${textBox.style.fontSize} Cairo, sans-serif`;
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      ctx.font        = `700 ${fontSizeCss / scale}px Cairo, sans-serif`;
       ctx.fillStyle   = color;
       ctx.globalAlpha = opacity;
-      ctx.fillText(txt, bd.x, bd.y + parseInt(textBox.style.fontSize));
+      ctx.fillText(txt, bd.x, bd.y + fontSizeCss / scale);
       ctx.restore();
     }
     textBox.style.display = 'none';
@@ -521,10 +854,333 @@
     fsIcon.innerHTML = on ? FS_OFF : FS_ON;
     fsBtn.classList.toggle('active', on);
     if (wbQuickTools) wbQuickTools.style.display = on ? 'block' : 'none';
+    // don't rely solely on the ResizeObserver picking up wrap's new size —
+    // recompute the fullscreen-aware pan padding (see centerBoard) right away
+    centerBoard();
+    updateWrapRect();
   });
 
+  /* ── Ready-made templates ── */
+  const templateBtn  = document.getElementById('wbTemplateBtn');
+  const templateMenu = document.getElementById('wbTemplateMenu');
+  if (templateBtn && templateMenu) {
+    const setTplOpen = open => {
+      if (open) {
+        const r = templateBtn.getBoundingClientRect();
+        templateMenu.hidden = false; // measure while visible
+        const mw = templateMenu.getBoundingClientRect().width;
+        templateMenu.style.top  = (r.bottom + 6) + 'px';
+        let left = r.left;
+        if (left + mw > window.innerWidth - 8) left = window.innerWidth - mw - 8;
+        templateMenu.style.left = Math.max(8, left) + 'px';
+      } else {
+        templateMenu.hidden = true;
+      }
+    };
+    templateBtn.addEventListener('click', e => { e.stopPropagation(); setTplOpen(templateMenu.hidden); });
+    document.addEventListener('click', e => {
+      if (!templateBtn.contains(e.target) && !templateMenu.contains(e.target)) setTplOpen(false);
+    });
+    templateMenu.querySelectorAll('[data-template]').forEach(btn => {
+      btn.addEventListener('click', () => { setTplOpen(false); insertTemplate(btn.getAttribute('data-template')); });
+    });
+  }
+
+  /* Mind-map has its own layout + branch-count options, so it opens a
+     second small panel instead of inserting immediately. */
+  const mindmapOpener = document.getElementById('wbMindmapOpener');
+  const mindmapPanel  = document.getElementById('wbMindmapPanel');
+  if (templateBtn && mindmapOpener && mindmapPanel) {
+    const setMmOpen = open => {
+      if (open) {
+        const r = templateBtn.getBoundingClientRect();
+        mindmapPanel.hidden = false;
+        const mw = mindmapPanel.getBoundingClientRect().width;
+        mindmapPanel.style.top  = (r.bottom + 6) + 'px';
+        let left = r.left;
+        if (left + mw > window.innerWidth - 8) left = window.innerWidth - mw - 8;
+        mindmapPanel.style.left = Math.max(8, left) + 'px';
+      } else {
+        mindmapPanel.hidden = true;
+      }
+    };
+    mindmapOpener.addEventListener('click', e => {
+      e.stopPropagation();
+      templateMenu.hidden = true;
+      setMmOpen(true);
+    });
+    document.addEventListener('click', e => {
+      if (!templateBtn.contains(e.target) && !mindmapPanel.contains(e.target)) setMmOpen(false);
+    });
+    mindmapPanel.querySelectorAll('.wb-mm-layout').forEach(btn => {
+      btn.addEventListener('click', () => {
+        mindmapPanel.querySelectorAll('.wb-mm-layout').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
+    mindmapPanel.querySelectorAll('.wb-mm-count').forEach(btn => {
+      btn.addEventListener('click', () => {
+        mindmapPanel.querySelectorAll('.wb-mm-count').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
+    document.getElementById('wbMindmapInsert').addEventListener('click', () => {
+      const layout = mindmapPanel.querySelector('.wb-mm-layout.active')?.dataset.layout || 'radial';
+      const count  = +(mindmapPanel.querySelector('.wb-mm-count.active')?.dataset.count || 6);
+      setMmOpen(false);
+      insertTemplate('mindmap', { layout, count });
+    });
+  }
+
+  function rrPath(c, x, y, w, h, r) {
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y,     x + w, y + h, r);
+    c.arcTo(x + w, y + h, x,     y + h, r);
+    c.arcTo(x,     y + h, x,     y,     r);
+    c.arcTo(x,     y,     x + w, y,     r);
+    c.closePath();
+  }
+
+  /* Builds the template as its own small canvas (not drawn straight onto
+     the board) so it can be dropped into the existing floating-image
+     move/resize flow below — same drag handles + confirm/cancel the user
+     already knows from pasting images, instead of a fixed, uneditable
+     placement in the board center. */
+  function buildTemplateCanvas(name, opts = {}) {
+    const layout = opts.layout || 'radial';
+    const count  = opts.count  || 6;
+    let w, h;
+    if (name === 'mult')      { w = 13 * 80; h = 13 * 80; }
+    else if (name === 'timeline')  { w = 1200; h = 140; }
+    else if (name === 'tchart')    { w = 900;  h = 560; }
+    else if (name === 'venn')      { w = 760;  h = 460; }
+    else if (name === 'kwl')       { w = 1020; h = 550; }
+    else if (name === 'pyramid')   { w = 760;  h = 560; }
+    else if (name === 'letters')   { w = 780;  h = 780; }
+    else if (name === 'timetable') { w = 840;  h = 480; }
+    else if (layout === 'radial')      { w = h = 620 + count * 40; }
+    else if (layout === 'tree')        { w = 170 * count + 60; h = 420; }
+    else /* horizontal */              { w = 620; h = 110 * count + 60; }
+
+    const oc = document.createElement('canvas');
+    /* store at DPR density (like the board canvases) so the raster still
+       holds up when the user zooms in later — draw math below stays in
+       logical w/h units regardless */
+    oc.width  = Math.round(w * DPR);
+    oc.height = Math.round(h * DPR);
+    const c = oc.getContext('2d');
+    c.setTransform(DPR, 0, 0, DPR, 0, 0);
+    const isDark  = boardCol === '#1e293b';
+    const lineCol = isDark ? '#e2e8f0' : '#334155';
+    const textCol = isDark ? '#f1f5f9' : '#1e293b';
+    /* header/column tint palette for grid-style templates, shared so tables
+       stay visually consistent with each other */
+    const headerBg  = isDark ? 'rgba(99,102,241,.28)' : '#e0e7ff';
+    const stripeBg   = isDark ? 'rgba(255,255,255,.04)' : 'rgba(0,0,0,.025)';
+    const kwlBg = isDark
+      ? ['rgba(59,130,246,.25)', 'rgba(234,179,8,.25)', 'rgba(34,197,94,.25)']
+      : ['#dbeafe', '#fef9c3', '#dcfce7'];
+    c.strokeStyle = lineCol;
+    c.fillStyle   = textCol;
+    c.textAlign    = 'center';
+    c.textBaseline = 'middle';
+
+    if (name === 'mult') {
+      const cols = 13, rows = 13, cell = 80, N = 12;
+      c.fillStyle = headerBg;
+      c.fillRect(0, 0, w, cell);
+      c.fillRect(0, 0, cell, h);
+      c.fillStyle = textCol;
+      c.lineWidth = 2;
+      for (let i = 0; i <= cols; i++) { c.beginPath(); c.moveTo(i * cell, 0); c.lineTo(i * cell, h); c.stroke(); }
+      for (let j = 0; j <= rows; j++) { c.beginPath(); c.moveTo(0, j * cell); c.lineTo(w, j * cell); c.stroke(); }
+      c.font = '900 24px Cairo, sans-serif';
+      c.fillText('×', cell / 2, cell / 2);
+      for (let k = 1; k <= N; k++) {
+        c.fillText(String(k), (k + 0.5) * cell, cell / 2);
+        c.fillText(String(k), cell / 2, (k + 0.5) * cell);
+      }
+    } else if (name === 'timeline') {
+      const margin = 40, y = h / 2, n = 6;
+      c.lineWidth = 4;
+      c.beginPath(); c.moveTo(margin, y); c.lineTo(w - margin, y); c.stroke();
+      c.beginPath();
+      c.moveTo(w - margin, y); c.lineTo(w - margin - 20, y - 12);
+      c.moveTo(w - margin, y); c.lineTo(w - margin - 20, y + 12);
+      c.stroke();
+      const step = (w - margin * 2) / (n - 1);
+      c.lineWidth = 3;
+      c.font = '600 20px Cairo, sans-serif';
+      for (let i = 0; i < n; i++) {
+        const x = margin + i * step;
+        c.beginPath(); c.moveTo(x, y - 16); c.lineTo(x, y + 16); c.stroke();
+        c.fillText('. . .', x, y + 42);
+      }
+    } else if (name === 'tchart') {
+      const headerH = 70, rows = 6, cellH = (h - headerH) / rows;
+      c.fillStyle = headerBg;
+      c.fillRect(0, 0, w, headerH);
+      c.fillStyle = stripeBg;
+      for (let r = 1; r < rows; r += 2) c.fillRect(0, headerH + r * cellH, w, cellH);
+      c.lineWidth = 2;
+      c.strokeStyle = lineCol;
+      c.strokeRect(1, 1, w - 2, h - 2);
+      c.beginPath(); c.moveTo(0, headerH); c.lineTo(w, headerH); c.stroke();
+      c.beginPath(); c.moveTo(w / 2, 0); c.lineTo(w / 2, h); c.stroke();
+      for (let r = 1; r < rows; r++) { const y = headerH + r * cellH; c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke(); }
+    } else if (name === 'venn') {
+      const r = 210, cy = h / 2, cx1 = w / 2 - 120, cx2 = w / 2 + 120;
+      c.lineWidth = 3;
+      c.beginPath(); c.arc(cx1, cy, r, 0, Math.PI * 2); c.stroke();
+      c.beginPath(); c.arc(cx2, cy, r, 0, Math.PI * 2); c.stroke();
+    } else if (name === 'kwl') {
+      const cols = 3, rows = 6, headerH = 70, colW = w / cols, cellH = (h - headerH) / rows;
+      for (let i = 0; i < cols; i++) {
+        c.fillStyle = kwlBg[i];
+        c.fillRect(i * colW, 0, colW, headerH);
+        c.globalAlpha = 0.35; // faint tint under the column body, full color stays on the header
+        c.fillRect(i * colW, headerH, colW, h - headerH);
+        c.globalAlpha = 1;
+      }
+      c.lineWidth = 2;
+      c.strokeStyle = lineCol;
+      c.strokeRect(1, 1, w - 2, h - 2);
+      c.beginPath(); c.moveTo(0, headerH); c.lineTo(w, headerH); c.stroke();
+      for (let i = 1; i < cols; i++) { c.beginPath(); c.moveTo(i * colW, 0); c.lineTo(i * colW, h); c.stroke(); }
+      for (let r = 1; r < rows; r++) { const y = headerH + r * cellH; c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke(); }
+      c.fillStyle = textCol;
+      c.font = '700 19px Cairo, sans-serif';
+      ['ماذا أعرف؟', 'ماذا أريد أن أعرف؟', 'ماذا تعلمت؟'].forEach((t, i) => c.fillText(t, colW * (i + 0.5), headerH / 2));
+    } else if (name === 'pyramid') {
+      const levels = 5, baseW = 680, apexY = 30, baseY = h - 30, cx = w / 2;
+      const totalH = baseY - apexY, bandH = totalH / levels;
+      c.lineWidth = 2.5;
+      c.beginPath();
+      c.moveTo(cx, apexY); c.lineTo(cx + baseW / 2, baseY); c.lineTo(cx - baseW / 2, baseY);
+      c.closePath(); c.stroke();
+      for (let i = 1; i < levels; i++) {
+        const y = apexY + bandH * i;
+        const halfW = (baseW / 2) * ((y - apexY) / totalH);
+        c.beginPath(); c.moveTo(cx - halfW, y); c.lineTo(cx + halfW, y); c.stroke();
+      }
+    } else if (name === 'letters') {
+      const letters = ['أ','ب','ت','ث','ج','ح','خ','د','ذ','ر','ز','س','ش','ص','ض','ط','ظ','ع','غ','ف','ق','ك','ل','م','ن','ه','و','ي'];
+      const cx = w / 2, cy = h / 2, R = 320, R2 = 360;
+      c.lineWidth = 2;
+      c.beginPath(); c.arc(cx, cy, R2, 0, Math.PI * 2); c.stroke();
+      c.font = '700 28px Cairo, sans-serif';
+      letters.forEach((L, i) => {
+        const ang = (i / letters.length) * Math.PI * 2 - Math.PI / 2;
+        c.fillText(L, cx + R * Math.cos(ang), cy + R * Math.sin(ang));
+      });
+    } else if (name === 'timetable') {
+      const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
+      const periods = 6, labelColW = 90, headerH = 60;
+      const gridW = w - labelColW;
+      const cellW = gridW / days.length, cellH = (h - headerH) / periods;
+      /* RTL layout: label column on the right, day 0 (الأحد) starts right
+         next to it and the week reads right-to-left across the grid */
+      const dayX = i => w - labelColW - (i + 1) * cellW;
+      c.fillStyle = headerBg;
+      c.fillRect(0, 0, gridW, headerH);        // days header
+      c.fillRect(gridW, 0, labelColW, h);       // period label column
+      c.fillStyle = stripeBg;
+      for (let r = 1; r < periods; r += 2) c.fillRect(0, headerH + r * cellH, gridW, cellH);
+      c.lineWidth = 2;
+      c.strokeStyle = lineCol;
+      c.strokeRect(1, 1, w - 2, h - 2);
+      c.beginPath(); c.moveTo(0, headerH); c.lineTo(w, headerH); c.stroke();
+      c.beginPath(); c.moveTo(gridW, 0); c.lineTo(gridW, h); c.stroke();
+      for (let i = 1; i < days.length; i++) { const x = i * cellW; c.beginPath(); c.moveTo(x, 0); c.lineTo(x, h); c.stroke(); }
+      for (let r = 1; r < periods; r++) { const y = headerH + r * cellH; c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke(); }
+      c.fillStyle = textCol;
+      c.font = '700 17px Cairo, sans-serif';
+      days.forEach((d, i) => c.fillText(d, dayX(i) + cellW / 2, headerH / 2));
+      c.font = '600 15px Cairo, sans-serif';
+      for (let r = 0; r < periods; r++) c.fillText(String(r + 1), gridW + labelColW / 2, headerH + cellH * (r + 0.5));
+    } else if (name === 'mindmap') {
+      const rw = 210, rh = 90;
+      const accent = ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#ec4899','#06b6d4'];
+      const nodeSize = count <= 4 ? { w: 190, h: 80 } : count <= 6 ? { w: 175, h: 72 } : { w: 150, h: 62 };
+
+      const drawNode = (x, y, nw, nh, color, text, big) => {
+        c.fillStyle = boardCol;
+        rrPath(c, x - nw / 2, y - nh / 2, nw, nh, big ? 20 : 18);
+        c.fill();
+        c.strokeStyle = color; c.lineWidth = 2.5; c.stroke();
+        c.fillStyle = textCol;
+        c.font = big ? '700 24px Cairo, sans-serif' : '600 17px Cairo, sans-serif';
+        if (text) c.fillText(text, x, y);
+      };
+      /* stop each connecting line at the node's border, not its center, so
+         it doesn't poke into the box as a stray diagonal stub */
+      const edgeStop = (fromX, fromY, toX, toY, nw, nh) => {
+        const dx = toX - fromX, dy = toY - fromY, d = Math.hypot(dx, dy) || 1;
+        const r = Math.min(nw, nh) / 2;
+        return { x: toX - (dx / d) * r, y: toY - (dy / d) * r };
+      };
+
+      if (layout === 'radial') {
+        const cx = w / 2, cy = h / 2;
+        const radius = (Math.min(w, h) - nodeSize.w) / 2 - 20;
+        const nodes = [];
+        for (let i = 0; i < count; i++) {
+          const ang = (i / count) * Math.PI * 2 - Math.PI / 2;
+          const nx = cx + radius * Math.cos(ang), ny = cy + radius * Math.sin(ang);
+          nodes.push({ x: nx, y: ny, stop: edgeStop(cx, cy, nx, ny, nodeSize.w, nodeSize.h), color: accent[i % accent.length] });
+        }
+        nodes.forEach(p => { c.strokeStyle = p.color; c.lineWidth = 2.5; c.beginPath(); c.moveTo(cx, cy); c.lineTo(p.stop.x, p.stop.y); c.stroke(); });
+        drawNode(cx, cy, rw, rh, lineCol, '', true);
+        nodes.forEach(p => drawNode(p.x, p.y, nodeSize.w, nodeSize.h, p.color, ''));
+      } else if (layout === 'tree') {
+        const rootX = w / 2, rootY = 70, childY = h - 90;
+        const step = (w - 80) / Math.max(count - 1, 1);
+        const xs = []; for (let i = 0; i < count; i++) xs.push(count === 1 ? w / 2 : 40 + step * i);
+        xs.forEach((x, i) => {
+          const color = accent[i % accent.length];
+          const a = edgeStop(rootX, rootY, x, childY, nodeSize.w, nodeSize.h);
+          const b = edgeStop(x, childY, rootX, rootY, rw, rh);
+          c.strokeStyle = color; c.lineWidth = 2.5;
+          c.beginPath(); c.moveTo(b.x, b.y); c.lineTo(a.x, a.y); c.stroke();
+        });
+        drawNode(rootX, rootY, rw, rh, lineCol, '', true);
+        xs.forEach((x, i) => drawNode(x, childY, nodeSize.w, nodeSize.h, accent[i % accent.length], ''));
+      } else { /* horizontal */
+        const rootX = 110, rootY = h / 2, childX = w - 130;
+        const stepY = (h - 80) / Math.max(count - 1, 1);
+        const ys = []; for (let i = 0; i < count; i++) ys.push(count === 1 ? h / 2 : 40 + stepY * i);
+        ys.forEach((y, i) => {
+          const color = accent[i % accent.length];
+          const a = edgeStop(rootX, rootY, childX, y, nodeSize.w, nodeSize.h);
+          const b = edgeStop(childX, y, rootX, rootY, rw, rh);
+          c.strokeStyle = color; c.lineWidth = 2.5;
+          c.beginPath(); c.moveTo(b.x, b.y); c.lineTo(a.x, a.y); c.stroke();
+        });
+        drawNode(rootX, rootY, rw, rh, lineCol, '', true);
+        ys.forEach((y, i) => drawNode(childX, y, nodeSize.w, nodeSize.h, accent[i % accent.length], ''));
+      }
+    }
+    return oc;
+  }
+
+  function insertTemplate(name, opts) {
+    const oc = buildTemplateCanvas(name, opts);
+    const img = new Image();
+    img.onload = () => {
+      const maxW = wrap.clientWidth  * 0.6;
+      const maxH = wrap.clientHeight * 0.6;
+      const sc2  = Math.min(maxW / img.width, maxH / img.height, 1);
+      const w2 = img.width  * sc2, h2 = img.height * sc2;
+      const x = (wrap.clientWidth  - w2) / 2;
+      const y = (wrap.clientHeight - h2) / 2;
+      showFloatImg(img, x, y, w2, h2);
+    };
+    img.src = oc.toDataURL('image/png');
+  }
+
   /* ══ TOOLBAR WIRING ══ */
-  const TOOL_LABELS = { pen:'قلم', highlight:'تظليل', eraser:'ممحاة', line:'خط', arrow:'سهم', rect:'مستطيل', circle:'دائرة', triangle:'مثلث', diamond:'معين', star:'نجمة', text:'نص', hand:'يد' };
+  const TOOL_LABELS = { pen:'قلم', highlight:'تظليل', eraser:'ممحاة', line:'خط', arrow:'سهم', rect:'مستطيل', circle:'دائرة', triangle:'مثلث', diamond:'معين', star:'نجمة', text:'نص', hand:'يد', select:'تحديد' };
 
   /* custom per-tool cursors — small SVG icons with a hotspot at the actual
      drawing point, so the pointer itself communicates which tool is active */
@@ -544,6 +1200,7 @@
       28, 28, 14, 16) + ', cell',
     text: 'text',
     hand: 'grab',
+    select: 'crosshair',
     line: svgCursor(`<line x1="4" y1="20" x2="20" y2="4" stroke="#64748b" stroke-width="2.5" stroke-linecap="round"/>`, 24, 24, 4, 20) + ', crosshair',
     arrow: svgCursor(`<line x1="4" y1="20" x2="20" y2="4" stroke="#f97316" stroke-width="2.5" stroke-linecap="round"/><path d="M20 4 12 6l6 6Z" fill="#f97316"/>`, 24, 24, 4, 20) + ', crosshair',
     rect: svgCursor(`<rect x="3" y="6" width="18" height="14" rx="2" fill="none" stroke="#0ea5e9" stroke-width="2.5"/>`, 24, 24, 3, 6) + ', crosshair',
@@ -584,15 +1241,29 @@
     colorBtnIcon.querySelector('circle').setAttribute('fill', color);
   });
 
-  /* Brush size — preset dot sizes instead of a percentage slider */
+  /* Brush size — preset dot sizes instead of a percentage slider.
+     Scoped to #wbSizePop so it doesn't collide with the separate text-size
+     popover below, which reuses the same .wb-size-opt look. */
   const sizeBtn = document.getElementById('wbSizeBtn');
-  document.querySelectorAll('.wb-size-opt').forEach(opt => {
+  document.querySelectorAll('#wbSizePop .wb-size-opt').forEach(opt => {
     opt.addEventListener('click', () => {
-      document.querySelectorAll('.wb-size-opt').forEach(o => o.classList.remove('active'));
+      document.querySelectorAll('#wbSizePop .wb-size-opt').forEach(o => o.classList.remove('active'));
       opt.classList.add('active');
       size = +opt.dataset.size;
       document.getElementById('wbSizePop').classList.remove('open');
       sizeBtn.classList.remove('open');
+    });
+  });
+
+  /* Text font size — separate from brush size, see wbTextSizeBtn */
+  const textSizeBtn = document.getElementById('wbTextSizeBtn');
+  document.querySelectorAll('#wbTextSizePop .wb-size-opt').forEach(opt => {
+    opt.addEventListener('click', () => {
+      document.querySelectorAll('#wbTextSizePop .wb-size-opt').forEach(o => o.classList.remove('active'));
+      opt.classList.add('active');
+      textSize = +opt.dataset.textSize;
+      document.getElementById('wbTextSizePop').classList.remove('open');
+      textSizeBtn.classList.remove('open');
     });
   });
 
@@ -634,6 +1305,7 @@
     pop.addEventListener('click', e => e.stopPropagation());
   }
   wirePropPopover('wbSizeBtn', 'wbSizePop');
+  wirePropPopover('wbTextSizeBtn', 'wbTextSizePop');
   wirePropPopover('wbShapeBtn', 'wbShapePop');
   wirePropPopover('wbColorBtn', 'wbColorPop');
   wirePropPopover('wbSbBgBtn', 'wbSbBgPop');
@@ -719,10 +1391,12 @@
 
   /* ── Save board ── */
   document.getElementById('wbSave').addEventListener('click', () => {
+    // only the current page's canvas — that's already all `canvas` is
     const data = JSON.stringify({ v:3, scale, panX, panY, boardCol, bgType, img: canvas.toDataURL() });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([data], { type:'application/json' }));
-    a.download = `سبورة-${new Date().toLocaleDateString('ar-EG').replace(/\//g,'-')}.wb`;
+    const safeName = (pagesData[currentPageIdx]?.name || 'سبورة').replace(/[\\/:*?"<>|]/g, '').trim() || 'سبورة';
+    a.download = `${safeName}.wb`;
     a.click(); URL.revokeObjectURL(a.href);
   });
 
@@ -749,6 +1423,10 @@
   /* ── Floating image helpers ── */
   const imgOverlay = document.getElementById('wbImgOverlay');
   const imgFloat   = document.getElementById('wbImgFloat');
+  const imgDeleteBtn = document.getElementById('wbImgDelete');
+  /* set only when the current float came from lifting existing board
+     content with the select tool — holds where to put it back if canceled */
+  let liftedFrom = null;
 
   function showFloatImg(imgEl, x, y, w, h) {
     floatImg  = imgEl;
@@ -756,6 +1434,7 @@
     imgFloat.src = imgEl.src;
     applyFloatRect();
     imgOverlay.style.display = 'block';
+    if (imgDeleteBtn) imgDeleteBtn.style.display = liftedFrom ? '' : 'none';
   }
 
   function applyFloatRect() {
@@ -774,20 +1453,29 @@
     const bh = floatRect.h / scale;
     saveHistory();
     ctx.save();
-    ctx.setTransform(scale, 0, 0, scale, panX, panY);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     ctx.drawImage(floatImg, bx, by, bw, bh);
     ctx.restore();
-    cancelFloatImg();
+    cancelFloatImg(false); // already placed at the new spot — nothing to restore
   }
 
-  function cancelFloatImg() {
+  function cancelFloatImg(restore = true) {
+    if (restore && liftedFrom && floatImg) {
+      ctx.save();
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      ctx.drawImage(floatImg, liftedFrom.bx, liftedFrom.by, liftedFrom.bw, liftedFrom.bh);
+      ctx.restore();
+    }
+    liftedFrom = null;
     floatImg = null;
     _imgDrag = null;
     imgOverlay.style.display = 'none';
+    if (imgDeleteBtn) imgDeleteBtn.style.display = 'none';
   }
 
   document.getElementById('wbImgConfirm').addEventListener('click', commitFloatImg);
-  document.getElementById('wbImgCancel').addEventListener('click',  cancelFloatImg);
+  document.getElementById('wbImgCancel').addEventListener('click',  () => cancelFloatImg(true));
+  imgDeleteBtn?.addEventListener('click', () => cancelFloatImg(false));
 
   /* drag-move + corner-resize for floating image (mouse + touch) */
   function imgPointer(e) {
@@ -860,7 +1548,6 @@
 
   /* ── Export ── */
   document.getElementById('wbExportPng').addEventListener('click', () => exportImg('png'));
-  document.getElementById('wbExportJpg').addEventListener('click', () => exportImg('jpeg'));
 
   function exportImg(fmt) {
     /* render at native board resolution */
@@ -869,11 +1556,12 @@
     const tc = tmp.getContext('2d');
     tc.fillStyle = boardCol;
     tc.fillRect(0, 0, BOARD_W, BOARD_H);
-    /* draw strokes scaled back to board coords */
-    tc.save();
-    tc.setTransform(1/scale, 0, 0, 1/scale, -panX/scale, -panY/scale);
-    tc.drawImage(canvas, 0, 0);
-    tc.restore();
+    /* `canvas` is always the full board already (fixed BOARD_W*DPR x
+       BOARD_H*DPR backing store, independent of the current pan/zoom) — no
+       need to "unproject" a viewport crop back to board space anymore, so
+       this also fixes exporting only whatever happened to be on screen at
+       the time */
+    tc.drawImage(canvas, 0, 0, BOARD_W, BOARD_H);
     const a = document.createElement('a');
     a.href = tmp.toDataURL('image/' + fmt, fmt==='jpeg' ? 0.93 : 1);
     a.download = `سبورة-${new Date().toLocaleDateString('ar-EG').replace(/\//g,'-')}.${fmt==='jpeg'?'jpg':'png'}`;
@@ -904,7 +1592,7 @@
 
   /* ── Keyboard shortcuts ── */
   document.addEventListener('keydown', e => {
-    if (e.target === textBox) return;
+    if (e.target === textBox || e.target === pageLabelEl) return;
     if (floatImg) {
       if (e.key === 'Enter')  { e.preventDefault(); commitFloatImg(); return; }
       if (e.key === 'Escape') { e.preventDefault(); cancelFloatImg(); return; }
@@ -913,7 +1601,7 @@
     if (e.ctrlKey && (e.key==='y'||e.key==='Y')) { e.preventDefault(); redo(); }
     if (e.ctrlKey && e.key==='s') { e.preventDefault(); document.getElementById('wbSave').click(); }
     if (!e.ctrlKey) {
-      const keyMap = { p:'pen', m:'highlight', e:'eraser', t:'text', h:'hand', l:'line', a:'arrow', r:'rect', c:'circle' };
+      const keyMap = { p:'pen', m:'highlight', e:'eraser', t:'text', h:'hand', s:'select', l:'line', a:'arrow', r:'rect', c:'circle' };
       if (keyMap[e.key.toLowerCase()]) document.querySelector(`[data-tool="${keyMap[e.key.toLowerCase()]}"]`)?.click();
       if (e.key==='+' || e.key==='=') doZoom(1.2, wrap.clientWidth/2, wrap.clientHeight/2);
       if (e.key==='-')                doZoom(0.8, wrap.clientWidth/2, wrap.clientHeight/2);
@@ -1145,8 +1833,16 @@
   function pad2(n) { return String(n).padStart(2, '0'); }
 
   function recFrameLoop() {
-    recCtx.drawImage(bgCvs, 0, 0);
-    recCtx.drawImage(canvas, 0, 0);
+    /* bgCvs/canvas are now fixed full-board bitmaps (see ensureCanvasesSized
+       above), independent of the current pan/zoom — crop to whatever's
+       actually on screen right now so the recording matches what the
+       teacher sees, not the whole board regardless of view. */
+    const srcX = (-panX / scale) * DPR;
+    const srcY = (-panY / scale) * DPR;
+    const srcW = (wrap.clientWidth  / scale) * DPR;
+    const srcH = (wrap.clientHeight / scale) * DPR;
+    recCtx.drawImage(bgCvs,  srcX, srcY, srcW, srcH, 0, 0, recCanvas.width, recCanvas.height);
+    recCtx.drawImage(canvas, srcX, srcY, srcW, srcH, 0, 0, recCanvas.width, recCanvas.height);
     if (camOn && camPreview.readyState >= 2) {
       /* map the on-screen preview's dragged position/size (CSS px, relative to
          wrap) into the recording canvas's pixel space, so the recorded video
@@ -1197,8 +1893,10 @@
       if (!videoStream) return; // teacher cancelled
     } else {
       recCanvas = document.createElement('canvas');
-      recCanvas.width  = canvas.width;
-      recCanvas.height = canvas.height;
+      // sized to the current viewport (not the fixed full-board canvas) —
+      // recFrameLoop() crops the board bitmap down to whatever's visible
+      recCanvas.width  = Math.round(wrap.clientWidth  * DPR);
+      recCanvas.height = Math.round(wrap.clientHeight * DPR);
       recCtx = recCanvas.getContext('2d');
       videoStream = recCanvas.captureStream(30);
     }

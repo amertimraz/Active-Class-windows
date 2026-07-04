@@ -101,18 +101,29 @@ function showTrialPopup(msg) {
   if (!pop) {
     pop = document.createElement('div');
     pop.id = '_trialPop';
-    pop.style.cssText = `position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:99999;
-      background:#1e293b;color:#fff;padding:14px 20px;border-radius:12px;font-family:Cairo,sans-serif;
-      font-size:.88rem;display:flex;align-items:center;gap:14px;box-shadow:0 8px 32px rgba(0,0,0,.25);
-      max-width:440px;width:90%;direction:rtl`;
     document.body.appendChild(pop);
   }
+  // Re-apply the full style every call, with !important on the layout-critical
+  // properties, instead of only setting it once at creation time. A page that
+  // re-triggers this (e.g. games.html, which injects its own scoped <style>
+  // blocks into the same document) can otherwise leave this element with a
+  // collapsed/zero-size box if anything upstream nudges its style between
+  // calls — !important here means this toast can't silently end up invisible
+  // no matter what other page-local CSS is loaded alongside it.
+  pop.style.cssText = `
+    position:fixed !important; bottom:24px !important; left:50% !important;
+    transform:translateX(-50%) !important; z-index:99999 !important;
+    background:#1e293b; color:#fff; padding:14px 20px; border-radius:12px;
+    font-family:Cairo,sans-serif; font-size:.88rem;
+    display:flex !important; align-items:center; gap:14px;
+    box-shadow:0 8px 32px rgba(0,0,0,.25);
+    min-height:24px !important; max-width:440px; width:90%; direction:rtl;
+  `;
   pop.innerHTML = `
     <span style="font-size:1.1rem">🔒</span>
     <span style="flex:1">${msg}</span>
     <a href="/pages/activation.html" style="white-space:nowrap;background:#0f766e;color:#fff;border-radius:7px;padding:5px 12px;text-decoration:none;font-weight:700;font-size:.8rem">فعّل الآن</a>
     <button onclick="this.parentElement.style.display='none'" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:1rem;padding:0">✕</button>`;
-  pop.style.display = 'flex';
   clearTimeout(pop._t);
-  pop._t = setTimeout(() => { if (pop) pop.style.display = 'none'; }, 6000);
+  pop._t = setTimeout(() => { if (pop) pop.style.setProperty('display', 'none', 'important'); }, 6000);
 }

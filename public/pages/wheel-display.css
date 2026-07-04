@@ -1,0 +1,150 @@
+/* ══════════════════════════════════════
+   عجلة الحظ — نافذة صغيرة ثابتة الحجم
+   الإعدادات (المشاركون، الصوت، استثناء الفائز)
+   في نافذة منفصلة (wheel-settings.html).
+   ══════════════════════════════════════ */
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: transparent !important;
+  background-image: none !important;
+}
+
+body {
+  font-family: 'Cairo', system-ui, sans-serif;
+  color: var(--text);
+  overflow: hidden;
+  user-select: none;
+}
+
+.tool-shell {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.tool-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  flex-shrink: 0;
+  -webkit-app-region: drag;
+}
+
+.tool-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.header-actions {
+  display: flex;
+  gap: 4px;
+  -webkit-app-region: no-drag;
+}
+
+.tool-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s, color .15s;
+}
+
+.close-btn:hover { background: #fee2e2; color: #ef4444; }
+.fold-btn:hover  { background: var(--primary-bg); color: var(--primary); }
+
+.stage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 0;
+  overflow: hidden;
+  padding-bottom: 8px;
+}
+
+.wheel-area {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  flex: 0 0 auto;
+}
+
+#wheelCanvas {
+  border-radius: 50%;
+  box-shadow: 0 4px 16px rgba(0,0,0,.18);
+}
+
+.wheel-pointer {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 9px solid transparent;
+  border-right: 9px solid transparent;
+  border-top: 16px solid #ff4444;
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,.3));
+  z-index: 2;
+}
+
+.spin-hub {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, #ff6b6b, #ff4444);
+  color: #fff;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(255,68,68,.4);
+  transition: filter .15s, transform .15s;
+  z-index: 2;
+}
+.spin-hub:hover:not(:disabled)  { filter: brightness(1.08); }
+.spin-hub:active:not(:disabled) { transform: translate(-50%, -50%) scale(.96); }
+.spin-hub:disabled {
+  background: var(--text-muted);
+  opacity: .4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.winner-bar {
+  flex-shrink: 0;
+  max-width: 100%;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.winner-bar.has-winner { color: var(--primary); }

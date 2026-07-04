@@ -3,30 +3,78 @@
   <!-- ══ TOP BAR ══ -->
   <div class="wb-topbar">
 
-    <!-- ── سطر واحد: كل الأقسام ── -->
+    <!-- ── سطر واحد: كل الأقسام، زر ملء الشاشة مثبّت برّه منطقة التمرير عشان
+         يفضل ظاهر دايمًا مهما زاد عدد المجموعات وعمل overflow ── -->
+    <div class="wb-tb-outer">
     <div class="wb-tb-line">
 
       <!-- ملف -->
       <div class="wb-tb-grp">
         <div class="wb-tb-label">ملف</div>
         <div class="wb-tb-row">
-          <button class="wb-btn" id="wbSave"      title="حفظ (Ctrl+S)">
+          <button class="wb-btn wb-file-btn wb-file-save" id="wbSave"      title="حفظ (Ctrl+S)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
           </button>
-          <button class="wb-btn" id="wbLoad"      title="فتح">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <button class="wb-btn wb-file-btn wb-file-load" id="wbLoad"      title="فتح">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
           </button>
           <input type="file" id="wbLoadInput" accept=".wb,.json" style="display:none">
-          <button class="wb-btn" id="wbImgBtn"    title="إدراج صورة">
+          <button class="wb-btn wb-file-btn wb-file-img" id="wbImgBtn"    title="إدراج صورة">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
           </button>
           <input type="file" id="wbImgInput" accept="image/*" style="display:none">
-          <button class="wb-btn" id="wbExportPng" title="تصدير PNG">
+          <button class="wb-btn wb-file-btn wb-file-export" id="wbExportPng" title="تصدير صورة (PNG)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
           </button>
-          <button class="wb-btn" id="wbExportJpg" title="تصدير JPG">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><polyline points="21 15 16 10 5 21"/></svg>
-          </button>
+        </div>
+      </div>
+
+      <div class="wb-tb-sep"></div>
+
+      <!-- قوالب -->
+      <div class="wb-tb-grp">
+        <div class="wb-tb-label">قوالب</div>
+        <div class="wb-tb-row">
+          <div class="header-quick-tools" id="wbTemplateWrap">
+            <button class="wb-btn" id="wbTemplateBtn" title="إدراج قالب جاهز" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="18" height="7" rx="1"/></svg>
+            </button>
+            <div class="hqt-menu" id="wbTemplateMenu" hidden>
+              <button class="hqt-item" data-template="mult">🔢 <span>جدول الضرب</span></button>
+              <button class="hqt-item" data-template="timeline">📏 <span>خط زمني</span></button>
+              <button class="hqt-item" id="wbMindmapOpener" type="button">🧠 <span>خريطة ذهنية</span></button>
+              <button class="hqt-item" data-template="tchart">📊 <span>جدول مقارنة</span></button>
+              <button class="hqt-item" data-template="venn">⭕ <span>دائرتان متقاطعتان</span></button>
+              <button class="hqt-item" data-template="kwl">📋 <span>جدول KWL</span></button>
+              <button class="hqt-item" data-template="pyramid">🔺 <span>هرم تدرّج</span></button>
+              <button class="hqt-item" data-template="letters">🔤 <span>دائرة الحروف</span></button>
+              <button class="hqt-item" data-template="timetable">🗓️ <span>جدول الحصص</span></button>
+            </div>
+            <div class="hqt-menu wb-mm-panel" id="wbMindmapPanel" hidden>
+              <div class="wb-mm-title">الشكل</div>
+              <div class="wb-mm-row">
+                <button class="wb-mm-layout active" data-layout="radial" title="شعاعي" type="button">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="2.6"/><line x1="12" y1="12" x2="12" y2="3"/><line x1="12" y1="12" x2="20" y2="8"/><line x1="12" y1="12" x2="20" y2="16"/><line x1="12" y1="12" x2="12" y2="21"/><line x1="12" y1="12" x2="4" y2="16"/><line x1="12" y1="12" x2="4" y2="8"/></svg>
+                  <span>شعاعي</span>
+                </button>
+                <button class="wb-mm-layout" data-layout="tree" title="شجري" type="button">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="9" y="2.5" width="6" height="4" rx="1"/><rect x="2" y="16.5" width="6" height="4" rx="1"/><rect x="16" y="16.5" width="6" height="4" rx="1"/><path d="M12 6.5v5H5v5M12 11.5h7v5"/></svg>
+                  <span>شجري</span>
+                </button>
+                <button class="wb-mm-layout" data-layout="horizontal" title="أفقي" type="button">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="9" width="6" height="6" rx="1"/><rect x="16" y="2.5" width="6" height="4" rx="1"/><rect x="16" y="10" width="6" height="4" rx="1"/><rect x="16" y="17.5" width="6" height="4" rx="1"/><path d="M8 12h4v-8h4M12 12h4M12 12v7.5h4"/></svg>
+                  <span>أفقي</span>
+                </button>
+              </div>
+              <div class="wb-mm-title">عدد الفروع</div>
+              <div class="wb-mm-row">
+                <button class="wb-mm-count" data-count="4" type="button">4</button>
+                <button class="wb-mm-count active" data-count="6" type="button">6</button>
+                <button class="wb-mm-count" data-count="8" type="button">8</button>
+              </div>
+              <button class="hqt-item wb-mm-insert" id="wbMindmapInsert" type="button">إدراج</button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -69,6 +117,29 @@
 
       <div class="wb-tb-sep"></div>
 
+      <!-- الصفحات: بديل عن تكبير حجم اللوح الواحد — عدة لوحات عادية الحجم
+           بدل لوح واحد ضخم، فمفيش تأثير على أداء الرسم -->
+      <div class="wb-tb-grp">
+        <div class="wb-tb-label">صفحات</div>
+        <div class="wb-tb-row">
+          <button class="wb-btn" id="wbPagePrev" title="الصفحة السابقة">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <span id="wbPageLabel" class="wb-zoom-lbl wb-page-name" contenteditable="true" spellcheck="false" title="اضغط للتعديل على اسم الصفحة">سبورة 1</span>
+          <button class="wb-btn" id="wbPageNext" title="الصفحة التالية">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+          <button class="wb-btn" id="wbPageAdd" title="صفحة جديدة">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          </button>
+          <button class="wb-btn wb-btn--danger" id="wbPageDelete" title="حذف الصفحة الحالية">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="wb-tb-sep"></div>
+
       <!-- تسجيل -->
       <div class="wb-tb-grp">
         <div class="wb-tb-label">تسجيل</div>
@@ -102,8 +173,25 @@
         </div>
       </div>
 
-      <!-- أدوات سريعة — نسخة تظهر بس أثناء ملء الشاشة، لأن نسخة الهيدر الأصلية بتختفي -->
-      <div class="header-quick-tools wb-tb-fs" id="wbQuickTools" style="display:none">
+      <div class="wb-tb-sep"></div>
+
+      <!-- تشجيع -->
+      <div class="wb-tb-grp">
+        <div class="wb-tb-label">تشجيع</div>
+        <div class="wb-tb-row">
+          <button class="wb-btn wb-encourage-btn" id="wbEncourage" title="تشجيع الطلاب" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </button>
+        </div>
+      </div>
+
+    </div><!-- /wb-tb-line -->
+
+    <!-- أدوات سريعة (تظهر بس أثناء ملء الشاشة) + ملء الشاشة — مثبّتين برّه
+         منطقة التمرير (wb-tb-line) فوق عشان يفضلوا ظاهرين دايمًا مهما
+         زاد عدد المجموعات جوه الشريط وعمل overflow -->
+    <div class="wb-tb-fs-group wb-tb-fs">
+      <div class="header-quick-tools" id="wbQuickTools" style="display:none">
         <button class="icon-btn hqt-toggle" id="wbQtToggle" aria-haspopup="true" aria-expanded="false" title="أدوات سريعة">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
         </button>
@@ -115,12 +203,12 @@
         </div>
       </div>
 
-      <!-- ملء الشاشة (آخر عنصر = يسار في RTL) -->
-      <button class="wb-btn wb-tb-fs" id="wbFullscreen" title="ملء الشاشة (F11)">
+      <!-- ملء الشاشة -->
+      <button class="wb-btn" id="wbFullscreen" title="ملء الشاشة (F11)">
         <svg id="wbFsIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
       </button>
-
-    </div><!-- /wb-tb-line -->
+    </div>
+    </div><!-- /wb-tb-outer -->
 
   </div><!-- /wb-topbar -->
 
@@ -137,6 +225,11 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M18 11V6a2 2 0 0 0-4 0v0m0 5V5a2 2 0 0 0-4 0v6m0-4a2 2 0 0 0-4 0v8"/>
             <path d="M18 8a2 2 0 0 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>
+          </svg>
+        </button>
+        <button class="wb-btn wb-tool" data-tool="select" title="تحديد — تحريك/تكبير/حذف أي عنصر (S)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-dasharray="4 3">
+            <rect x="4" y="4" width="16" height="16" rx="1"/>
           </svg>
         </button>
       </div>
@@ -280,6 +373,25 @@
             <line x1="12" y1="4" x2="12" y2="20"/>
           </svg>
         </button>
+        <div class="wb-prop-wrap">
+          <button class="wb-prop-btn" id="wbTextSizeBtn" type="button" title="حجم النص">
+            <svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6v-.5A1.5 1.5 0 0 1 5.5 4h11A1.5 1.5 0 0 1 18 5.5V6M11 4v14M8.5 18h5"/></svg>
+          </button>
+          <div class="wb-prop-pop wb-size-pop" id="wbTextSizePop">
+            <button class="wb-size-opt" data-text-size="18" title="صغير">
+              <span style="font-size:12px;font-weight:800;">Aa</span>
+            </button>
+            <button class="wb-size-opt active" data-text-size="32" title="متوسط">
+              <span style="font-size:16px;font-weight:800;">Aa</span>
+            </button>
+            <button class="wb-size-opt" data-text-size="48" title="كبير">
+              <span style="font-size:19px;font-weight:800;">Aa</span>
+            </button>
+            <button class="wb-size-opt" data-text-size="72" title="كبير جدًا">
+              <span style="font-size:22px;font-weight:800;">Aa</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       <div class="wb-sb-div"></div>
@@ -305,16 +417,16 @@
         <!-- تسطير السبورة -->
         <div class="wb-prop-wrap">
           <button class="wb-btn wb-prop-btn" id="wbSbBgBtn" type="button" title="تسطير السبورة">
-            <svg id="wbSbBgBtnIcon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" fill="currentColor" opacity=".18" stroke="currentColor" stroke-width="1.5"/></svg>
+            <svg id="wbSbBgBtnIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
           </button>
           <div class="wb-prop-pop wb-shape-pop" id="wbSbBgPop">
-            <button class="wb-btn wb-bg wb-shape-opt active" data-bg="plain" title="سادة">
+            <button class="wb-btn wb-bg wb-shape-opt" data-bg="plain" title="سادة">
               <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" fill="currentColor" opacity=".18" stroke="currentColor" stroke-width="1.5"/></svg>
             </button>
             <button class="wb-btn wb-bg wb-shape-opt" data-bg="lines" title="مسطّر">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
             </button>
-            <button class="wb-btn wb-bg wb-shape-opt" data-bg="grid" title="شبكة">
+            <button class="wb-btn wb-bg wb-shape-opt active" data-bg="grid" title="شبكة">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
             </button>
             <button class="wb-btn wb-bg wb-shape-opt" data-bg="dots" title="نقاط">
@@ -348,7 +460,8 @@
         <div class="wb-img-h" data-dir="se"></div>
         <div class="wb-img-toolbar">
           <button id="wbImgConfirm" title="تأكيد (Enter)">✓</button>
-          <button id="wbImgCancel"  title="إلغاء (Esc)">✕</button>
+          <button id="wbImgCancel"  title="إلغاء — رجوع لمكانه (Esc)">✕</button>
+          <button id="wbImgDelete"  title="حذف نهائي" style="display:none">🗑</button>
         </div>
       </div>
 

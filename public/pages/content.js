@@ -2618,6 +2618,9 @@
     annoCvs.addEventListener('pointerdown', e => {
       if (!$('pdfjsWrap')) return;
       e.stopPropagation();
+      e.preventDefault(); /* some touch-overlay drivers still trigger a native
+        scroll-into-view/bounce on contact even with touch-action:none set —
+        this is what was causing the page to jump to the top mid-stroke */
       pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       annoCvs.setPointerCapture(e.pointerId);
 
@@ -2642,6 +2645,7 @@
 
     annoCvs.addEventListener('pointermove', e => {
       if (!pointers.has(e.pointerId)) return;
+      e.preventDefault();
       pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       const wrap = $('pdfjsWrap');
 
@@ -2654,8 +2658,15 @@
         }
         gesture.midX = midX; gesture.midY = midY;
         gesture.liveScale = dist(a, b) / gesture.startDist;   /* live pinch preview */
+        /* only show the zoom preview once the finger spread has actually
+           changed meaningfully — a plain two-finger scroll naturally jitters
+           the distance a little, and scaling the page for that makes panning
+           feel broken/glitchy instead of a clean scroll */
         const pw = $('pdfjsPageWrap');
-        if (pw) { pw.style.transformOrigin = 'center top'; pw.style.transform = `scale(${gesture.liveScale})`; }
+        if (pw) {
+          pw.style.transformOrigin = 'center top';
+          pw.style.transform = Math.abs(gesture.liveScale - 1) > 0.04 ? `scale(${gesture.liveScale})` : '';
+        }
         return;
       }
 

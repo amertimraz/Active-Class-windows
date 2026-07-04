@@ -71,10 +71,37 @@ contextBridge.exposeInMainWorld('api', {
   openToolWindow: (toolName) => ipcRenderer.invoke('open-tool-window', toolName),
   openNumbersWindow: () => ipcRenderer.invoke('open-numbers-window'),
   openWheelWindow: () => ipcRenderer.send('open-wheel-window'),
-  
+
+  // Names picker settings popover (separate small window)
+  sendNamesSettingsUpdate: (data) => ipcRenderer.send('names-settings-update', data),
+  onNamesSettingsUpdate: (cb) => ipcRenderer.on('names-settings-update', (_e, data) => cb(data)),
+  closeNamesSettings: () => ipcRenderer.send('names-close-settings'),
+
+  // Wheel settings popover (separate small window)
+  sendWheelSettingsUpdate: (data) => ipcRenderer.send('wheel-settings-update', data),
+  onWheelSettingsUpdate: (cb) => ipcRenderer.on('wheel-settings-update', (_e, data) => cb(data)),
+  closeWheelSettings: () => ipcRenderer.send('wheel-close-settings'),
+  sendWheelWinnerPicked: (data) => ipcRenderer.send('wheel-winner-picked', data),
+  onWheelWinnerPicked: (cb) => ipcRenderer.on('wheel-winner-picked', (_e, data) => cb(data)),
+
+  // Numbers generator settings popover (separate small window)
+  sendNumbersSettingsUpdate: (data) => ipcRenderer.send('numbers-settings-update', data),
+  onNumbersSettingsUpdate: (cb) => ipcRenderer.on('numbers-settings-update', (_e, data) => cb(data)),
+  closeNumbersSettings: () => ipcRenderer.send('numbers-close-settings'),
+
+  // Timer settings popover (separate small window)
+  sendTimerSettingsUpdate: (data) => ipcRenderer.send('timer-settings-update', data),
+  onTimerSettingsUpdate: (cb) => ipcRenderer.on('timer-settings-update', (_e, data) => cb(data)),
+  closeTimerSettings: () => ipcRenderer.send('timer-close-settings'),
+
+  // Native OS-level fullscreen toggle for the current window, and a listener
+  // for when the main process reports the fullscreen state actually changed.
+  onFullscreenChange: (cb) => ipcRenderer.on('fullscreen-changed', (_e, isFullscreen) => cb(isFullscreen)),
+
   // Window controls for tools
   setAlwaysOnTop: (flag) => ipcRenderer.send('set-always-on-top', flag),
   toggleFullscreen: () => ipcRenderer.send('toggle-fullscreen'),
+  setFullscreen: (flag) => ipcRenderer.send('set-fullscreen', flag),
   focusWindow: () => ipcRenderer.send('focus-window'),
   // Resize current tool window (frameless)
   resizeWindow: (width, height) => ipcRenderer.send('resize-window', { width, height }),

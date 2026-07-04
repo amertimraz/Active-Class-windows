@@ -2,6 +2,12 @@
 const { app, BrowserWindow, ipcMain, dialog, session, shell, desktopCapturer } = require('electron');
 
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+// Interactive touchscreens (the app targets classroom smartboards): make sure
+// Chromium treats touch/stylus input as real touch events with multi-touch,
+// instead of falling back to synthesized single-point mouse emulation.
+app.commandLine.appendSwitch('touch-events', 'enabled');
+app.commandLine.appendSwitch('enable-pointer-lock-options');
+app.commandLine.appendSwitch('disable-features', 'TouchpadAndWheelScrollLatching');
 const path = require('path');
 const { spawn } = require('child_process');
 const fs = require('fs');
@@ -270,14 +276,38 @@ async function createWindow() {
   }
 }
 
+// Computes where a settings popover should sit relative to its owning
+// display window — reused both when first opening the popover and
+// whenever the display window is dragged, so the popover stays glued to
+// it. Shared by the names and wheel tools.
+function computeSettingsPopoverPosition(ownerWin, popW, popH) {
+  const { screen } = require('electron');
+  const b = ownerWin.getBounds();
+  const area = screen.getDisplayMatching(b).workArea;
+  // prefer opening to the left of the owner window, but flip to the
+  // right (or clamp) if that would land off-screen
+  const x = (b.x - (popW + 10) >= area.x) ? b.x - (popW + 10) : Math.min(b.x + b.width + 10, area.x + area.width - popW);
+  const y = Math.max(area.y, Math.min(b.y, area.y + area.height - popH));
+  return { x, y };
+}
+function positionSettingsPopover(ownerWin, popoverWin, popW, popH) {
+  try {
+    const { x, y } = computeSettingsPopoverPosition(ownerWin, popW, popH);
+    popoverWin.setPosition(x, y);
+  } catch {}
+}
+
 function createNumbersWindow() {
   // Reuse single window instance
   const existing = toolWindows.get('numbers');
   if (existing && !existing.isDestroyed()) { try { existing.focus(); } catch {} return existing; }
 
+  // Small fixed-size display window — same two-window pattern as names and
+  // wheel: this window only shows the big number + generate button, all
+  // range/count/sound settings live in the separate numbers-settings popover.
   const win = new BrowserWindow({
-    width: 418,
-    height: 460, // fitWindowToContent() in numbers-standalone.html corrects this to the real content height right after load
+    width: 255,
+    height: 260,
     frame: false,
     transparent: true,
     resizable: true,
@@ -286,6 +316,7 @@ function createNumbersWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      sandbox: false,
       preload: path.join(__dirname, 'preload.js')
     }
   });
@@ -303,8 +334,18 @@ function createNumbersWindow() {
     });
   });
 
-  win.loadURL('http://localhost:5000/pages/numbers-standalone.html');
-  win.on('closed', () => { toolWindows.delete('numbers'); });
+  win.loadURL('http://localhost:5000/pages/numbers-display.html');
+
+  // Keep the settings popover glued to this window whenever it's dragged.
+  win.on('move', () => {
+    const settingsWin = toolWindows.get('numbers-settings');
+    if (settingsWin && !settingsWin.isDestroyed()) positionSettingsPopover(win, settingsWin, 230, 260);
+  });
+  win.on('closed', () => {
+    toolWindows.delete('numbers');
+    const settingsWin = toolWindows.get('numbers-settings');
+    if (settingsWin && !settingsWin.isDestroyed()) settingsWin.close();
+  });
   toolWindows.set('numbers', win);
   return win;
 }
@@ -313,16 +354,22 @@ function createWheelWindow() {
   const existing = toolWindows.get('wheel');
   if (existing && !existing.isDestroyed()) { try { existing.focus(); } catch {} return existing; }
 
+  // Small fixed-size display window — mirrors the names picker's two-window
+  // pattern: this window only ever shows the wheel + spin button, all
+  // participant/settings management lives in the separate wheel-settings
+  // popover so this window never needs to resize.
   const win = new BrowserWindow({
-    width: 900,
-    height: 700,
+    width: 270,
+    height: 330,
     frame: false,
     transparent: true,
     resizable: true,
     alwaysOnTop: true,
+    backgroundColor: '#00000000',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      sandbox: false,
       preload: path.join(__dirname, 'preload.js')
     }
   });
@@ -340,9 +387,18 @@ function createWheelWindow() {
     });
   });
 
-  win.loadURL('http://localhost:5000/pages/wheel-standalone.html');
+  win.loadURL('http://localhost:5000/pages/wheel-display.html');
 
-  win.on('closed', () => { toolWindows.delete('wheel'); });
+  // Keep the settings popover glued to this window whenever it's dragged.
+  win.on('move', () => {
+    const settingsWin = toolWindows.get('wheel-settings');
+    if (settingsWin && !settingsWin.isDestroyed()) positionSettingsPopover(win, settingsWin, 260, 360);
+  });
+  win.on('closed', () => {
+    toolWindows.delete('wheel');
+    const settingsWin = toolWindows.get('wheel-settings');
+    if (settingsWin && !settingsWin.isDestroyed()) settingsWin.close();
+  });
   toolWindows.set('wheel', win);
   return win;
 }
@@ -448,56 +504,228 @@ app.whenReady().then(async () => {
         const existing = toolWindows.get('names');
         if (existing && !existing.isDestroyed()) { try { existing.focus(); } catch {} return { ok: true }; }
         const win = new BrowserWindow({
-          width: 418,
-          height: 520,
+          width: 255,
+          height: 260,
           frame: false,
           transparent: true,
           resizable: true,
           alwaysOnTop: true,
           backgroundColor: '#00000000',
-          webPreferences: { contextIsolation: true, nodeIntegration: false, preload: path.join(__dirname, 'preload.js') }
+          webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: false, preload: path.join(__dirname, 'preload.js') }
         });
         win.setAlwaysOnTop(true, 'screen-saver');
         win.webContents.session.webRequest.onHeadersReceived((details, callback) => {
           const h2 = {}; for (const [k,v] of Object.entries(details.responseHeaders)) { if (k.toLowerCase() !== 'content-security-policy') h2[k]=v; } callback({ responseHeaders: { ...h2, 'Content-Security-Policy': [CSP_VALUE] } });
         });
         win.loadURL('http://localhost:5000/pages/names.html');
-        win.on('closed', () => { toolWindows.delete('names'); });
+        // Keep the settings popover glued to this window whenever it's dragged.
+        win.on('move', () => {
+          const settingsWin = toolWindows.get('names-settings');
+          if (settingsWin && !settingsWin.isDestroyed()) positionSettingsPopover(win, settingsWin, 230, 280);
+        });
+        win.on('closed', () => {
+          toolWindows.delete('names');
+          const settingsWin = toolWindows.get('names-settings');
+          if (settingsWin && !settingsWin.isDestroyed()) settingsWin.close();
+        });
         toolWindows.set('names', win);
         return { ok: true };
       }
-      if (toolName === 'timer') {
-        const existing = toolWindows.get('timer');
+      if (toolName === 'names-settings') {
+        // Small popover-style settings window for the names picker — kept
+        // entirely separate from the main names window so that window can
+        // stay one fixed, tiny size forever (no more resize-on-open-settings
+        // dance, which kept hitting an Electron/Windows transparent-window
+        // repaint bug).
+        const existing = toolWindows.get('names-settings');
         if (existing && !existing.isDestroyed()) { try { existing.focus(); } catch {} return { ok: true }; }
+        const namesWin = toolWindows.get('names');
+        let x, y;
+        try {
+          if (namesWin && !namesWin.isDestroyed()) {
+            ({ x, y } = computeSettingsPopoverPosition(namesWin, 230, 280));
+          }
+        } catch (posErr) {
+          log.error('names-settings positioning failed, using OS default: ' + (posErr?.message || posErr));
+          x = undefined; y = undefined;
+        }
         const win = new BrowserWindow({
-          width: 418,
-          height: 520,
+          width: 230,
+          height: 280,
+          x, y,
           frame: false,
           transparent: true,
-          resizable: false,
+          resizable: true,
           alwaysOnTop: true,
           backgroundColor: '#00000000',
-          webPreferences: { contextIsolation: true, nodeIntegration: false, preload: path.join(__dirname, 'preload.js') }
+          webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: false, preload: path.join(__dirname, 'preload.js') }
         });
         win.setAlwaysOnTop(true, 'screen-saver');
         win.webContents.session.webRequest.onHeadersReceived((details, callback) => {
           const h2 = {}; for (const [k,v] of Object.entries(details.responseHeaders)) { if (k.toLowerCase() !== 'content-security-policy') h2[k]=v; } callback({ responseHeaders: { ...h2, 'Content-Security-Policy': [CSP_VALUE] } });
         });
-        win.loadURL('http://localhost:5000/pages/timer-standalone.html');
-        win.on('closed', () => { toolWindows.delete('timer'); });
+        win.loadURL('http://localhost:5000/pages/names-settings.html');
+        win.on('closed', () => { toolWindows.delete('names-settings'); });
+        toolWindows.set('names-settings', win);
+        return { ok: true };
+      }
+      if (toolName === 'timer') {
+        // Small fixed-size display window — same two-window pattern as the
+        // other tools: this window only shows the countdown + start/reset,
+        // all duration/mode/sound settings live in the timer-settings popover.
+        // Fullscreen uses Electron's native setFullScreen (an OS-level
+        // window-state switch, not a setBounds resize), so it doesn't hit
+        // the transparent-window repaint bug that ruled out runtime resizing.
+        const existing = toolWindows.get('timer');
+        if (existing && !existing.isDestroyed()) { try { existing.focus(); } catch {} return { ok: true }; }
+        const win = new BrowserWindow({
+          width: 290,
+          height: 300,
+          frame: false,
+          transparent: true,
+          resizable: true,
+          alwaysOnTop: true,
+          backgroundColor: '#00000000',
+          webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: false, preload: path.join(__dirname, 'preload.js') }
+        });
+        win.setAlwaysOnTop(true, 'screen-saver');
+        win.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+          const h2 = {}; for (const [k,v] of Object.entries(details.responseHeaders)) { if (k.toLowerCase() !== 'content-security-policy') h2[k]=v; } callback({ responseHeaders: { ...h2, 'Content-Security-Policy': [CSP_VALUE] } });
+        });
+        win.loadURL('http://localhost:5000/pages/timer-display.html');
+        win.on('enter-full-screen', () => { try { win.webContents.send('fullscreen-changed', true); } catch {} });
+        win.on('leave-full-screen', () => { try { win.webContents.send('fullscreen-changed', false); } catch {} });
+        win.on('move', () => {
+          const settingsWin = toolWindows.get('timer-settings');
+          if (settingsWin && !settingsWin.isDestroyed()) positionSettingsPopover(win, settingsWin, 230, 300);
+        });
+        win.on('closed', () => {
+          toolWindows.delete('timer');
+          const settingsWin = toolWindows.get('timer-settings');
+          if (settingsWin && !settingsWin.isDestroyed()) settingsWin.close();
+        });
         toolWindows.set('timer', win);
+        return { ok: true };
+      }
+      if (toolName === 'timer-settings') {
+        // Small popover-style settings window for the timer — duration,
+        // count type, quick presets, sound toggle.
+        const existing = toolWindows.get('timer-settings');
+        if (existing && !existing.isDestroyed()) { try { existing.focus(); } catch {} return { ok: true }; }
+        const timerWin = toolWindows.get('timer');
+        let x, y;
+        try {
+          if (timerWin && !timerWin.isDestroyed()) {
+            ({ x, y } = computeSettingsPopoverPosition(timerWin, 230, 300));
+          }
+        } catch (posErr) {
+          log.error('timer-settings positioning failed, using OS default: ' + (posErr?.message || posErr));
+          x = undefined; y = undefined;
+        }
+        const win = new BrowserWindow({
+          width: 230,
+          height: 300,
+          x, y,
+          frame: false,
+          transparent: true,
+          resizable: true,
+          alwaysOnTop: true,
+          backgroundColor: '#00000000',
+          webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: false, preload: path.join(__dirname, 'preload.js') }
+        });
+        win.setAlwaysOnTop(true, 'screen-saver');
+        win.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+          const h2 = {}; for (const [k,v] of Object.entries(details.responseHeaders)) { if (k.toLowerCase() !== 'content-security-policy') h2[k]=v; } callback({ responseHeaders: { ...h2, 'Content-Security-Policy': [CSP_VALUE] } });
+        });
+        win.loadURL('http://localhost:5000/pages/timer-settings.html');
+        win.on('closed', () => { toolWindows.delete('timer-settings'); });
+        toolWindows.set('timer-settings', win);
         return { ok: true };
       }
       if (toolName === 'numbers') {
         createNumbersWindow();
         return { ok: true };
       }
+      if (toolName === 'numbers-settings') {
+        // Small popover-style settings window for the numbers generator —
+        // range, count, sound, and no-repeat toggle. Same reasoning as the
+        // names/wheel popovers: keeps the display window one fixed size.
+        const existing = toolWindows.get('numbers-settings');
+        if (existing && !existing.isDestroyed()) { try { existing.focus(); } catch {} return { ok: true }; }
+        const numbersWin = toolWindows.get('numbers');
+        let x, y;
+        try {
+          if (numbersWin && !numbersWin.isDestroyed()) {
+            ({ x, y } = computeSettingsPopoverPosition(numbersWin, 230, 260));
+          }
+        } catch (posErr) {
+          log.error('numbers-settings positioning failed, using OS default: ' + (posErr?.message || posErr));
+          x = undefined; y = undefined;
+        }
+        const win = new BrowserWindow({
+          width: 230,
+          height: 260,
+          x, y,
+          frame: false,
+          transparent: true,
+          resizable: true,
+          alwaysOnTop: true,
+          backgroundColor: '#00000000',
+          webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: false, preload: path.join(__dirname, 'preload.js') }
+        });
+        win.setAlwaysOnTop(true, 'screen-saver');
+        win.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+          const h2 = {}; for (const [k,v] of Object.entries(details.responseHeaders)) { if (k.toLowerCase() !== 'content-security-policy') h2[k]=v; } callback({ responseHeaders: { ...h2, 'Content-Security-Policy': [CSP_VALUE] } });
+        });
+        win.loadURL('http://localhost:5000/pages/numbers-settings.html');
+        win.on('closed', () => { toolWindows.delete('numbers-settings'); });
+        toolWindows.set('numbers-settings', win);
+        return { ok: true };
+      }
       if (toolName === 'wheel') {
         createWheelWindow();
         return { ok: true };
       }
+      if (toolName === 'wheel-settings') {
+        // Small popover-style settings window for the wheel — participants
+        // list, add/group-load/shuffle/clear, sound + exclude-winner toggles.
+        // Kept separate from the wheel display window for the same reason
+        // as the names tool: the display window stays one fixed tiny size.
+        const existing = toolWindows.get('wheel-settings');
+        if (existing && !existing.isDestroyed()) { try { existing.focus(); } catch {} return { ok: true }; }
+        const wheelWin = toolWindows.get('wheel');
+        let x, y;
+        try {
+          if (wheelWin && !wheelWin.isDestroyed()) {
+            ({ x, y } = computeSettingsPopoverPosition(wheelWin, 260, 360));
+          }
+        } catch (posErr) {
+          log.error('wheel-settings positioning failed, using OS default: ' + (posErr?.message || posErr));
+          x = undefined; y = undefined;
+        }
+        const win = new BrowserWindow({
+          width: 260,
+          height: 360,
+          x, y,
+          frame: false,
+          transparent: true,
+          resizable: true,
+          alwaysOnTop: true,
+          backgroundColor: '#00000000',
+          webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: false, preload: path.join(__dirname, 'preload.js') }
+        });
+        win.setAlwaysOnTop(true, 'screen-saver');
+        win.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+          const h2 = {}; for (const [k,v] of Object.entries(details.responseHeaders)) { if (k.toLowerCase() !== 'content-security-policy') h2[k]=v; } callback({ responseHeaders: { ...h2, 'Content-Security-Policy': [CSP_VALUE] } });
+        });
+        win.loadURL('http://localhost:5000/pages/wheel-settings.html');
+        win.on('closed', () => { toolWindows.delete('wheel-settings'); });
+        toolWindows.set('wheel-settings', win);
+        return { ok: true };
+      }
       return { ok: false, error: 'Unknown tool' };
     } catch (err) {
+      log.error(`open-tool-window(${toolName}) failed: ${err?.stack || err}`);
       return { ok: false, error: err?.message };
     }
   });
@@ -516,24 +744,44 @@ app.whenReady().then(async () => {
   });
 
   // Window control handlers for tools (both invoke and send supported)
-  ipcMain.handle('set-always-on-top', async (event, flag) => {
+  // Unpinning a window that was raised with the 'screen-saver' level is
+  // unreliable on Windows if you just flip the flag — the OS-level z-order
+  // priority set by that level tends to stick. Explicitly dropping to the
+  // lowest normal level (and never re-passing a level string once disabled)
+  // is what actually releases it.
+  function applyAlwaysOnTop(event, flag) {
     try {
       const win = BrowserWindow.fromWebContents(event.sender);
-      if (win) win.setAlwaysOnTop(!!flag, 'screen-saver');
+      if (!win) return;
+      if (flag) {
+        win.setAlwaysOnTop(true, 'screen-saver');
+      } else {
+        // Jumping straight from 'screen-saver' to false doesn't reliably
+        // release the OS-level z-order on Windows — step the level down
+        // first (still "on top", but at the lowest priority) before
+        // actually disabling always-on-top, which is what makes it stick.
+        win.setAlwaysOnTop(true, 'normal');
+        win.setAlwaysOnTop(false);
+      }
     } catch {}
-  });
-  ipcMain.on('set-always-on-top', (event, flag) => {
-    try {
-      const win = BrowserWindow.fromWebContents(event.sender);
-      if (win) win.setAlwaysOnTop(!!flag, 'screen-saver');
-    } catch {}
-  });
+  }
+  ipcMain.handle('set-always-on-top', async (event, flag) => applyAlwaysOnTop(event, flag));
+  ipcMain.on('set-always-on-top', (event, flag) => applyAlwaysOnTop(event, flag));
 
   ipcMain.handle('toggle-fullscreen', async (event) => {
     try { const win = BrowserWindow.fromWebContents(event.sender); if (win) win.setFullScreen(!win.isFullScreen()); } catch {}
   });
   ipcMain.on('toggle-fullscreen', (event) => {
     try { const win = BrowserWindow.fromWebContents(event.sender); if (win) win.setFullScreen(!win.isFullScreen()); } catch {}
+  });
+
+  // win.isFullScreen() is unreliable for frameless/transparent windows on
+  // Windows (observed always returning false even while visually
+  // fullscreen), which makes a "toggle based on current state" approach
+  // get stuck. The timer display window instead tracks its own fullscreen
+  // state client-side and tells main exactly which state to set.
+  ipcMain.on('set-fullscreen', (event, flag) => {
+    try { const win = BrowserWindow.fromWebContents(event.sender); if (win) win.setFullScreen(!!flag); } catch {}
   });
 
   ipcMain.handle('focus-window', async (event) => {
@@ -543,12 +791,30 @@ app.whenReady().then(async () => {
     try { const win = BrowserWindow.fromWebContents(event.sender); if (win) { win.show(); win.focus(); } } catch {}
   });
 
+  // Transparent frameless windows on Windows have a known Electron/Chromium quirk:
+  // shrinking them with setSize() alone often leaves the old (larger) transparent
+  // backing surface stale/visible until something forces a repaint — the window
+  // *is* smaller, but stale pixels from the previous larger size stay drawn over
+  // whatever's behind it. Nudging the size by 1px and back forces that repaint.
+  function resizeTransparentWindow(win, width, height) {
+    // was clamped to a hardcoded 320×300 minimum, which silently overrode
+    // any smaller size a tool window asked for (e.g. names.js requesting a
+    // compact 255×234) — every "shrink" call was quietly ignored
+    const w = Math.max(180, Math.floor(width));
+    const h = Math.max(160, Math.floor(height));
+    const [x, y] = win.getPosition();
+    // setBounds (not setSize) + no animation: this is the combination that
+    // actually forces Windows to repaint a transparent frameless window at
+    // its new size instead of leaving the old backing surface visible.
+    win.setBounds({ x, y, width: w, height: h }, false);
+  }
+
   ipcMain.handle('resize-window', async (event, payload) => {
     try {
       const win = BrowserWindow.fromWebContents(event.sender);
       const { width, height } = payload || {};
       if (win && typeof width === 'number' && typeof height === 'number') {
-        win.setSize(Math.max(320, Math.floor(width)), Math.max(300, Math.floor(height)), true);
+        resizeTransparentWindow(win, width, height);
         return { ok: true };
       }
       return { ok: false, error: 'Invalid size' };
@@ -561,8 +827,84 @@ app.whenReady().then(async () => {
       const win = BrowserWindow.fromWebContents(event.sender);
       const { width, height } = payload || {};
       if (win && typeof width === 'number' && typeof height === 'number') {
-        win.setSize(Math.max(320, Math.floor(width)), Math.max(300, Math.floor(height)), true);
+        resizeTransparentWindow(win, width, height);
       }
+    } catch {}
+  });
+
+  // Relay settings changes from the small names-settings popover to the
+  // main names window — the two windows never share state directly.
+  ipcMain.on('names-settings-update', (_event, payload) => {
+    try {
+      const namesWin = toolWindows.get('names');
+      if (namesWin && !namesWin.isDestroyed()) namesWin.webContents.send('names-settings-update', payload);
+    } catch {}
+  });
+
+  // Close the settings popover the moment a pick starts — the user is done
+  // configuring and the popover only gets in the way of the reveal.
+  ipcMain.on('names-close-settings', () => {
+    try {
+      const settingsWin = toolWindows.get('names-settings');
+      if (settingsWin && !settingsWin.isDestroyed()) settingsWin.close();
+    } catch {}
+  });
+
+  // Same relay pattern as names-settings-update, for the wheel tool.
+  ipcMain.on('wheel-settings-update', (_event, payload) => {
+    try {
+      const wheelWin = toolWindows.get('wheel');
+      if (wheelWin && !wheelWin.isDestroyed()) wheelWin.webContents.send('wheel-settings-update', payload);
+    } catch {}
+  });
+
+  // Close the wheel settings popover the moment a spin starts.
+  ipcMain.on('wheel-close-settings', () => {
+    try {
+      const settingsWin = toolWindows.get('wheel-settings');
+      if (settingsWin && !settingsWin.isDestroyed()) settingsWin.close();
+    } catch {}
+  });
+
+  // The display window resolves the spin and reports the winner back so the
+  // settings popover (source of truth for the participant list) can remove
+  // them when "exclude winner" is on.
+  ipcMain.on('wheel-winner-picked', (_event, payload) => {
+    try {
+      const settingsWin = toolWindows.get('wheel-settings');
+      if (settingsWin && !settingsWin.isDestroyed()) settingsWin.webContents.send('wheel-winner-picked', payload);
+    } catch {}
+  });
+
+  // Same relay pattern as names/wheel settings, for the numbers generator.
+  ipcMain.on('numbers-settings-update', (_event, payload) => {
+    try {
+      const numbersWin = toolWindows.get('numbers');
+      if (numbersWin && !numbersWin.isDestroyed()) numbersWin.webContents.send('numbers-settings-update', payload);
+    } catch {}
+  });
+
+  // Close the numbers settings popover the moment generation starts.
+  ipcMain.on('numbers-close-settings', () => {
+    try {
+      const settingsWin = toolWindows.get('numbers-settings');
+      if (settingsWin && !settingsWin.isDestroyed()) settingsWin.close();
+    } catch {}
+  });
+
+  // Same relay pattern as names/wheel/numbers settings, for the timer.
+  ipcMain.on('timer-settings-update', (_event, payload) => {
+    try {
+      const timerWin = toolWindows.get('timer');
+      if (timerWin && !timerWin.isDestroyed()) timerWin.webContents.send('timer-settings-update', payload);
+    } catch {}
+  });
+
+  // Close the timer settings popover the moment the countdown starts.
+  ipcMain.on('timer-close-settings', () => {
+    try {
+      const settingsWin = toolWindows.get('timer-settings');
+      if (settingsWin && !settingsWin.isDestroyed()) settingsWin.close();
     } catch {}
   });
 
@@ -1066,21 +1408,33 @@ app.whenReady().then(async () => {
         // A naturally-expired trial stays blocked (expected behavior). But if
         // this machine was cut off by an admin and has since been restored
         // from the admin panel, let it start a fresh trial instead of being
-        // stuck forever on a local file that predates the restore.
-        if (existing.revokedByAdmin) {
-          try {
-            const mid = getMachineId();
-            const r = await fetch(`http://localhost:${SERVER_PORT}/api/trial-status?machineId=${encodeURIComponent(mid)}`,
-              { signal: AbortSignal.timeout(5000) });
-            const data = await r.json();
-            if (data.revoked) return { ok: false, message: 'trial_expired' };
-            // no longer revoked — fall through and issue a new trial period
-          } catch {
-            return { ok: false, message: 'trial_expired' }; // can't confirm restore while offline
+        // stuck forever on a local file that predates the restore. Likewise,
+        // if the admin has explicitly granted this machine a remote reset
+        // (see /api/trial-log/:machineId/reset — for a trial that simply ran
+        // out naturally, not a revocation), consume that one-shot grant and
+        // let it through too.
+        let allowFresh = false;
+        try {
+          const mid = getMachineId();
+          const r = await fetch(`http://localhost:${SERVER_PORT}/api/trial-status?machineId=${encodeURIComponent(mid)}`,
+            { signal: AbortSignal.timeout(5000) });
+          const data = await r.json();
+          if (existing.revokedByAdmin) {
+            allowFresh = !data.revoked;
+          } else {
+            allowFresh = !!data.resetAvailable;
           }
-        } else {
-          return { ok: false, message: 'trial_expired' };
+          if (allowFresh && data.resetAvailable) {
+            try {
+              await fetch(`http://localhost:${SERVER_PORT}/api/trial-log/${encodeURIComponent(mid)}/reset-consume`,
+                { method: 'POST', signal: AbortSignal.timeout(5000) });
+            } catch {}
+          }
+        } catch {
+          allowFresh = false; // can't confirm reset/restore while offline
         }
+        if (!allowFresh) return { ok: false, message: 'trial_expired' };
+        // fall through and issue a new trial period
       } else {
         // Trial already started and still valid — just navigate to the app
         if (mainWindow && !mainWindow.isDestroyed()) mainWindow.loadURL('http://localhost:5000');

@@ -1,0 +1,180 @@
+/* ══════════════════════════════════════
+   المؤقت الذكي — نافذة صغيرة ثابتة الحجم
+   المدة/النوع/الصوت في نافذة منفصلة (timer-settings.html).
+   ملء الشاشة يستخدم setFullScreen على مستوى النظام (لا تغيير لحجم
+   النافذة نفسها)، فمفيش تعارض مع مشكلة إعادة الرسم عند تصغير نافذة
+   شفافة بدون إطار.
+   ══════════════════════════════════════ */
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: transparent !important;
+  background-image: none !important;
+}
+
+body {
+  font-family: 'Cairo', system-ui, sans-serif;
+  color: var(--text);
+  overflow: hidden;
+  user-select: none;
+}
+
+.tool-shell {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+body.is-fullscreen .tool-shell {
+  border-radius: 0;
+  border: none;
+}
+
+.tool-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  flex-shrink: 0;
+  -webkit-app-region: drag;
+}
+
+.tool-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.header-actions {
+  display: flex;
+  gap: 4px;
+  -webkit-app-region: no-drag;
+}
+
+.tool-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s, color .15s;
+}
+
+.close-btn:hover      { background: #fee2e2; color: #ef4444; }
+.fold-btn:hover        { background: var(--primary-bg); color: var(--primary); }
+.fullscreen-btn:hover   { background: var(--primary-bg); color: var(--primary); }
+.fullscreen-btn.is-active { background: var(--primary); color: #fff; }
+
+.stage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 0;
+  overflow: hidden;
+  padding-bottom: 10px;
+}
+
+.timer-display {
+  font-size: clamp(45px, 21vw, 78px);
+  font-weight: 900;
+  color: var(--primary);
+  font-family: 'Cairo', monospace;
+  letter-spacing: .04em;
+  line-height: 1.1;
+  transition: font-size .25s ease;
+}
+.timer-display.is-warning { color: var(--warning); animation: pulse 1s infinite; }
+.timer-display.is-danger  { color: var(--error);   animation: pulse .5s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .65; } }
+
+body.is-fullscreen .timer-display {
+  font-size: clamp(10rem, 26vw, 34rem);
+}
+
+.timer-progress {
+  width: calc(100% - 32px);
+  height: 5px;
+  background: var(--border-light);
+  border-radius: 3px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.timer-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--primary), var(--primary-light));
+  transition: width 1s linear;
+}
+body.is-fullscreen .timer-progress { display: none; }
+
+.timer-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 0 16px;
+  width: 100%;
+}
+
+.main-pick-btn {
+  flex: 1;
+  height: 36px;
+  background: var(--primary);
+  border: none;
+  border-radius: 9px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: filter .15s;
+}
+.main-pick-btn:hover  { filter: brightness(1.08); }
+.main-pick-btn:active { filter: brightness(.95); }
+.main-pick-btn.is-paused  { background: var(--warning); }
+.main-pick-btn.is-running { background: var(--secondary, #64748b); }
+
+.reset-btn {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg-solid);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s, color .15s;
+}
+.reset-btn:hover { background: var(--border-light); color: var(--text); }
+
+body.is-fullscreen .timer-controls {
+  position: fixed;
+  bottom: 6vh;
+  left: 50%;
+  transform: translateX(-50%);
+  width: auto;
+  min-width: 260px;
+  background: rgba(255,255,255,.95);
+  backdrop-filter: blur(10px);
+  padding: 14px 18px;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.3);
+}

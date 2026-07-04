@@ -26,12 +26,23 @@
   z-index: 50;
 }
 
+/* Outer row: scrollable groups (wb-tb-line) + pinned fullscreen group,
+   as siblings — so the fullscreen button is never pushed off-screen by
+   overflow in the scrollable part, no matter how many groups it holds. */
+.wb-tb-outer {
+  display: flex;
+  align-items: center;
+  height: 62px;
+}
+
 /* السطر الرئيسي في الشريط العلوي */
 .wb-tb-line {
   display: flex;
   align-items: center;
   padding: 0 8px;
-  height: 62px;
+  height: 100%;
+  flex: 1;
+  min-width: 0;
   overflow-x: auto;
   overflow-y: hidden;
 }
@@ -112,10 +123,38 @@
 .wb-topbar .wb-btn.wb-bg.active      { background: #e0e7ff; color: #4f46e5; }
 .wb-topbar .wb-btn.wb-btn--danger:hover { background: #fee2e2; color: #ef4444; }
 
-/* Fullscreen — pushed to far end */
+/* "ملف" group — distinct color per action so each icon is identifiable at a glance */
+.wb-file-save   { color: #3b82f6; }
+.wb-file-save:hover   { background: #eff6ff; color: #3b82f6; }
+.wb-file-load   { color: #f59e0b; }
+.wb-file-load:hover   { background: #fffbeb; color: #f59e0b; }
+.wb-file-img    { color: #22c55e; }
+.wb-file-img:hover    { background: #f0fdf4; color: #22c55e; }
+.wb-file-export { color: #8b5cf6; }
+.wb-file-export:hover { background: #f5f3ff; color: #8b5cf6; }
+
+/* Fullscreen (+ its fullscreen-only quick-tools sibling) — pinned outside
+   the scrollable wb-tb-line (see .wb-tb-outer), so no margin trick needed
+   to push it to the end anymore. */
 .wb-tb-fs {
-  margin-inline-start: auto;
   flex-shrink: 0;
+  padding-inline-end: 8px;
+}
+.wb-tb-fs-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* The quick-tools dropdown (#wbQtMenu) is position:fixed with no top/left
+   of its own, so it falls back to wherever it sits in normal flow — that
+   used to be fine when this toggle lived far from the screen edge, but now
+   that it's grouped right next to the fullscreen button at the far edge,
+   letting it fall back would push the menu half off-screen. Anchor it
+   explicitly under the toolbar instead. */
+#wbQuickTools .hqt-menu {
+  top: 50px;
+  left: 8px;
 }
 
 /* ══════════════════════════════════════
@@ -215,6 +254,7 @@
 .wb-sidebar .wb-btn[data-tool="circle"] { --tc:#14b8a6; --tb:#f0fdfa; }
 .wb-sidebar .wb-btn[data-tool="text"]   { --tc:#22c55e; --tb:#f0fdf4; }
 .wb-sidebar .wb-btn[data-tool="hand"]   { --tc:#eab308; --tb:#fefce8; }
+.wb-sidebar .wb-btn[data-tool="select"] { --tc:#4f46e5; --tb:#eef2ff; }
 
 .wb-sidebar .wb-btn[data-tool] { color: var(--tc); }
 .wb-sidebar .wb-btn[data-tool]:hover { background: var(--tb); }
@@ -257,6 +297,8 @@
 .wb-btn span { font-size: 9px; font-weight: 600; line-height: 1; white-space: nowrap; }
 .wb-btn:hover { background: var(--bg); color: var(--text); }
 .wb-btn:active { transform: scale(.93); }
+
+.wb-btn:disabled { opacity: .35; cursor: default; pointer-events: none; }
 
 /* Danger */
 .wb-btn--danger { --tc:#ef4444; --tb:#fee2e2; }
@@ -522,6 +564,21 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* editable page-name label — looks like plain text until focused */
+.wb-page-name {
+  min-width: 60px;
+  max-width: 110px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  cursor: text;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  outline: none;
+}
+.wb-page-name:hover  { background: var(--bg); }
+.wb-page-name:focus  { background: var(--bg); color: var(--text); box-shadow: 0 0 0 1.5px #4f46e5; }
+
 /* ══════════════════════════════════════
    CANVAS AREA
    ══════════════════════════════════════ */
@@ -537,11 +594,13 @@
 #wbBg,
 #wbCanvas,
 #wbOverlay {
+  /* top/left/width/height are set inline by applyCssTransform() in
+     whiteboard.js — these three canvases have a FIXED backing-store
+     resolution (the full board, drawn once) and are positioned/scaled
+     purely via CSS to show the current pan/zoom, so panning/zooming never
+     touches the actual pixel content and can't clip or blur it */
   position: absolute;
-  top: 0; left: 0;
   display: block;
-  width: 100%;
-  height: 100%;
 }
 #wbBg      { z-index: 0; }
 #wbCanvas  { z-index: 1; background: transparent; }
@@ -624,7 +683,7 @@
   white-space: nowrap;
 }
 
-#wbImgConfirm, #wbImgCancel {
+#wbImgConfirm, #wbImgCancel, #wbImgDelete {
   width: 30px;
   height: 30px;
   border-radius: 7px;
@@ -638,6 +697,7 @@
 #wbImgConfirm:hover, #wbImgCancel:hover { transform: scale(1.1); }
 #wbImgConfirm { background: #4f46e5; color: #fff; }
 #wbImgCancel  { background: #fee2e2; color: #ef4444; }
+#wbImgDelete  { background: #fef2f2; color: #b91c1c; font-size: 14px; }
 
 /* camera toggle active tint */
 #wbCamToggle.active,
@@ -831,5 +891,128 @@
 #wbRecToggle.active {
   background: #fee2e2;
   color: #ef4444;
+}
+
+/* ══════════════════════════════════════
+   MIND-MAP LAYOUT/COUNT PANEL
+   ══════════════════════════════════════ */
+.wb-mm-panel { direction: rtl; min-width: 220px; }
+.wb-mm-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  opacity: .7;
+  padding: 4px 4px 2px;
+}
+.wb-mm-row {
+  display: flex;
+  gap: 6px;
+  padding: 2px 4px 8px;
+}
+.wb-mm-layout {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 2px;
+  border: 1.5px solid var(--border);
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: Cairo, sans-serif;
+}
+.wb-mm-layout svg { width: 20px; height: 20px; pointer-events: none; }
+.wb-mm-layout:hover { background: #eef2ff; color: #4f46e5; border-color: #c7d2fe; }
+.wb-mm-layout.active { background: #e0e7ff; color: #4f46e5; border-color: #4f46e5; }
+
+.wb-mm-count {
+  flex: 1;
+  padding: 7px 0;
+  border: 1.5px solid var(--border);
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: Cairo, sans-serif;
+}
+.wb-mm-count:hover { background: #eef2ff; color: #4f46e5; border-color: #c7d2fe; }
+.wb-mm-count.active { background: #e0e7ff; color: #4f46e5; border-color: #4f46e5; }
+
+.wb-mm-insert {
+  justify-content: center;
+  background: #4f46e5 !important;
+  color: #fff !important;
+  font-weight: 700;
+  margin-top: 2px;
+}
+.wb-mm-insert:hover { background: #4338ca !important; }
+
+/* ══════════════════════════════════════
+   ENCOURAGEMENT TOAST — big phrase + confetti burst, auto-dismisses
+   ══════════════════════════════════════ */
+.wb-encourage-btn {
+  color: #f59e0b;
+}
+.wb-encourage-btn:hover {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.wb-encourage-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 5000;
+}
+
+.wb-encourage-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 22px 46px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #fef3c7, #ffffff);
+  box-shadow: 0 20px 60px rgba(0,0,0,.25), 0 0 0 4px rgba(245,158,11,.25);
+  font-family: Cairo, sans-serif;
+  font-size: 52px;
+  font-weight: 900;
+  color: #d97706;
+  opacity: 0;
+  transform: scale(.6) translateY(10px);
+  animation: wbEncourgePop 2.2s cubic-bezier(.2,.9,.25,1) forwards;
+}
+
+.wb-encourage-emoji {
+  font-size: 58px;
+  line-height: 1;
+}
+
+@keyframes wbEncourgePop {
+  0%   { opacity: 0; transform: scale(.5)  translateY(20px); }
+  15%  { opacity: 1; transform: scale(1.08) translateY(0); }
+  25%  { transform: scale(1) translateY(0); }
+  80%  { opacity: 1; transform: scale(1) translateY(0); }
+  100% { opacity: 0; transform: scale(.92) translateY(-14px); }
+}
+
+.wb-encourage-confetti {
+  position: absolute;
+  top: 0; left: 0; width: 6px; height: 12px;
+  border-radius: 2px;
+  animation: wbConfettiFall linear forwards;
+}
+
+@keyframes wbConfettiFall {
+  0%   { transform: translate(0, -20px) rotate(0deg);   opacity: 1; }
+  100% { transform: translate(var(--drift, 0px), 90vh) rotate(600deg); opacity: 0; }
 }
 #wbRecToggle.active svg { animation: wb-rec-blink 1s infinite; }

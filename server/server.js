@@ -2004,12 +2004,62 @@ app.post('/api/trial-log/:machineId/restore', async (req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
+// Grant a machine a brand-new trial period remotely, even after its previous
+// one expired naturally. "restore" above only un-blocks a machine that was
+// actively revoked — a machine whose trial simply ran out has no path back
+// in via that flow (see the revokedByAdmin comment in main.js's start-trial
+// handler), which is the gap this closes. Clears any trial-log/revoked
+// record for the machine and drops a one-shot marker in `trial-resets`
+// that the app consumes (via /api/trial-status + the consume endpoint
+// below) the next time it tries to start a trial.
+app.post('/api/trial-log/:machineId/reset', async (req, res) => {
+  try {
+    const id = decodeURIComponent(req.params.machineId);
+    const db2 = getFirestore();
+    if (!db2) return res.json({ ok: false, error: 'firebase_unavailable' });
+    const [logSnap, revokedSnap] = await Promise.all([
+      db2.collection('trial-log').where('machineId', '==', id).get(),
+      db2.collection('trial-revoked').where('machineId', '==', id).get(),
+    ]);
+    await Promise.all([
+      ...logSnap.docs.map(d => d.ref.delete()),
+      ...revokedSnap.docs.map(d => d.ref.delete()),
+    ]);
+    const existingReset = await db2.collection('trial-resets').where('machineId', '==', id).limit(1).get();
+    if (existingReset.empty) {
+      await db2.collection('trial-resets').add({ machineId: id, requestedAt: new Date().toISOString() });
+    }
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// Called by main.js when it's about to actually issue a fresh trial off the
+// back of a reset — makes the reset one-shot so it can't be replayed.
+app.post('/api/trial-log/:machineId/reset-consume', async (req, res) => {
+  try {
+    const id = decodeURIComponent(req.params.machineId);
+    const db2 = getFirestore();
+    if (!db2) return res.json({ ok: false });
+    const snap = await db2.collection('trial-resets').where('machineId', '==', id).get();
+    await Promise.all(snap.docs.map(d => d.ref.delete()));
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
 // Called by main.js every 30s to check if admin revoked this machine's trial
 app.get('/api/trial-status', async (req, res) => {
   const machineId = req.query.machineId || '';
-  if (!machineId) return res.json({ revoked: false });
+  if (!machineId) return res.json({ revoked: false, resetAvailable: false });
+  const db2 = getFirestore();
   const revoked = await isMachineRevoked(machineId);
-  res.json({ revoked });
+  let resetAvailable = false;
+  if (db2) {
+    try {
+      const snap = await db2.collection('trial-resets').where('machineId', '==', machineId).limit(1).get();
+      resetAvailable = !snap.empty;
+    } catch {}
+  }
+  res.json({ revoked, resetAvailable });
 });
 // ──────────────────────────────────────────────────────────────────────────
 

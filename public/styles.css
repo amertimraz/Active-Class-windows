@@ -108,6 +108,19 @@ html, body {
   height: 100%;
 }
 
+/* Touchscreen support (interactive smartboards + normal Windows/mouse both work fine
+   with this — it only affects how touch input specifically is interpreted):
+   - buttons/links get touch-action:manipulation so tapping fires immediately
+     instead of waiting ~300ms for a possible double-tap-to-zoom
+   - double-tap-to-zoom and pinch-zoom on the page itself are disabled, since a
+     kiosk-style classroom app should never accidentally zoom the whole UI */
+html {
+  touch-action: pan-x pan-y;
+}
+button, a, input, select, textarea, [role="button"], .icon-btn {
+  touch-action: manipulation;
+}
+
 /* Prefer theme variables via [data-theme] globally (works across all pages/windows) */
 body {
   margin: 0;

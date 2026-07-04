@@ -64,6 +64,21 @@
       transform: none !important; /* no scale */
       background: var(--card);
       overflow: hidden;
+      /* fixed window size (see main.js), card fills it and the display area
+         below absorbs any leftover space — no runtime window resizing, since
+         shrinking a transparent frameless Electron window on Windows hits a
+         persistent repaint bug (stale backing surface stays visible) */
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    .numbers-modal-card [data-main-number] {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 64px !important;
+      margin: 10px 16px !important;
     }
 
     .numbers-modal-card.is-dragging {
@@ -634,15 +649,12 @@
       }
     }
 
-    /* the window opens at a fixed 418×640 size (see main.js), but the card's
-       actual content is usually much shorter — resize the real OS window down
-       to match it instead of leaving a big blank area under the card. Called
-       again whenever content height changes (collapse toggle, results shown). */
-    function fitWindowToContent(){
-      if (!numbersModalState || !window.api?.resizeWindow) return;
-      const h = Math.min(760, Math.max(260, Math.round(numbersModalState.modalCard.scrollHeight)));
-      window.api.resizeWindow(418, h);
-    }
+    /* Runtime resizing of this window was removed: shrinking a transparent
+       frameless Electron window on Windows hits a persistent repaint bug
+       (stale backing surface stays visible as blank space). The window now
+       opens at one fixed size (see main.js) and the layout fills it —
+       [data-main-number] is flex:1 so it absorbs any leftover space. */
+    function fitWindowToContent(){}
 
     // تهيئة التطبيق عند تحميل الصفحة
     document.addEventListener('DOMContentLoaded', () => {

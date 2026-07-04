@@ -1,7 +1,7 @@
 /* ══════════════════════════════════════
-   اختيار اسم عشوائي — نافذة صغيرة ثابتة الحجم
-   الاسم المختار هو البطل، والإعدادات في نافذة
-   منفصلة (names-settings.html) بدل ما تكون جوّاها.
+   مولد الأرقام العشوائية — نافذة صغيرة ثابتة الحجم
+   الإعدادات (النطاق، عدد الأرقام، الصوت، عدم التكرار)
+   في نافذة منفصلة (numbers-settings.html).
    ══════════════════════════════════════ */
 
 * { box-sizing: border-box; }
@@ -9,10 +9,6 @@
 html, body {
   margin: 0;
   height: 100%;
-  /* !important: styles.css sets a solid body background for the main app
-     shell — this window is a separate transparent frameless BrowserWindow,
-     and without !important that solid color can win the cascade and show
-     as an opaque rectangle wherever .tool-shell doesn't fully cover it */
   background: transparent !important;
   background-image: none !important;
 }
@@ -34,7 +30,6 @@ body {
   overflow: hidden;
 }
 
-/* ── الشريط العلوي ── */
 .tool-header {
   display: flex;
   align-items: center;
@@ -74,8 +69,6 @@ body {
 .close-btn:hover { background: #fee2e2; color: #ef4444; }
 .fold-btn:hover  { background: var(--primary-bg); color: var(--primary); }
 
-/* ── كتلة العرض: الاسم + العدّادات + الزر، متمركزة رأسيًا في نافذة
-   ثابتة الحجم — لا تفتح ولا تقفل، فمفيش داعي لأي منطق تبديل ── */
 .stage {
   flex: 1;
   display: flex;
@@ -86,7 +79,6 @@ body {
   overflow: hidden;
 }
 
-/* ── منطقة العرض (البطل) ── */
 .hero {
   flex: 0 0 auto;
   height: 140px;
@@ -101,8 +93,7 @@ body {
   overflow: hidden;
   transition: background .2s;
 }
-
-.hero.picking { background: var(--primary-bg); }
+.hero.running { background: var(--primary-bg); }
 
 .placeholder {
   display: flex;
@@ -114,35 +105,44 @@ body {
 }
 .placeholder p { margin: 0; font-size: 12.5px; font-weight: 600; }
 
-.winner-name {
-  font-size: clamp(22px, 11vw, 40px);
+.big-number {
+  font-size: clamp(28px, 13vw, 48px);
   font-weight: 900;
-  line-height: 1.25;
   color: var(--primary);
-  word-break: break-word;
+  line-height: 1.1;
 }
-.hero.picking .winner-name { color: var(--text-muted); font-weight: 700; }
+.hero.running .big-number { color: var(--text-muted); font-weight: 700; }
 
-/* ── العدّادات ── */
+.number-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.number-chip {
+  min-width: 34px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: var(--primary-bg);
+  color: var(--primary);
+  font-size: 16px;
+  font-weight: 800;
+  text-align: center;
+}
+
 .stats-bar {
   display: flex;
   justify-content: center;
   gap: 16px;
   padding: 6px 10px 0;
   flex-shrink: 0;
-}
-.stat {
   font-size: 12px;
   font-weight: 600;
   color: var(--text-muted);
-}
-.stat b {
-  color: var(--text);
-  font-weight: 800;
-  margin-inline-end: 3px;
+  min-height: 16px;
 }
 
-/* ── زر الاختيار ── */
 .main-pick-btn {
   margin: 8px 10px 10px;
   height: 36px;

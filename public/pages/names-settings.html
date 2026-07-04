@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>إعدادات الاختيار العشوائي</title>
+  <link rel="stylesheet" href="/shared-design.css">
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/pages/names-settings.css">
+  <script nonce="ac">
+    (function(){
+      try {
+        var theme = localStorage.getItem('cm_theme') || 'light';
+        document.documentElement.setAttribute('data-theme', theme);
+      } catch(_){ }
+    })();
+  </script>
+</head>
+<body>
+  <div class="tool-shell">
+    <div class="tool-header">
+      <button class="tool-btn close-btn" title="إغلاق">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+      </button>
+      <h2 class="tool-title">إعدادات الاختيار</h2>
+    </div>
+
+    <div class="controls-section">
+      <div class="form-group">
+        <label>المصدر</label>
+        <select id="sourceSelect" class="custom-select">
+          <option value="group">من المجموعات</option>
+          <option value="manual">إدخال يدوي</option>
+        </select>
+      </div>
+      <div id="groupControl" class="form-group">
+        <label>المجموعة</label>
+        <select id="groupSelect" class="custom-select">
+          <option value="">— اختر مجموعة —</option>
+        </select>
+      </div>
+
+      <div id="manualControl" class="manual-input-area" style="display:none">
+        <textarea id="manualNames" placeholder="أدخل الأسماء هنا... (كل اسم في سطر)"></textarea>
+        <div class="manual-actions">
+          <button id="addSampleBtn" class="action-link">إضافة تجريبية</button>
+          <button id="clearManualBtn" class="action-link danger">مسح الكل</button>
+        </div>
+      </div>
+
+      <div class="toggle-group">
+        <label class="toggle-item">
+          <span class="toggle-label">عدم التكرار</span>
+          <input type="checkbox" id="excludePicked" checked>
+          <span class="toggle-slider"></span>
+        </label>
+        <label class="toggle-item">
+          <span class="toggle-label">صوت</span>
+          <input type="checkbox" id="soundToggle" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <script src="/pages/names-settings.js"></script>
+</body>
+</html>

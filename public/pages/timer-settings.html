@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>إعدادات المؤقت</title>
+  <link rel="stylesheet" href="/shared-design.css">
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/pages/timer-settings.css">
+  <script nonce="ac">
+    (function(){
+      try {
+        var theme = localStorage.getItem('cm_theme') || 'light';
+        document.documentElement.setAttribute('data-theme', theme);
+      } catch(_){ }
+    })();
+  </script>
+</head>
+<body>
+  <div class="tool-shell">
+    <div class="tool-header">
+      <button class="tool-btn close-btn" title="إغلاق">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+      </button>
+      <h2 class="tool-title">إعدادات المؤقت</h2>
+    </div>
+
+    <div class="controls-section">
+      <div class="form-group">
+        <label>نوع العد</label>
+        <select id="countTypeSelect" class="custom-select">
+          <option value="countdown" selected>تنازلي</option>
+          <option value="countup">تصاعدي</option>
+        </select>
+      </div>
+
+      <div id="durationGroup" class="form-group">
+        <label>المدة</label>
+        <div class="duration-row">
+          <input type="number" id="hoursInput" class="duration-input" min="0" max="23" value="0" title="ساعات">
+          <span class="duration-sep">:</span>
+          <input type="number" id="minutesInput" class="duration-input" min="0" max="59" value="5" title="دقائق">
+          <span class="duration-sep">:</span>
+          <input type="number" id="secondsInput" class="duration-input" min="0" max="59" value="0" title="ثواني">
+        </div>
+      </div>
+
+      <div id="presetGroup" class="form-group">
+        <label>أوقات مقترحة</label>
+        <select id="presetSelect" class="custom-select">
+          <option value="">اختيار سريع...</option>
+          <option value="30">30 ثانية</option>
+          <option value="60">1 دقيقة</option>
+          <option value="120">2 دقيقة</option>
+          <option value="180">3 دقيقة</option>
+          <option value="300">5 دقائق</option>
+          <option value="600">10 دقائق</option>
+          <option value="900">15 دقيقة</option>
+          <option value="1800">30 دقيقة</option>
+          <option value="3600">1 ساعة</option>
+        </select>
+      </div>
+
+      <div class="toggle-group">
+        <label class="toggle-item">
+          <span class="toggle-label">صوت</span>
+          <input type="checkbox" id="soundToggle" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <script src="/pages/timer-settings.js"></script>
+</body>
+</html>
