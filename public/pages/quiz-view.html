@@ -72,7 +72,18 @@
               </svg>
               <span id="headerTimerText">00:00</span>
             </span>
-
+            <div class="qv-quick-tools" id="qvQuickTools">
+              <button type="button" class="btn icon-btn" id="qvQtToggle" title="الأدوات السريعة" aria-haspopup="true" aria-expanded="false">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+              </button>
+              <div class="qv-qt-menu" id="qvQtMenu" hidden>
+                <button class="qv-qt-item" data-qt="timer">⏱ <span>المؤقت الذكي</span></button>
+                <button class="qv-qt-item" data-qt="wheel">✨ <span>عجلة الحظ</span></button>
+                <button class="qv-qt-item" data-qt="numbers">🔢 <span>أرقام عشوائية</span></button>
+                <button class="qv-qt-item" data-qt="names">🎲 <span>اختيار اسم عشوائي</span></button>
+              </div>
+            </div>
+            <button type="button" class="btn icon-btn" id="fullscreenBtn" title="ملء الشاشة">⛶</button>
           </div>
         </div>
         
@@ -247,6 +258,18 @@
       <div class="actions">
         <button class="btn success" id="restartQuiz">🔄 إعادة الاختبار</button>
         <button class="btn" id="closeResults">🏠 إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom confirm dialog (replaces native confirm() for consistent styling) -->
+  <div id="customConfirmModal" class="modal-overlay" style="display:none;">
+    <div class="modal" style="max-width:420px; padding:36px; text-align:center;">
+      <div style="font-size:40px; margin-bottom:12px;">⚠️</div>
+      <p id="customConfirmMessage" style="font-size:16px; font-weight:600; color:var(--quiz-fg); margin-bottom:28px;"></p>
+      <div class="actions" style="display:flex; gap:12px; justify-content:center;">
+        <button id="customConfirmOk" class="btn">نعم</button>
+        <button id="customConfirmCancel" class="btn" style="background:var(--quiz-muted); border-color:var(--quiz-muted);">إلغاء</button>
       </div>
     </div>
   </div>

@@ -17,6 +17,13 @@
   --wb-sidebar-btn:  clamp(38px, 2.8vw + 1.6vh, 54px);
   --wb-sidebar-icon: clamp(18px, 1.5vw + 0.9vh, 25px);
 
+  /* Manual override multiplier — see .wb-ui-scale-ctrl below. Applied via
+     `zoom` (Chromium-only, safe here since this is Electron) so it scales
+     every descendant (buttons, icons, gaps, labels) uniformly, letting the
+     toolbar/sidebar shrink past the clamp() floor above when the automatic
+     sizing alone still leaves tools scrolled out of view. */
+  --wb-ui-scale: 1;
+
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -37,6 +44,7 @@
   flex-shrink: 0;
   position: relative;
   z-index: 50;
+  zoom: var(--wb-ui-scale);
 }
 
 /* Outer row: scrollable groups (wb-tb-line) + pinned fullscreen group,
@@ -200,6 +208,7 @@
   flex-shrink: 0;
   position: relative;
   z-index: 50;
+  zoom: var(--wb-ui-scale);
 }
 .wb-sidebar::-webkit-scrollbar { width: 3px; }
 .wb-sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
@@ -856,6 +865,45 @@
   text-overflow: ellipsis;
   max-width: 100%;
 }
+
+/* ══════════════════════════════════════
+   FLOATING TOOL-SIZE CONTROL
+   ══════════════════════════════════════ */
+/* Manual override on top of the automatic clamp()-based sizing — the
+   automatic sizing only shrinks each button/icon down to a fixed floor, so
+   on a small/short screen with many tool groups the overflow just scrolls
+   out of view (hidden) instead of shrinking further. This lets the teacher
+   shrink the whole toolbar/sidebar past that floor when needed. */
+.wb-ui-scale-ctrl {
+  position: fixed;
+  right: 10px;
+  bottom: 34px;
+  z-index: 200;
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 4px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.12);
+}
+.wb-ui-scale-ctrl .wb-btn {
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  border-radius: 8px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.wb-ui-scale-ctrl .wb-btn:hover { background: var(--bg); color: var(--text); }
+.wb-ui-scale-ctrl .wb-btn svg { width: 16px; height: 16px; }
 
 /* ══════════════════════════════════════
    STATUS BAR

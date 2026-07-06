@@ -400,22 +400,57 @@
                 </div>
               </div>
             </div>
+
+            <!-- Restore Backup Confirmation Modal -->
+            <div id="sm-restore-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;align-items:center;justify-content:center">
+              <div style="background:var(--card,#fff);border-radius:16px;padding:32px 28px;max-width:400px;width:90%;box-shadow:0 24px 60px rgba(0,0,0,.3);text-align:center;direction:rtl">
+                <div style="width:56px;height:56px;background:#fffbeb;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.85.99 6.57 2.64"/><polyline points="21 3 21 9 15 9"/></svg>
+                </div>
+                <h3 style="font-size:18px;font-weight:700;color:var(--text);margin:0 0 10px">استرجاع نسخة احتياطية</h3>
+                <p style="font-size:14px;color:var(--text-muted);margin:0 0 28px;line-height:1.8">هل أنت متأكد من استرجاع هذه النسخة؟ سيتم استبدال البيانات الحالية.</p>
+                <div style="display:flex;gap:10px;justify-content:center">
+                  <button id="sm-restore-cancel" type="button" style="flex:1;padding:11px;border:1.5px solid var(--border);background:transparent;color:var(--text);border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">إلغاء</button>
+                  <button id="sm-restore-confirm" type="button" style="flex:1;padding:11px;border:none;background:#0f766e;color:#fff;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">استرجاع</button>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- AI Tab -->
           <div class="sm-tab" id="interface-tab">
-            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;text-align:center;gap:16px">
-              <div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#0d9488);display:flex;align-items:center;justify-content:center">
-                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5z"/></svg>
+            <div class="sm-section">
+              <div class="sm-section-label">مفتاح Groq API</div>
+              <p class="sm-hint">
+                يُستخدم هذا المفتاح لتشغيل ميزات الذكاء الاصطناعي مثل "إنشاء اختبار بالذكاء الاصطناعي" في صفحة الاختبارات.
+                احصل على مفتاح مجاني من
+                <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com/keys</a>.
+              </p>
+              <input type="password" id="groqApiKey" class="sm-input" placeholder="gsk_..." autocomplete="off" style="width:100%">
+              <p class="sm-hint" style="margin-top:8px;">اضغط "حفظ الإعدادات" أسفل القائمة الجانبية بعد إدخال المفتاح.</p>
+            </div>
+
+            <div class="sm-divider"></div>
+
+            <div class="sm-section">
+              <div class="sm-section-label">مفتاح Google Gemini API (اختياري)</div>
+              <p class="sm-hint">
+                بديل إضافي لـ Groq — حصته المجانية أكبر وبيدعم قراءة ملفات PDF والصور مباشرة. عند إنشاء اختبار بالذكاء الاصطناعي تقدر تختار أي المزوّدين تستخدم.
+                احصل على مفتاح مجاني من
+                <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>.
+              </p>
+              <input type="password" id="geminiApiKey" class="sm-input" placeholder="AIza..." autocomplete="off" style="width:100%">
+            </div>
+
+            <div class="sm-divider"></div>
+
+            <div class="sm-section">
+              <div class="sm-section-label">ميزات الذكاء الاصطناعي المتاحة</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <span style="padding:4px 12px;border-radius:99px;background:var(--sl-100,#f1f5f9);color:var(--text-muted);font-size:12px">إنشاء اختبار من ملف/صورة</span>
+                <span style="padding:4px 12px;border-radius:99px;background:var(--sl-100,#f1f5f9);color:var(--text-muted);font-size:12px">شرح المحتوى (قريباً)</span>
+                <span style="padding:4px 12px;border-radius:99px;background:var(--sl-100,#f1f5f9);color:var(--text-muted);font-size:12px">تحليل الأداء (قريباً)</span>
               </div>
-              <h3 style="font-size:18px;font-weight:700;color:var(--text);margin:0">ميزات الذكاء الاصطناعي</h3>
-              <p style="font-size:14px;color:var(--text-muted);margin:0;line-height:1.8;max-width:320px">نعمل على تطوير تجربة ذكاء اصطناعي متكاملة داخل Active Class — ستكون متاحة قريباً.</p>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:8px">
-                <span style="padding:4px 12px;border-radius:99px;background:var(--sl-100,#f1f5f9);color:var(--text-muted);font-size:12px">توليد اختبارات</span>
-                <span style="padding:4px 12px;border-radius:99px;background:var(--sl-100,#f1f5f9);color:var(--text-muted);font-size:12px">شرح المحتوى</span>
-                <span style="padding:4px 12px;border-radius:99px;background:var(--sl-100,#f1f5f9);color:var(--text-muted);font-size:12px">تحليل الأداء</span>
-              </div>
-              <span style="margin-top:4px;padding:5px 14px;border-radius:99px;background:#fef3c7;color:#92400e;font-size:12px;font-weight:600">قريباً</span>
             </div>
           </div>
 

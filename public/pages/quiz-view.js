@@ -293,6 +293,39 @@ console.log('Quiz view script loading...');
     }
   }
 
+  // ===== Custom Confirm Dialog (styled replacement for native confirm()) =====
+  function showConfirmModal(message) {
+    return new Promise((resolve) => {
+      const overlay = document.getElementById('customConfirmModal');
+      const msgEl = document.getElementById('customConfirmMessage');
+      const okBtn = document.getElementById('customConfirmOk');
+      const cancelBtn = document.getElementById('customConfirmCancel');
+
+      if (!overlay || !msgEl || !okBtn || !cancelBtn) {
+        // Fallback if the modal markup is somehow missing
+        resolve(confirm(message));
+        return;
+      }
+
+      msgEl.textContent = message;
+      overlay.style.display = 'flex';
+      requestAnimationFrame(() => overlay.classList.add('show'));
+
+      const cleanup = (result) => {
+        overlay.classList.remove('show');
+        setTimeout(() => { overlay.style.display = 'none'; }, 250);
+        okBtn.removeEventListener('click', onOk);
+        cancelBtn.removeEventListener('click', onCancel);
+        resolve(result);
+      };
+      const onOk = () => cleanup(true);
+      const onCancel = () => cleanup(false);
+
+      okBtn.addEventListener('click', onOk);
+      cancelBtn.addEventListener('click', onCancel);
+    });
+  }
+
   // ===== Loading System =====
   function showLoading() {
     if (loadingOverlay) {
@@ -323,153 +356,6 @@ console.log('Quiz view script loading...');
     // Hide the "تأكد من الإعدادات" hint
     const ghost = document.getElementById('startGhost');
     if (ghost) ghost.style.display = 'none';
-  }
-
-  function loadQuizFromURL() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const quizId = urlParams.get('id');
-
-    // Apply minutes param to pre-start input
-    const minutesParam = urlParams.get('minutes');
-    if (preStartMinutes && minutesParam !== null) {
-      const m = parseInt(minutesParam, 10);
-      if (!Number.isNaN(m) && m >= 0 && m <= 999) {
-        try { preStartMinutes.value = String(m); } catch {}
-      }
-    }
-
-    // Apply review param (1/true enable, 0/false disable)
-    const reviewParam = urlParams.get('review');
-    if (reviewParam !== null) {
-      const allow = reviewParam === '1' || (typeof reviewParam === 'string' && reviewParam.toLowerCase() === 'true');
-      state.settings.allowReview = allow;
-      // Reflect on UI when available
-      try {
-        const btn = document.getElementById('reviewBtn');
-        if (btn) btn.style.display = state.settings.allowReview ? 'inline-flex' : 'none';
-      } catch {}
-    }
-
-    // Apply time up mode and show-correct flags from URL if provided
-    const timeUpParam = urlParams.get('timeUp');
-    if (preTimeUpMode && timeUpParam) {
-      try { preTimeUpMode.value = timeUpParam; } catch {}
-    }
-    const showCorrectParam = urlParams.get('showCorrect');
-    if (showCorrectAnswerCheckbox && showCorrectParam !== null) {
-      const v = showCorrectParam === '1' || (typeof showCorrectParam === 'string' && showCorrectParam.toLowerCase() === 'true');
-      try { showCorrectAnswerCheckbox.checked = v; } catch {}
-    }
-
-    // If link contains any of the sharing params, minimize the pre-start UI (QR mode)
-    const cameFromQR = minutesParam !== null || timeUpParam !== null || showCorrectParam !== null || reviewParam !== null;
-    if (cameFromQR) {
-      try { minimizeStartSettings(); } catch {}
-    }
-    
-    if (!quizId) {
-      showToast('معرف الاختبار غير موجود', 'error');
-      setTimeout(() => {
-        window.location.href = '/#/quizzes';
-      }, 2000);
-      return;
-    }
-
-    loadQuizData(quizId);
-  }
-
-  async function loadQuizData(quizId) {
-    showLoading();
-    console.log(`Loading quiz with ID: ${quizId}`);
-
-    let quiz = null;
-
-    try {
-      // API-first approach: try to fetch a single quiz directly.
-      const response = await fetch(`/api/quizzes/${quizId}`);
-      
-      if (response.ok) {
-        quiz = await response.json();
-        console.log('Quiz loaded successfully from API.');
-      } else {
-        console.warn(`API failed to load quiz (status: ${response.status}), falling back to localStorage.`);
-      }
-    } catch (error) {
-      console.warn('API fetch error, falling back to localStorage:', error);
-    }
-
-    // Fallback to localStorage if API fails
-    if (!quiz) {
-      console.log('Looking for quiz in localStorage...');
-      try {
-        // This is the old, less reliable method
-        const stored = localStorage.getItem('cm_quizzes_v1');
-        const quizzes = stored ? JSON.parse(stored) : [];
-        console.log('All saved quizzes:', quizzes);
-        quiz = quizzes.find(q => q.id === quizId);
-
-        if (quiz) {
-          console.log('Quiz found in localStorage');
-        } else {
-          console.error('Quiz not found in localStorage');
-        }
-      } catch (e) {
-        console.error('Error reading quizzes from localStorage:', e);
-      }
-    }
-
-    if (!quiz) {
-      hideLoading();
-      console.error('No quiz data found');
-      showToast('الاختبار المحدد غير موجود أو لا يمكن تحميله.', 'error');
-      
-      // Disable the start button and show an error state
-      if (startBtn) {
-          startBtn.textContent = 'خطأ في التحميل';
-          startBtn.disabled = true;
-          console.log('Fallback start button handler set');
-      }
-      return;
-    }
-
-    state.quiz = quiz;
-    state.questions = quiz.questions || [];
-
-    try {
-      await initializeQuiz();
-      // After quiz loaded, if it has a group, show student picker populated from API
-      try {
-        if (quiz.groupId) {
-          const row = document.getElementById('studentPickerRow');
-          const sel = document.getElementById('studentSelect');
-          if (row && sel) {
-            const res = await fetch(`/api/group/${encodeURIComponent(quiz.groupId)}/students`);
-            const list = res.ok ? (await res.json()) : [];
-            sel.innerHTML = '';
-            const placeholder = document.createElement('option');
-            placeholder.value = '';
-            placeholder.textContent = 'اختر اسمك';
-            placeholder.disabled = true;
-            placeholder.selected = true;
-            sel.appendChild(placeholder);
-            list.forEach(s => {
-              const opt = document.createElement('option');
-              opt.value = s.id || s.studentId || '';
-              opt.textContent = s.name || s.fullName || '';
-              sel.appendChild(opt);
-            });
-            row.style.display = 'flex';
-          }
-        }
-      } catch (e) {
-        console.warn('Failed to load group students for picker', e);
-      }
-    } catch (initError) {
-      console.error('Error initializing quiz:', initError);
-      showToast('حدث خطأ أثناء تهيئة الاختبار.', 'error');
-    } finally {
-      hideLoading();
-    }
   }
 
   // ===== Diagnostic Function =====
@@ -623,8 +509,8 @@ console.log('Quiz view script loading...');
           
         } else {
           const qCount = Array.isArray(state.quiz.questions) ? state.quiz.questions.length : 'N/A';
-          console.error('No questions found. quiz.name:', state.quiz.name, '| questions:', qCount, '| quizId:', quizId);
-          showToast(`الاختبار "${state.quiz.name || quizId}" لا يحتوي على أسئلة في قاعدة البيانات (${qCount})`, 'error');
+          console.error('No questions found. quiz.name:', state.quiz.name, '| questions:', qCount, '| quizId:', state.quiz.id);
+          showToast(`الاختبار "${state.quiz.name || state.quiz.id}" لا يحتوي على أسئلة في قاعدة البيانات (${qCount})`, 'error');
           return;
         }
       } catch (questionsError) {
@@ -732,28 +618,6 @@ console.log('Quiz view script loading...');
     }
   }
 
-  function updateQuizInfo() {
-    if (!state.quiz) return;
-
-    // Ensure quiz title is displayed
-    if (quizHeaderTitle) {
-      const quizTitle = state.quiz.name || 'اختبار';
-      quizHeaderTitle.textContent = quizTitle;
-      quizHeaderTitle.style.display = 'block';
-      if (window.debugMode) {
-        console.log('Quiz title updated in header:', quizTitle);
-      }
-    }
-    
-    // Ensure group name is displayed if available
-    loadGroupData().catch(error => {
-      console.warn('Error updating group data:', error);
-    });
-    
-    // Update window title
-    updateWindowTitle();
-  }
-
   // ===== Quiz Header Info =====
   function updateQuizInfo() {
     try {
@@ -794,6 +658,8 @@ console.log('Quiz view script loading...');
       if (quizHeaderGroup) {
         quizHeaderGroup.style.display = 'none';
       }
+
+      updateWindowTitle();
     } catch (err) {
       console.warn('updateQuizInfo error:', err);
     }
@@ -1725,7 +1591,7 @@ console.log('Quiz view script loading...');
     const unanswered = Object.values(state.answers).filter(a => a === null || a === '').length;
     
     if (unanswered > 0 && !isAutoSubmit) {
-      const confirmSubmit = confirm(`لديك ${unanswered} أسئلة غير مُجابة. هل تريد المتابعة؟`);
+      const confirmSubmit = await showConfirmModal(`لديك ${unanswered} أسئلة غير مُجابة. هل تريد المتابعة؟`);
       if (!confirmSubmit) return;
     }
 
@@ -2079,31 +1945,6 @@ console.log('Quiz view script loading...');
     }
   }
 
-  function closeFinalResults() {
-    try {
-      // Clear the keep visible interval first
-      if (window.modalKeepVisibleInterval) {
-        clearInterval(window.modalKeepVisibleInterval);
-        window.modalKeepVisibleInterval = null;
-        console.log('Cleared modal keep visible interval');
-      }
-      
-      if (finalResultsModal) {
-        finalResultsModal.style.opacity = '0';
-        finalResultsModal.classList.remove('show');
-        
-        setTimeout(() => {
-          finalResultsModal.style.display = 'none';
-          finalResultsModal.style.visibility = 'hidden';
-        }, 300);
-        
-        console.log('Final results modal closed');
-      }
-    } catch (error) {
-      console.error('Error closing final results:', error);
-    }
-  }
-
   function showCorrectAnswers(results) {
     const correctAnswersList = document.getElementById('correctAnswersList');
     if (!correctAnswersList) return;
@@ -2387,36 +2228,6 @@ console.log('Quiz view script loading...');
         }
       }
 
-      // Control buttons
-      const goHomeBtn = document.getElementById('goHome');
-      if (goHomeBtn) {
-        try {
-          goHomeBtn.addEventListener('click', () => {
-            if (state.isStarted && !state.isSubmitted) {
-              const confirmLeave = confirm('سيتم فقدان تقدمك في الاختبار. هل تريد المتابعة؟');
-              if (!confirmLeave) return;
-            }
-            closeQuizWindow();
-          });
-        } catch (goHomeError) {
-          console.error('Error setting up go home button:', goHomeError);
-        }
-      }
-
-      const closeWindowBtn = document.getElementById('closeWindow');
-      if (closeWindowBtn) {
-        try {
-          closeWindowBtn.addEventListener('click', () => {
-            if (state.isStarted && !state.isSubmitted) {
-              const confirmClose = confirm('سيتم فقدان تقدمك في الاختبار. هل تريد إغلاق النافذة؟');
-              if (!confirmClose) return;
-            }
-            closeQuizWindow();
-          });
-        } catch (closeWindowError) {
-          console.error('Error setting up close window button:', closeWindowError);
-        }
-      }
     } catch (error) {
       console.error('Critical error in setupEventHandlers:', error);
     }
@@ -2426,16 +2237,10 @@ console.log('Quiz view script loading...');
       fullscreenBtn.addEventListener('click', toggleFullscreen);
     }
 
+    setupQuickTools();
+
     // Keyboard shortcuts
     document.addEventListener('keydown', handleKeyboard);
-
-    // Prevent accidental page leave
-    window.addEventListener('beforeunload', (e) => {
-      if (state.isStarted && !state.isSubmitted) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    });
 
     // Sticky header scroll effect - تأثير التمرير على الهيدر
     if (card && quizHeader) {
@@ -2529,6 +2334,70 @@ console.log('Quiz view script loading...');
     }
   }
 
+  // ===== Quick Tools (header) — same tools/behavior as the main app's header widget =====
+  async function handleQuickToolAction(tool) {
+    try {
+      if (tool === 'timer' && window.api?.openToolWindow) {
+        await window.api.openToolWindow('timer'); return;
+      }
+      if (tool === 'wheel' && window.api?.openWheelWindow) {
+        window.api.openWheelWindow(); return;
+      }
+      if (tool === 'numbers') {
+        try {
+          if (window.api?.openToolWindow) await window.api.openToolWindow('numbers');
+          else if (window.api?.openNumbersWindow) await window.api.openNumbersWindow();
+          else window.open('/pages/numbers-standalone.html', '_blank');
+        } catch (_) { window.open('/pages/numbers-standalone.html', '_blank'); }
+        return;
+      }
+      if (tool === 'names') {
+        try {
+          if (window.api?.openToolWindow) await window.api.openToolWindow('names');
+          else window.open('/pages/names.html', '_blank');
+        } catch (_) { window.open('/pages/names.html', '_blank'); }
+        return;
+      }
+    } catch (err) {
+      console.error('Quick tool error:', err);
+    }
+  }
+
+  function setupQuickTools() {
+    const toggle = document.getElementById('qvQtToggle');
+    const menu = document.getElementById('qvQtMenu');
+    if (!toggle || !menu) return;
+
+    // Move the menu out to <body> so it can't get visually clipped by an
+    // ancestor with overflow:hidden/backdrop-filter (.q-card does both,
+    // which was silently hiding the menu even though position:fixed
+    // computed the right on-screen coordinates).
+    document.body.appendChild(menu);
+
+    const placeMenu = () => {
+      const r = toggle.getBoundingClientRect();
+      menu.style.top = `${r.bottom + 6}px`;
+      menu.style.left = 'auto';
+      menu.style.right = `${Math.max(8, window.innerWidth - r.right)}px`;
+    };
+    const setOpen = (open) => {
+      if (open) placeMenu();
+      menu.hidden = !open;
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    };
+
+    toggle.addEventListener('click', (e) => { e.stopPropagation(); setOpen(menu.hidden); });
+    document.addEventListener('click', (e) => {
+      if (!toggle.contains(e.target) && !menu.contains(e.target)) setOpen(false);
+    });
+    menu.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-qt]');
+      if (!btn) return;
+      setOpen(false);
+      handleQuickToolAction(btn.getAttribute('data-qt'));
+    });
+  }
+
   // ===== Window Management =====
   function isStandaloneWindow() {
     return window.opener !== null;
@@ -2536,15 +2405,6 @@ console.log('Quiz view script loading...');
 
   function setupWindowBehavior() {
     if (isStandaloneWindow()) {
-      // إضافة تحذير عند إغلاق النافذة أثناء الاختبار
-      window.addEventListener('beforeunload', (e) => {
-        if (state.isStarted && !state.isSubmitted) {
-          e.preventDefault();
-          e.returnValue = 'هل أنت متأكد من إغلاق النافذة؟ سيتم فقدان تقدمك في الاختبار.';
-          return e.returnValue;
-        }
-      });
-
       // إضافة أنماط خاصة بالنافذة المستقلة
       document.body.classList.add('standalone-window');
     }
@@ -2957,72 +2817,6 @@ console.log('Quiz view script loading...');
     }
   }
 
-  function closeQuizWindow() {
-    if (isStandaloneWindow()) {
-      // حفظ النتائج قبل الإغلاق
-      if (state.isSubmitted) {
-        saveQuizResults();
-      }
-      
-      // إغلاق النافذة
-      window.close();
-    } else {
-      // العودة لصفحة الاختبارات
-      window.location.href = '/#/quizzes';
-    }
-  }
-
-  // ===== Initialization =====
-  function init() {
-    try {
-      console.log('Initializing quiz view...');
-      
-      // Check for essential DOM elements
-      const essentialElements = [
-        { element: startBtn, name: 'Start button' },
-        { element: contentBox, name: 'Content box' },
-        { element: startOverlay, name: 'Start overlay' }
-      ];
-      
-      const missingElements = essentialElements.filter(item => !item.element);
-      if (missingElements.length > 0) {
-        console.warn('Missing essential elements:', missingElements.map(item => item.name));
-      }
-      
-      try {
-        console.log('Setting up event handlers...');
-        setupEventHandlers();
-        console.log('Event handlers set up successfully');
-      } catch (handlersError) {
-        console.error('Error setting up event handlers:', handlersError);
-      }
-      
-      try {
-        setupWindowBehavior();
-      } catch (windowError) {
-        console.error('Error setting up window behavior:', windowError);
-      }
-      
-      try {
-        setupModalEventListeners();
-      } catch (modalError) {
-        console.error('Error setting up modal listeners:', modalError);
-      }
-      
-      try {
-        loadQuizFromURL();
-      } catch (loadError) {
-        console.error('Error loading quiz from URL:', loadError);
-        showToast('خطأ في تحميل الاختبار', 'error');
-      }
-      
-      console.log('Quiz view initialized successfully');
-    } catch (error) {
-      console.error('Critical error in init:', error);
-      showToast('خطأ في تهيئة التطبيق', 'error');
-    }
-  }
-
   // ===== Close Final Results =====
   function closeFinalResults() {
     try {
@@ -3231,17 +3025,17 @@ console.log('Quiz view script loading...');
       if (quizId) {
         console.log('Loading quiz with ID:', quizId);
         
-        // Try API first
-        if (hasAPI && window.api.loadQuizzes) {
+        // Try API first — load-quiz (singular) returns the full quiz *with*
+        // its questions array; load-quizzes (plural, list view) only
+        // returns a questionsCount, which used to get stored as state.quiz
+        // here and made every quiz look like it had zero questions.
+        if (hasAPI && window.api.loadQuiz) {
           try {
-            const allQuizzes = await window.api.loadQuizzes();
-            if (Array.isArray(allQuizzes)) {
-              const quiz = allQuizzes.find(q => q.id === quizId);
-              if (quiz) {
-                state.quiz = quiz;
-                console.log('Quiz loaded from API:', quiz);
-                return true;
-              }
+            const quiz = await window.api.loadQuiz(quizId);
+            if (quiz && Array.isArray(quiz.questions) && quiz.questions.length > 0) {
+              state.quiz = quiz;
+              console.log('Quiz loaded from API:', quiz);
+              return true;
             }
           } catch (apiError) {
             console.warn('API load failed, trying localStorage:', apiError);
@@ -3314,10 +3108,38 @@ console.log('Quiz view script loading...');
       // Initialize quiz data (shows start overlay)
       await initializeQuiz();
 
-      // If launched via QR/share link, hide settings so student only sees the start button
+      // If launched via QR/share link, apply the shared settings and hide
+      // the settings panel so the student only sees the start button
       try {
         const _p = new URLSearchParams(window.location.search);
-        if (_p.get('minutes') !== null || _p.get('timeUp') !== null || _p.get('showCorrect') !== null) {
+        const minutesParam = _p.get('minutes');
+        const timeUpParam = _p.get('timeUp');
+        const showCorrectParam = _p.get('showCorrect');
+        const reviewParam = _p.get('review');
+
+        if (preStartMinutes && minutesParam !== null) {
+          const m = parseInt(minutesParam, 10);
+          if (!Number.isNaN(m) && m >= 0 && m <= 999) {
+            try { preStartMinutes.value = String(m); } catch (_) {}
+          }
+        }
+        if (preTimeUpMode && timeUpParam) {
+          try { preTimeUpMode.value = timeUpParam; } catch (_) {}
+        }
+        if (showCorrectAnswerCheckbox && showCorrectParam !== null) {
+          const v = showCorrectParam === '1' || (typeof showCorrectParam === 'string' && showCorrectParam.toLowerCase() === 'true');
+          try { showCorrectAnswerCheckbox.checked = v; } catch (_) {}
+        }
+        if (reviewParam !== null) {
+          const allow = reviewParam === '1' || (typeof reviewParam === 'string' && reviewParam.toLowerCase() === 'true');
+          state.settings.allowReview = allow;
+          try {
+            const btn = document.getElementById('reviewBtn');
+            if (btn) btn.style.display = allow ? 'inline-flex' : 'none';
+          } catch (_) {}
+        }
+
+        if (minutesParam !== null || timeUpParam !== null || showCorrectParam !== null || reviewParam !== null) {
           minimizeStartSettings();
         }
       } catch (_) {}
@@ -3349,7 +3171,10 @@ console.log('Quiz view script loading...');
       if (typeof setupModalEventListeners === 'function') {
         setupModalEventListeners();
       }
-      
+      // Wire up sound toggle, review button, keyboard shortcuts, fullscreen/back buttons
+      setupEventHandlers();
+      setupWindowBehavior();
+
       console.log('Quiz view initialized successfully');
     } catch (error) {
       console.error('Error initializing quiz view:', error);

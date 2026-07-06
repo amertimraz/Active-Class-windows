@@ -15,7 +15,8 @@ class SettingsManager {
             showDeleteAllGroups: false,
             showAnimations: true,
             showNotifications: true,
-            groq_api_key: ''
+            groq_api_key: '',
+            gemini_api_key: ''
         };
         
         this.translations = {
@@ -59,9 +60,13 @@ class SettingsManager {
             this.showLoading(true);
             
             // Get values from UI that aren't auto-bound
-            const geminiInput = document.getElementById('groqApiKey');
-            if (geminiInput) {
-                this.settings.groq_api_key = geminiInput.value;
+            const groqInput = document.getElementById('groqApiKey');
+            if (groqInput) {
+                this.settings.groq_api_key = groqInput.value;
+            }
+            const geminiApiInput = document.getElementById('geminiApiKey');
+            if (geminiApiInput) {
+                this.settings.gemini_api_key = geminiApiInput.value;
             }
 
             for (const [key, value] of Object.entries(this.settings)) {
@@ -246,9 +251,15 @@ class SettingsManager {
             this._updateHeaderControls();
             
             // Groq API Key
-            const geminiInput = document.getElementById('groqApiKey');
-            if (geminiInput) {
-                geminiInput.value = this.settings.groq_api_key || '';
+            const groqInput = document.getElementById('groqApiKey');
+            if (groqInput) {
+                groqInput.value = this.settings.groq_api_key || '';
+            }
+
+            // Gemini API Key
+            const geminiApiInput = document.getElementById('geminiApiKey');
+            if (geminiApiInput) {
+                geminiApiInput.value = this.settings.gemini_api_key || '';
             }
 
             // Auto-backup UI
@@ -416,10 +427,9 @@ class SettingsManager {
                 if (!backupFile) return;
             }
 
-            if (!confirm('هل أنت متأكد من استرجاع هذه النسخة؟ سيتم استبدال البيانات الحالية.')) {
-                return;
-            }
-            
+            const confirmed = await this._showRestoreConfirm();
+            if (!confirmed) return;
+
             this.showLoading(true);
             
             const response = await authFetch('/api/restore', {
@@ -581,7 +591,15 @@ class SettingsManager {
                 const days = Math.max(0, Math.ceil((expDate - new Date()) / 86400000));
                 set('licInfoDays', `${days} يوم`);
 
-                const total = lic.totalDays || 365;
+                // Prefer the license's real original span (issuedAt → expiresAt)
+                // over the separately-cached totalDays — that field defaults to
+                // 365 whenever it's missing (older cached licenses, offline
+                // fallbacks, etc.), which silently clips the bar at 100% for
+                // the entire first year of any longer-than-a-year license even
+                // though the remaining-days count keeps counting down correctly.
+                const total = lic.issuedAt
+                    ? Math.max(1, Math.round((expDate - new Date(lic.issuedAt)) / 86400000))
+                    : (lic.totalDays || 365);
                 const pct = Math.min(100, Math.round((days / total) * 100));
                 const barWrap = document.getElementById('licBarWrap');
                 const bar = document.getElementById('licDaysBar');
@@ -689,7 +707,32 @@ class SettingsManager {
             }
         };
     }
-    
+
+    // Styled replacement for the native confirm() dialog previously used
+    // before restoring a backup — matches the app's other confirm modals
+    // (e.g. #sm-reset-modal) instead of the OS-native "active-class" box.
+    _showRestoreConfirm() {
+        return new Promise((resolve) => {
+            const modal = document.getElementById('sm-restore-modal');
+            const cancel = document.getElementById('sm-restore-cancel');
+            const confirmBtn = document.getElementById('sm-restore-confirm');
+            if (!modal || !cancel || !confirmBtn) { resolve(true); return; }
+
+            const cleanup = (result) => {
+                modal.style.display = 'none';
+                cancel.onclick = null;
+                confirmBtn.onclick = null;
+                modal.onclick = null;
+                resolve(result);
+            };
+
+            modal.style.display = 'flex';
+            cancel.onclick = () => cleanup(false);
+            confirmBtn.onclick = () => cleanup(true);
+            modal.onclick = (e) => { if (e.target === modal) cleanup(false); };
+        });
+    }
+
     closeModal() {
         const modal = document.getElementById('settingsModal');
         if (modal) {

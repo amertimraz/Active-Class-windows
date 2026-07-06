@@ -9,7 +9,10 @@
         <div style="font-size:3rem">🏆</div>
         <h2 style="color:#1e293b;margin:0">المسابقات غير متاحة في النسخة التجريبية</h2>
         <p style="margin:0;font-size:.9rem">فعّل البرنامج للوصول إلى المسابقات وجميع الميزات</p>
-        <a href="/pages/activation.html" style="background:#0f766e;color:#fff;padding:10px 24px;border-radius:10px;text-decoration:none;font-weight:700;font-size:.95rem">فعّل الآن ←</a>
+        <div style="display:flex;gap:10px;">
+          <a href="/pages/activation.html" style="background:#0f766e;color:#fff;padding:10px 24px;border-radius:10px;text-decoration:none;font-weight:700;font-size:.95rem">فعّل الآن ←</a>
+          <a href="/" onclick="window.location.href='/'; return false;" style="background:transparent;color:#64748b;border:1.5px solid #cbd5e1;padding:10px 24px;border-radius:10px;text-decoration:none;font-weight:700;font-size:.95rem">أكمل في النسخة التجريبية</a>
+        </div>
       </div>`;
     return;
   }

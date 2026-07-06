@@ -38,6 +38,32 @@
   const listView = document.getElementById('listView');
   const quizzesGrid = document.getElementById('quizzesGrid');
   const quizzesTableBody = document.getElementById('quizzesTableBody');
+  const openTemplatesBtn = document.getElementById('openTemplatesBtn');
+  const templatesModal = document.getElementById('templatesModal');
+  const templatesModalClose = document.getElementById('templatesModalClose');
+  const templatesList = document.getElementById('templatesList');
+  const tplFilterSubject = document.getElementById('tplFilterSubject');
+  const tplFilterGrade = document.getElementById('tplFilterGrade');
+  const tplTargetGroup = document.getElementById('tplTargetGroup');
+  let quizTemplates = [];
+  const openAiGenerateBtn = document.getElementById('openAiGenerateBtn');
+  const aiGenerateModal = document.getElementById('aiGenerateModal');
+  const aiGenerateModalClose = document.getElementById('aiGenerateModalClose');
+  const aiStepUpload = document.getElementById('aiStepUpload');
+  const aiStepLoading = document.getElementById('aiStepLoading');
+  const aiStepReview = document.getElementById('aiStepReview');
+  const aiProvider = document.getElementById('aiProvider');
+  const aiPastedText = document.getElementById('aiPastedText');
+  const aiQuizTitle = document.getElementById('aiQuizTitle');
+  const aiTargetGroup = document.getElementById('aiTargetGroup');
+  const aiMcqCount = document.getElementById('aiMcqCount');
+  const aiTfCount = document.getElementById('aiTfCount');
+  const aiExtractBtn = document.getElementById('aiExtractBtn');
+  const aiStatsBar = document.getElementById('aiStatsBar');
+  const aiQuestionsList = document.getElementById('aiQuestionsList');
+  const aiPublishBtn = document.getElementById('aiPublishBtn');
+  const aiBackBtn = document.getElementById('aiBackBtn');
+  let aiExtractedQuestions = [];
   const noResultsMessage = document.getElementById('noResultsMessage');
   const clearFiltersBtn = document.getElementById('clearFiltersBtn');
   const homeButton = document.getElementById('homeButton');
@@ -258,7 +284,7 @@
 
   // ===== Group Management =====
   function populateGroupSelects(){
-    const selects = [quizGroup, filterGroup, modalQuizGroup];
+    const selects = [quizGroup, filterGroup, modalQuizGroup, tplTargetGroup, aiTargetGroup];
     
     selects.forEach(select => {
       if (!select) return;
@@ -1282,6 +1308,296 @@
     }
   };
   document.addEventListener('keydown', window.__quizzesKeyHandler);
+
+  // ===== Quiz templates library =====
+  // Ready-made quizzes by subject/grade so a teacher doesn't build every
+  // quiz from a blank editor — "use template" creates a real quiz via the
+  // normal create-quiz + bulk-import-questions flow, then it's just a
+  // regular quiz the teacher can edit/customize like any other.
+  async function loadQuizTemplates() {
+    if (quizTemplates.length) return quizTemplates;
+    try {
+      const res = await fetch('/data/quiz-templates.json');
+      quizTemplates = await res.json();
+    } catch {
+      quizTemplates = [];
+      showToast('تعذّر تحميل مكتبة القوالب', 'error');
+    }
+    return quizTemplates;
+  }
+
+  function populateTemplateFilters() {
+    const subjects = [...new Set(quizTemplates.map(t => t.subject))];
+    const grades   = [...new Set(quizTemplates.map(t => t.grade))];
+    const fill = (select, values) => {
+      if (!select) return;
+      const cur = select.value;
+      select.querySelectorAll('option:not(:first-child)').forEach(o => o.remove());
+      values.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v; opt.textContent = v;
+        select.appendChild(opt);
+      });
+      select.value = cur;
+    };
+    fill(tplFilterSubject, subjects);
+    fill(tplFilterGrade, grades);
+  }
+
+  function renderTemplatesList() {
+    if (!templatesList) return;
+    const subjectFilter = tplFilterSubject?.value || '';
+    const gradeFilter    = tplFilterGrade?.value || '';
+    const filtered = quizTemplates.filter(t =>
+      (!subjectFilter || t.subject === subjectFilter) &&
+      (!gradeFilter || t.grade === gradeFilter)
+    );
+
+    if (!filtered.length) {
+      templatesList.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:24px;">لا توجد قوالب مطابقة</p>';
+      return;
+    }
+
+    templatesList.innerHTML = filtered.map(t => `
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; border:1px solid var(--border-color,#e5e7eb); border-radius:10px;">
+        <div>
+          <div style="font-weight:700; font-size:.92rem;">${esc(t.title)}</div>
+          <div style="font-size:.8rem; color:var(--text-muted); margin-top:2px;">${esc(t.subject)} · ${esc(t.grade)} · ${t.questions.length} سؤال</div>
+          <div style="font-size:.78rem; color:var(--text-muted); margin-top:4px;">${esc(t.description || '')}</div>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" data-use-template="${t.id}" style="white-space:nowrap;">استخدام القالب</button>
+      </div>
+    `).join('');
+  }
+
+  function esc(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+
+  async function useTemplate(templateId) {
+    const groupId = tplTargetGroup?.value;
+    if (!groupId) { showToast('اختر المجموعة الأول', 'warning'); return; }
+    const tpl = quizTemplates.find(t => t.id === templateId);
+    if (!tpl) return;
+
+    if (window.trialBlock && window.trialBlock('quizzes', quizzes.length)) return;
+
+    showLoading();
+    try {
+      if (!hasAPI || !window.api.createQuiz || !window.api.importQuestions) {
+        showToast('غير متاح بدون اتصال بالتطبيق', 'error');
+        return;
+      }
+      const newQuiz = createQuiz({ name: tpl.title, groupId });
+      const result = await window.api.createQuiz({ id: newQuiz.id, name: tpl.title, groupId, status: 'active' });
+      if (!result || result.message) { showToast('فشل إنشاء الاختبار من القالب', 'error'); return; }
+      const quizId = result.id || newQuiz.id;
+
+      const importRes = await window.api.importQuestions(quizId, tpl.questions);
+      if (!importRes || importRes.ok === false) { showToast('اتضاف الاختبار لكن فشل استيراد الأسئلة', 'error'); return; }
+
+      newQuiz.id = quizId;
+      quizzes.push(newQuiz);
+      updateStats();
+      render();
+      showToast(`تمت إضافة "${tpl.title}" بأسئلته (${tpl.questions.length}) بنجاح`, 'success');
+      if (templatesModal) templatesModal.style.display = 'none';
+    } finally {
+      hideLoading();
+    }
+  }
+
+  if (openTemplatesBtn) {
+    openTemplatesBtn.addEventListener('click', async () => {
+      await loadQuizTemplates();
+      populateTemplateFilters();
+      renderTemplatesList();
+      if (templatesModal) templatesModal.style.display = 'flex';
+    });
+  }
+  templatesModalClose?.addEventListener('click', () => { if (templatesModal) templatesModal.style.display = 'none'; });
+  templatesModal?.addEventListener('click', (e) => { if (e.target === templatesModal) templatesModal.style.display = 'none'; });
+  tplFilterSubject?.addEventListener('change', renderTemplatesList);
+  tplFilterGrade?.addEventListener('change', renderTemplatesList);
+  templatesList?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-use-template]');
+    if (btn) useTemplate(btn.dataset.useTemplate);
+  });
+
+  // ===== AI quiz generation =====
+  // Teacher uploads a lesson explanation (PDF) or a photo of a questions
+  // sheet; the server calls Groq (using the API key from Settings ← الذكاء
+  // الاصطناعي) to extract/generate MCQ questions. The result is shown here
+  // for review/editing — nothing is saved until "نشر الاختبار" is clicked,
+  // which reuses the same createQuiz + bulk-import-questions flow as the
+  // templates library above.
+  function resetAiModal() {
+    aiExtractedQuestions = [];
+    if (aiPastedText) aiPastedText.value = '';
+    if (aiQuizTitle) aiQuizTitle.value = '';
+    if (aiMcqCount) aiMcqCount.value = '8';
+    if (aiTfCount) aiTfCount.value = '2';
+    if (aiStatsBar) aiStatsBar.innerHTML = '';
+    if (aiStepUpload) aiStepUpload.style.display = 'block';
+    if (aiStepLoading) aiStepLoading.style.display = 'none';
+    if (aiStepReview) aiStepReview.style.display = 'none';
+  }
+
+  function statChip(label, value) {
+    return `<span style="padding:6px 14px; border-radius:99px; background:var(--sl-100,#f1f5f9); font-size:.82rem; font-weight:700; color:var(--text-primary,#111);">${esc(label)}: ${esc(String(value))}</span>`;
+  }
+
+  function renderAiStatsBar(meta) {
+    if (!aiStatsBar) return;
+    if (!meta) { aiStatsBar.innerHTML = ''; return; }
+    const chips = [
+      statChip('الإجمالي', meta.total ?? aiExtractedQuestions.length),
+      statChip('اختياري', meta.mcqCount ?? 0),
+      statChip('صح/خطأ', meta.tfCount ?? 0),
+    ];
+    if (meta.totalPages && meta.totalPages > 1) {
+      chips.push(statChip('الصفحات المقروءة', `${meta.pagesRead || meta.totalPages} من ${meta.totalPages}`));
+    }
+    if (meta.mode === 'scanned-images') {
+      chips.push(`<span style="padding:6px 14px; border-radius:99px; background:#fef3c7; color:#92400e; font-size:.82rem; font-weight:700;">📷 تم التعامل مع الملف كصور ممسوحة (مفيش نص جوّاه)</span>`);
+    }
+    aiStatsBar.innerHTML = chips.join('');
+  }
+
+  function renderAiQuestionsList() {
+    if (!aiQuestionsList) return;
+    aiQuestionsList.innerHTML = aiExtractedQuestions.map((q, qi) => `
+      <div class="ai-q-block" data-qi="${qi}" data-type="${q.type === 'tf' ? 'tf' : 'mcq'}" style="border:1px solid var(--border-color,#e5e7eb); border-radius:10px; padding:12px 14px;">
+        <div style="display:flex; align-items:flex-start; gap:8px; margin-bottom:8px;">
+          <span style="font-weight:700; color:var(--text-muted); white-space:nowrap; padding-top:8px;">س${qi + 1} <span style="font-weight:400; font-size:.75rem;">(${q.type === 'tf' ? 'صح/خطأ' : 'اختياري'})</span></span>
+          <input type="text" class="form-input ai-q-text" value="${esc(q.text)}" style="flex:1;">
+          <button type="button" class="btn btn-danger btn-sm ai-q-remove" title="حذف السؤال">✖</button>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:6px; margin-inline-start:32px;">
+          ${q.options.map((opt, oi) => `
+            <label style="display:flex; align-items:center; gap:8px;">
+              <input type="radio" name="ai-correct-${qi}" class="ai-q-correct" value="${oi}" ${q.correctAnswer === oi ? 'checked' : ''}>
+              <input type="text" class="form-input ai-q-option" value="${esc(opt)}" style="flex:1;" ${q.type === 'tf' ? 'readonly' : ''}>
+            </label>
+          `).join('')}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  async function extractAiQuestions() {
+    const pastedText = aiPastedText?.value?.trim();
+    const groupId = aiTargetGroup?.value;
+    const title = aiQuizTitle?.value?.trim();
+    const mcqCount = parseInt(aiMcqCount?.value, 10);
+    const tfCount = parseInt(aiTfCount?.value, 10);
+
+    if (!title) { showToast('اكتب اسم الاختبار', 'warning'); return; }
+    if (!groupId) { showToast('اختر المجموعة الأول', 'warning'); return; }
+    if (!pastedText) { showToast('الصق النص أولاً', 'warning'); return; }
+    if ((Number.isFinite(mcqCount) ? mcqCount : 8) + (Number.isFinite(tfCount) ? tfCount : 2) === 0) {
+      showToast('اختر عدد أسئلة أكبر من صفر (اختياري أو صح/خطأ)', 'warning'); return;
+    }
+
+    if (aiStepUpload) aiStepUpload.style.display = 'none';
+    if (aiStepLoading) aiStepLoading.style.display = 'block';
+
+    try {
+      const formData = new FormData();
+      formData.append('text', pastedText);
+      formData.append('provider', aiProvider?.value === 'gemini' ? 'gemini' : 'groq');
+      if (Number.isFinite(mcqCount)) formData.append('mcqCount', String(mcqCount));
+      if (Number.isFinite(tfCount)) formData.append('tfCount', String(tfCount));
+
+      const res = await authFetch('/api/quizzes/generate-questions', { method: 'POST', body: formData });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        showToast(data.message || 'فشل استخراج الأسئلة', 'error');
+        if (aiStepUpload) aiStepUpload.style.display = 'block';
+        if (aiStepLoading) aiStepLoading.style.display = 'none';
+        return;
+      }
+
+      aiExtractedQuestions = Array.isArray(data.questions) ? data.questions : [];
+      renderAiStatsBar(data.meta);
+      renderAiQuestionsList();
+      if (aiStepLoading) aiStepLoading.style.display = 'none';
+      if (aiStepReview) aiStepReview.style.display = 'block';
+    } catch (err) {
+      showToast('تعذّر الاتصال بالخادم لاستخراج الأسئلة', 'error');
+      if (aiStepUpload) aiStepUpload.style.display = 'block';
+      if (aiStepLoading) aiStepLoading.style.display = 'none';
+    }
+  }
+
+  function collectAiQuestionsFromForm() {
+    const blocks = aiQuestionsList ? Array.from(aiQuestionsList.querySelectorAll('.ai-q-block')) : [];
+    return blocks.map(block => {
+      const type = block.dataset.type === 'tf' ? 'tf' : 'mcq';
+      const text = block.querySelector('.ai-q-text')?.value?.trim() || '';
+      const options = Array.from(block.querySelectorAll('.ai-q-option')).map(inp => inp.value.trim());
+      const checked = block.querySelector('.ai-q-correct:checked');
+      const correctAnswer = checked ? parseInt(checked.value, 10) : 0;
+      return { type, text, options, correctAnswer, points: 1 };
+    }).filter(q => q.text && q.options.every(o => o));
+  }
+
+  async function publishAiQuiz() {
+    const groupId = aiTargetGroup?.value;
+    const title = aiQuizTitle?.value?.trim();
+    if (!groupId) { showToast('اختر المجموعة الأول', 'warning'); return; }
+    if (!title) { showToast('اكتب اسم الاختبار', 'warning'); return; }
+
+    const questions = collectAiQuestionsFromForm();
+    if (!questions.length) { showToast('لا توجد أسئلة صالحة للنشر', 'warning'); return; }
+
+    if (window.trialBlock && window.trialBlock('quizzes', quizzes.length)) return;
+
+    showLoading();
+    try {
+      if (!hasAPI || !window.api.createQuiz || !window.api.importQuestions) {
+        showToast('غير متاح بدون اتصال بالتطبيق', 'error');
+        return;
+      }
+      const newQuiz = createQuiz({ name: title, groupId });
+      const result = await window.api.createQuiz({ id: newQuiz.id, name: title, groupId, status: 'active' });
+      if (!result || result.message) { showToast('فشل إنشاء الاختبار', 'error'); return; }
+      const quizId = result.id || newQuiz.id;
+
+      const importRes = await window.api.importQuestions(quizId, questions);
+      if (!importRes || importRes.ok === false) { showToast('اتضاف الاختبار لكن فشل استيراد الأسئلة', 'error'); return; }
+
+      newQuiz.id = quizId;
+      quizzes.push(newQuiz);
+      updateStats();
+      render();
+      showToast(`تم نشر "${title}" بأسئلته (${questions.length}) بنجاح`, 'success');
+      if (aiGenerateModal) aiGenerateModal.style.display = 'none';
+      resetAiModal();
+    } finally {
+      hideLoading();
+    }
+  }
+
+  if (openAiGenerateBtn) {
+    openAiGenerateBtn.addEventListener('click', () => {
+      resetAiModal();
+      if (aiGenerateModal) aiGenerateModal.style.display = 'flex';
+    });
+  }
+  aiGenerateModalClose?.addEventListener('click', () => { if (aiGenerateModal) aiGenerateModal.style.display = 'none'; });
+  aiGenerateModal?.addEventListener('click', (e) => { if (e.target === aiGenerateModal) aiGenerateModal.style.display = 'none'; });
+  aiExtractBtn?.addEventListener('click', extractAiQuestions);
+  aiPublishBtn?.addEventListener('click', publishAiQuiz);
+  aiBackBtn?.addEventListener('click', () => {
+    if (aiStepReview) aiStepReview.style.display = 'none';
+    if (aiStepUpload) aiStepUpload.style.display = 'block';
+  });
+  aiQuestionsList?.addEventListener('click', (e) => {
+    const removeBtn = e.target.closest('.ai-q-remove');
+    if (removeBtn) removeBtn.closest('.ai-q-block')?.remove();
+  });
 
   // ===== Initialization =====
   let __quizzesInitDone = false;

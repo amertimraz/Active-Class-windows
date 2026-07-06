@@ -1,5 +1,5 @@
 // Simple Electron main process
-const { app, BrowserWindow, ipcMain, dialog, session, shell, desktopCapturer } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, session, shell, desktopCapturer, Notification } = require('electron');
 
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 // Interactive touchscreens (the app targets classroom smartboards): make sure
@@ -14,6 +14,7 @@ const fs = require('fs');
 const os = require('os');
 const XLSX = require('xlsx');
 const crypto = require('crypto');
+const AdmZip = require('adm-zip');
 const log = require('./server/logger').create('main');
 
 // ── License helpers ────────────────────────────────────────────────────────
@@ -94,6 +95,68 @@ let wheelWindow;
 let serverProcess;
 // Keep references to tool windows to prevent GC from closing them
 const toolWindows = new Map();
+
+// ── Backup helpers (module scope so both the periodic timer inside
+// createWindow() and the top-level before-quit handler share one
+// implementation — this is what let the on-close path silently drift out
+// of sync with a wrong DB path before) ──────────────────────────────────
+function makeBackupName(ext) {
+  const _n = new Date();
+  const stamp = `${_n.getFullYear()}-${String(_n.getMonth()+1).padStart(2,'0')}-${String(_n.getDate()).padStart(2,'0')}_${String(_n.getHours()).padStart(2,'0')}-${String(_n.getMinutes()).padStart(2,'0')}`;
+  return `activeclass_backup_${stamp}.${ext}`;
+}
+
+const AUTO_BACKUP_KEEP = 10; // retention: keep only the N most recent auto-backups per folder
+
+function cleanupOldBackups(folder) {
+  try {
+    const files = fs.readdirSync(folder)
+      .filter(f => /^activeclass_backup_.*\.acbak$/.test(f))
+      .map(f => ({ name: f, time: fs.statSync(path.join(folder, f)).mtimeMs }))
+      .sort((a, b) => b.time - a.time);
+    for (const old of files.slice(AUTO_BACKUP_KEEP)) {
+      fs.unlinkSync(path.join(folder, old.name));
+    }
+  } catch (e) {
+    log.warn(`[AutoBackup] Cleanup failed: ${e.message}`);
+  }
+}
+
+function notifyBackupFailure(context, message) {
+  log.warn(`[AutoBackup] ${context} failed: ${message}`);
+  try {
+    if (Notification.isSupported()) {
+      new Notification({
+        title: 'فشل النسخ الاحتياطي التلقائي',
+        body: `${context}: تعذّر إنشاء نسخة احتياطية. راجع الإعدادات ← النسخ الاحتياطي.`,
+      }).show();
+    }
+  } catch {}
+}
+
+// The live SQLite DB lives under <userData>/classroom-data/ (set as
+// APP_DATA_DIR for the server — see startServer() below), NOT directly in
+// userData. Backing up from the wrong path silently failed with ENOENT on
+// every periodic/on-close run before this fix.
+//
+// Produces the same .acbak ZIP format as the manual "تصدير نسخة احتياطية"
+// export (database + db.json together) so auto-backups are never missing
+// data compared to a manual one, and old backups beyond AUTO_BACKUP_KEEP
+// get pruned so the folder doesn't grow unbounded.
+function doBackup(folder) {
+  const dataDir = path.join(app.getPath('userData'), 'classroom-data');
+  const dbSrc   = path.join(dataDir, 'activeclass.db');
+  const jsonSrc = path.join(dataDir, 'db.json');
+  const dest    = path.join(folder, makeBackupName('acbak'));
+
+  const zip = new AdmZip();
+  zip.addLocalFile(dbSrc, '', 'activeclass.db');
+  if (fs.existsSync(jsonSrc)) zip.addLocalFile(jsonSrc, '', 'db.json');
+  zip.writeZip(dest);
+
+  cleanupOldBackups(folder);
+  return dest;
+}
 
 async function createWindow() {
   const { screen } = require('electron');
@@ -244,8 +307,33 @@ async function createWindow() {
     }, 30000);
   }
 
-  // Block popup windows from embedded games; open external URLs in system browser
+  // Same-origin popups (e.g. "معاينة الاختبار" opening quiz-view.html via
+  // window.open) should stay inside the app as a real Electron window instead
+  // of being treated as an external link — otherwise they get kicked out to
+  // the system browser, which breaks window.opener/closeQuizWindow() and
+  // looks like the quiz "opened in a separate web page".
+  // Everything else (embedded games, external links) still opens in the
+  // system browser as before.
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    try {
+      const parsed = new URL(url);
+      if (parsed.origin === APP_URL) {
+        return {
+          action: 'allow',
+          overrideBrowserWindowOptions: {
+            width: 1200,
+            height: 800,
+            autoHideMenuBar: true,
+            webPreferences: {
+              nodeIntegration: false,
+              contextIsolation: true,
+              sandbox: false,
+              preload: path.join(__dirname, 'preload.js')
+            }
+          }
+        };
+      }
+    } catch {}
     if (url.startsWith('http://') || url.startsWith('https://')) {
       shell.openExternal(url);
     }
@@ -1121,20 +1209,12 @@ app.whenReady().then(async () => {
     return { canceled: false, path: result.filePaths[0] };
   });
 
-  // Auto-backup helpers
+  // Auto-backup config helper (implementation of doBackup/cleanupOldBackups/
+  // notifyBackupFailure lives at module scope below, shared with the
+  // top-level before-quit handler).
   const AUTO_BACKUP_CFG_FILE = () => path.join(app.getPath('userData'), 'ac_auto_backup.json');
   function readAutoBackupCfg() {
     try { return JSON.parse(fs.readFileSync(AUTO_BACKUP_CFG_FILE(), 'utf8')); } catch { return null; }
-  }
-  function makeBackupName() {
-    const _n = new Date();
-    return `activeclass_backup_${_n.getFullYear()}-${String(_n.getMonth()+1).padStart(2,'0')}-${String(_n.getDate()).padStart(2,'0')}_${String(_n.getHours()).padStart(2,'0')}-${String(_n.getMinutes()).padStart(2,'0')}.db`;
-  }
-  function doBackup(folder) {
-    const src  = path.join(app.getPath('userData'), 'activeclass.db');
-    const dest = path.join(folder, makeBackupName());
-    fs.copyFileSync(src, dest);
-    return dest;
   }
 
   let _autoBackupTimer = null;
@@ -1147,7 +1227,7 @@ app.whenReady().then(async () => {
     if (cfg.periodic && cfg.folder && cfg.interval > 0) {
       _autoBackupTimer = setInterval(() => {
         try { log.info(`[AutoBackup] Periodic → ${doBackup(cfg.folder)}`); }
-        catch (e) { log.warn(`[AutoBackup] Periodic failed: ${e.message}`); }
+        catch (e) { notifyBackupFailure('النسخ الدوري', e.message); }
       }, cfg.interval * 60 * 1000);
     }
   });
@@ -1376,7 +1456,7 @@ app.whenReady().then(async () => {
     if (!lic) return { valid: false, licensed: false };
     if (!isLicenseValid(lic)) return { valid: false, licensed: false, expired: true, expiresAt: lic.expiresAt };
     const daysLeft = Math.ceil((new Date(lic.expiresAt) - new Date()) / 86400000);
-    return { valid: true, licensed: true, name: lic.name || '', plan: lic.plan, expiresAt: lic.expiresAt, daysLeft, totalDays: lic.totalDays || 365, key: lic.key, phone: lic.phone, machineId: lic.machineId };
+    return { valid: true, licensed: true, name: lic.name || '', plan: lic.plan, expiresAt: lic.expiresAt, issuedAt: lic.issuedAt, daysLeft, totalDays: lic.totalDays || 365, key: lic.key, phone: lic.phone, machineId: lic.machineId };
   });
 
   ipcMain.handle('refresh-license', async () => {
@@ -1392,12 +1472,12 @@ app.whenReady().then(async () => {
         const updated = { ...lic, ...result, key: lic.key, machineId: lic.machineId, cachedAt: new Date().toISOString() };
         writeLicenseFile(updated);
         const daysLeft = Math.ceil((new Date(updated.expiresAt) - new Date()) / 86400000);
-        return { valid: true, licensed: true, name: updated.name, plan: updated.plan, expiresAt: updated.expiresAt, daysLeft, totalDays: updated.totalDays || 365, key: updated.key, phone: updated.phone, machineId: updated.machineId };
+        return { valid: true, licensed: true, name: updated.name, plan: updated.plan, expiresAt: updated.expiresAt, issuedAt: updated.issuedAt, daysLeft, totalDays: updated.totalDays || 365, key: updated.key, phone: updated.phone, machineId: updated.machineId };
       }
     } catch {}
     // Offline — return cached data
     const daysLeft = Math.ceil((new Date(lic.expiresAt) - new Date()) / 86400000);
-    return { valid: true, licensed: true, name: lic.name, plan: lic.plan, expiresAt: lic.expiresAt, daysLeft, totalDays: lic.totalDays || 365, key: lic.key, phone: lic.phone, machineId: lic.machineId, offline: true };
+    return { valid: true, licensed: true, name: lic.name, plan: lic.plan, expiresAt: lic.expiresAt, issuedAt: lic.issuedAt, daysLeft, totalDays: lic.totalDays || 365, key: lic.key, phone: lic.phone, machineId: lic.machineId, offline: true };
   });
 
   // ── Trial IPC ────────────────────────────────────────────────────────────
@@ -1792,14 +1872,10 @@ app.on('before-quit', () => {
     const cfgPath = path.join(app.getPath('userData'), 'ac_auto_backup.json');
     const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
     if (!cfg?.onClose || !cfg?.folder) return;
-    const _n   = new Date();
-    const name = `activeclass_backup_${_n.getFullYear()}-${String(_n.getMonth()+1).padStart(2,'0')}-${String(_n.getDate()).padStart(2,'0')}_${String(_n.getHours()).padStart(2,'0')}-${String(_n.getMinutes()).padStart(2,'0')}.db`;
-    const src  = path.join(app.getPath('userData'), 'activeclass.db');
-    const dest = path.join(cfg.folder, name);
-    fs.copyFileSync(src, dest);
+    const dest = doBackup(cfg.folder);
     log.info(`[AutoBackup] On-close backup saved → ${dest}`);
   } catch (e) {
-    if (e.code !== 'ENOENT') log.warn(`[AutoBackup] On-close failed: ${e.message}`);
+    if (e.code !== 'ENOENT') notifyBackupFailure('نسخة الإغلاق', e.message);
   }
 });
 

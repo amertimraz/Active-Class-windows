@@ -150,7 +150,14 @@
       : Math.min(0, Math.max(wrap.clientHeight - bh, panY));
   }
 
-  new ResizeObserver(resize).observe(wrap);
+  // The SPA router swaps #app's innerHTML on navigation without ever
+  // tearing down the previous page's script — so without this, leaving the
+  // whiteboard leaves this observer alive, and a later resize/reflow on
+  // whatever page loaded next fires `resize()` against DOM elements
+  // (#wbZoomLabel etc.) that no longer exist, throwing on null.
+  const boardResizeObserver = new ResizeObserver(resize);
+  boardResizeObserver.observe(wrap);
+  window.addEventListener('hashchange', () => boardResizeObserver.disconnect(), { once: true });
 
   /* ── Transform: purely CSS — the canvas bitmaps are fixed-resolution and
      never redrawn/rescaled by this, so panning/zooming can't lose or blur
@@ -671,8 +678,10 @@
 
   function updateZoomLabel() {
     const t = Math.round(scale * 100) + '%';
-    document.getElementById('wbZoomLabel').textContent  = t;
-    document.getElementById('wbZoomStatus').textContent = t;
+    const labelEl = document.getElementById('wbZoomLabel');
+    const statusEl = document.getElementById('wbZoomStatus');
+    if (labelEl) labelEl.textContent = t;
+    if (statusEl) statusEl.textContent = t;
   }
 
   document.getElementById('wbZoomIn').addEventListener('click',    () => doZoom(1.2, wrap.clientWidth/2, wrap.clientHeight/2));
@@ -910,6 +919,49 @@
   const FS_OFF = `<path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>`;
 
   const wbRoot = document.querySelector('.wb-root');
+
+  /* ── Manual tool-size override (floating +/− buttons) ──
+     The automatic clamp()-based sizing only shrinks buttons/icons down to a
+     fixed floor; on a small/short screen with many tool groups the overflow
+     just scrolls out of view instead of shrinking further. These buttons
+     let the teacher scale the whole toolbar/sidebar past that floor,
+     persisted across sessions per-device. */
+  (function setupUiScaleControl() {
+    const UI_SCALE_KEY = 'wb_ui_scale';
+    const UI_SCALE_MIN = 0.55;
+    const UI_SCALE_MAX = 1.15;
+    const UI_SCALE_STEP = 0.05;
+
+    const upBtn = document.getElementById('wbUiScaleUp');
+    const downBtn = document.getElementById('wbUiScaleDown');
+    const resetBtn = document.getElementById('wbUiScaleReset');
+    if (!wbRoot || !upBtn || !downBtn || !resetBtn) return;
+
+    let scale = 1;
+    try {
+      const saved = parseFloat(localStorage.getItem(UI_SCALE_KEY));
+      if (Number.isFinite(saved) && saved >= UI_SCALE_MIN && saved <= UI_SCALE_MAX) scale = saved;
+    } catch {}
+
+    function applyScale() {
+      wbRoot.style.setProperty('--wb-ui-scale', String(scale));
+      try { localStorage.setItem(UI_SCALE_KEY, String(scale)); } catch {}
+    }
+    applyScale();
+
+    upBtn.addEventListener('click', () => {
+      scale = Math.min(UI_SCALE_MAX, Math.round((scale + UI_SCALE_STEP) * 100) / 100);
+      applyScale();
+    });
+    downBtn.addEventListener('click', () => {
+      scale = Math.max(UI_SCALE_MIN, Math.round((scale - UI_SCALE_STEP) * 100) / 100);
+      applyScale();
+    });
+    resetBtn.addEventListener('click', () => {
+      scale = 1;
+      applyScale();
+    });
+  })();
 
   fsBtn.addEventListener('click', () => {
     if (!document.fullscreenElement) {

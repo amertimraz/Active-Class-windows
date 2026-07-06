@@ -879,6 +879,55 @@ body::before {
   border-color: var(--quiz-error);
 }
 
+/* ===== Quick Tools (header) ===== */
+.qv-quick-tools {
+  position: relative;
+}
+
+#qvQtToggle[aria-expanded="true"] {
+  filter: brightness(0.92);
+}
+
+.qv-qt-menu {
+  position: fixed;
+  min-width: 190px;
+  background: var(--quiz-card);
+  border: 1px solid var(--quiz-border);
+  border-radius: 12px;
+  box-shadow: var(--quiz-shadow-lg);
+  padding: 6px;
+  z-index: 3000;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.qv-qt-menu[hidden] {
+  display: none;
+}
+
+.qv-qt-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--quiz-fg);
+  text-align: start;
+  transition: background 0.12s;
+}
+
+.qv-qt-item:hover {
+  background: var(--quiz-primary-bg);
+  color: var(--quiz-primary);
+}
+
 .ghost {
   color: var(--quiz-muted);
   font-size: 15px;
@@ -1254,6 +1303,7 @@ body::before {
 .result-value {
   font-weight: 800;
   font-size: 20px;
+  color: var(--quiz-fg);
 }
 
 .result-value.grade {

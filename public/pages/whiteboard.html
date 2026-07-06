@@ -569,6 +569,21 @@
     </div>
   </div>
 
+  <!-- أزرار عائمة لتصغير/تكبير حجم الأدوات (الشريط العلوي + الجانبي) يدويًا،
+       لما التصغير التلقائي (clamp) ميكفيش ويحصل تكدّس/اختفاء أدوات تحت
+       سكرول مخفي على شاشات صغيرة. الاختيار بيتحفظ ويفضل زي ما هو. -->
+  <div class="wb-ui-scale-ctrl" title="حجم الأدوات">
+    <button class="wb-btn" id="wbUiScaleUp" title="تكبير حجم الأدوات" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+    <button class="wb-btn" id="wbUiScaleReset" title="حجم الأدوات الافتراضي" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+    </button>
+    <button class="wb-btn" id="wbUiScaleDown" title="تصغير حجم الأدوات" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+  </div>
+
   <!-- شريط الحالة -->
   <div class="wb-status">
     <span id="wbToolLabel">قلم</span>

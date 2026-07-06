@@ -293,13 +293,23 @@
     $('btnActivateSpinner')?.classList.toggle('hidden', !on);
   }
 
+  // Prefer the license's real original span (issuedAt → expiresAt) over the
+  // separately-cached totalDays, which defaults to 365 whenever missing —
+  // that silently clips the bar at 100% for a whole year on any
+  // longer-than-a-year license even as the remaining-days count keeps
+  // ticking down correctly.
+  function licenseTotalDays(lic, currentExpiresAt) {
+    if (lic.issuedAt) return Math.max(1, Math.round((new Date(currentExpiresAt) - new Date(lic.issuedAt)) / 86400000));
+    return lic.totalDays || 365;
+  }
+
   // ── Render states ─────────────────────────────────────────────────────────
   function showSuccessState(data) {
     $('successName').textContent   = data.name   || '';
     $('successPlan').textContent   = data.plan   || 'Pro';
     $('successExpiry').textContent = formatDate(data.expiresAt);
     $('successDays').textContent   = `${data.daysLeft} يوم`;
-    const pct = Math.min(100, Math.round((data.daysLeft / (data.totalDays || 365)) * 100));
+    const pct = Math.min(100, Math.round((data.daysLeft / licenseTotalDays(data, data.expiresAt)) * 100));
     $('successDaysPct').textContent = pct + '%';
     setTimeout(() => { if ($('successDaysBar')) $('successDaysBar').style.width = pct + '%'; }, 100);
     showState('stateSuccess');
@@ -307,7 +317,7 @@
 
   function showAlreadyActiveState(lic) {
     const days = daysLeft(lic.expiresAt);
-    const pct  = Math.min(100, Math.round((days / (lic.totalDays || 365)) * 100));
+    const pct  = Math.min(100, Math.round((days / licenseTotalDays(lic, lic.expiresAt)) * 100));
     $('activeName').textContent    = lic.name    || 'المستخدم';
     $('activePlan').textContent    = lic.plan    || 'Pro';
     $('activeExpiry').textContent  = formatDate(lic.expiresAt);

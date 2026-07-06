@@ -7,7 +7,7 @@ const crypto = require('crypto');
 const os = require('os');
 const AdmZip = require('adm-zip');
 const { db, openDB, closeDB } = require('./sqlite');
-const { generateQuizFromPDF } = require('./ai-service');
+const { generateQuizFromPDF, extractQuizQuestions } = require('./ai-service');
 const log = require('./logger').create('server');
 
 // ── Firebase Admin (shared Firestore for license requests) ─────────────────
@@ -181,6 +181,12 @@ const pdfUpload = multer({
   storage,
   limits: { fileSize: MAX_UPLOAD_BYTES, files: 1 },
   fileFilter: extensionFilter(new Set(['.pdf'])),
+});
+
+const aiQuestionsUpload = multer({
+  storage,
+  limits: { fileSize: MAX_UPLOAD_BYTES, files: 1 },
+  fileFilter: extensionFilter(new Set(['.pdf', '.txt', '.png', '.jpg', '.jpeg', '.webp'])),
 });
 
 // Translate multer/file-filter rejections into clean 400s instead of 500s.
@@ -744,6 +750,64 @@ app.post('/api/generate-ai-quiz', authenticateTeacher, handleUpload(pdfUpload.si
     log.error('Stack:', error.stack);
     log.error('===========================');
     res.status(500).json({ message: error.message || 'حدث خطأ أثناء معالجة الملف.' });
+  }
+});
+
+// Extract quiz questions from an uploaded file (lesson explanation or a
+// photographed/typed questions sheet) using the Groq API key from settings.
+// Returns the extracted questions for the teacher to review — it does NOT
+// create/save a quiz; that happens separately once the teacher confirms.
+app.post('/api/quizzes/generate-questions', authenticateTeacher, handleUpload(aiQuestionsUpload.single('file')), async (req, res) => {
+  const pastedText = typeof req.body.text === 'string' ? req.body.text.trim() : '';
+  if (!req.file && !pastedText) {
+    return res.status(400).json({ message: 'الرجاء رفع ملف أو لصق نص (PDF أو صورة أو نص).' });
+  }
+
+  // Pasted text reuses the exact same plain-text extraction pathway as an
+  // uploaded .txt file — just write it out to a temp file first — so all
+  // the existing chunking/top-up/provider logic works unchanged.
+  let filePath = req.file?.path;
+  let mimeType = req.file?.mimetype;
+  let tempTextFile = null;
+  if (!req.file && pastedText) {
+    tempTextFile = path.join(uploadsDir, `pasted-${crypto.randomUUID()}.txt`);
+    await fs.mkdir(uploadsDir, { recursive: true }).catch(() => {});
+    await fs.writeFile(tempTextFile, pastedText, 'utf8');
+    filePath = tempTextFile;
+    mimeType = 'text/plain';
+  }
+
+  try {
+    const provider = req.body.provider === 'gemini' ? 'gemini' : 'groq';
+    const settingKey = provider === 'gemini' ? 'gemini_api_key' : 'groq_api_key';
+    const settingRow = db.prepare('SELECT value FROM settings WHERE key = ?').get(settingKey);
+    let apiKey = '';
+    if (settingRow) {
+      try { apiKey = JSON.parse(settingRow.value); } catch { apiKey = settingRow.value; }
+    }
+
+    if (!apiKey) {
+      const providerLabel = provider === 'gemini' ? 'Google Gemini' : 'Groq';
+      return res.status(400).json({ message: `مفتاح API الخاص بـ ${providerLabel} غير موجود. أضفه من الإعدادات ← الذكاء الاصطناعي.` });
+    }
+
+    const mcqCount = parseInt(req.body.mcqCount, 10);
+    const tfCount = parseInt(req.body.tfCount, 10);
+    const maxPages = parseInt(req.body.maxPages, 10);
+    const counts = {
+      mcqCount: Number.isFinite(mcqCount) ? mcqCount : undefined,
+      tfCount: Number.isFinite(tfCount) ? tfCount : undefined,
+      maxPages: Number.isFinite(maxPages) ? maxPages : undefined,
+    };
+
+    const { questions, meta } = await extractQuizQuestions(filePath, mimeType, apiKey, counts, provider);
+    res.json({ questions, meta });
+  } catch (error) {
+    log.error('AI question extraction error:', error.message);
+    res.status(500).json({ message: error.message || 'حدث خطأ أثناء معالجة الملف.' });
+  } finally {
+    if (req.file) fs.unlink(req.file.path).catch(() => {});
+    if (tempTextFile) fs.unlink(tempTextFile).catch(() => {});
   }
 });
 
@@ -1715,7 +1779,7 @@ app.post('/api/quizzes/:id/questions/bulk', authenticateTeacher, (req, res) => {
         insert.run(
           crypto.randomUUID(),
           id,
-          'mcq',
+          q.type === 'tf' ? 'tf' : 'mcq',
           String(q.text).trim(),
           JSON.stringify(q.options),
           q.correctAnswer,
@@ -2167,7 +2231,7 @@ app.post('/api/license/verify', async (req, res) => {
     return res.json({ ok: false, message: 'هذا المفتاح مفعّل على جهاز آخر — تواصل مع الدعم' });
   }
   const daysLeft = Math.ceil((new Date(lic.expiresAt) - new Date()) / 86400000);
-  res.json({ ok: true, name: lic.name, phone: lic.phone, plan: lic.plan || 'Pro', expiresAt: lic.expiresAt, daysLeft, totalDays: lic.totalDays || 365 });
+  res.json({ ok: true, name: lic.name, phone: lic.phone, plan: lic.plan || 'Pro', expiresAt: lic.expiresAt, issuedAt: lic.issuedAt, daysLeft, totalDays: lic.totalDays || 365 });
 });
 
 // Create license — admin only

@@ -153,11 +153,21 @@
 .quiz-toolbar {
   padding: 10px 16px !important;
   display: flex !important;
-  flex-direction: row !important;
-  flex-wrap: nowrap !important;
+  flex-direction: column !important;
+  gap: 10px;
+}
+
+.toolbar-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0;
-  overflow: hidden;
+}
+
+.toolbar-row-secondary {
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
 }
 
 .toolbar-group {
@@ -168,7 +178,6 @@
   gap: 6px;
   flex: 1 1 0;
   min-width: 0;
-  overflow: hidden;
 }
 
 .toolbar-sep {
