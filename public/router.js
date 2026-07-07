@@ -1150,16 +1150,36 @@
       '/game-engine', '/game-engine/word-match', '/game-engine/edu-platformer', '/external-game'];
     const isGameRoute = gameRoutes.includes(hashPath);
     const isEngineRoute = hashPath === '/game-engine' || hashPath.startsWith('/game-engine/');
+    const isWhiteboardRoute = hashPath === '/whiteboard';
+    // The whiteboard keeps the app header visible (per user request) but
+    // still needs #app sized to the space below the header — same pattern
+    // as .game-page — otherwise its own toolbar assumes full-viewport
+    // height and visually collides with the header/window controls above it.
+    const isImmersiveRoute = isEngineRoute;
 
     if (!isGameRoute) {
       document.body.classList.remove('game-page');
-      document.body.classList.remove('header-hidden');
       const prevCss = document.getElementById('dynamic-page-css');
       if (prevCss) prevCss.remove();
     }
+    if (!isImmersiveRoute) {
+      document.body.classList.remove('header-hidden');
+    }
 
-    if (isEngineRoute) {
+    if (isImmersiveRoute) {
       document.body.classList.add('header-hidden');
+    }
+
+    document.body.classList.toggle('whiteboard-page', isWhiteboardRoute);
+
+    // geFloatingControls (back arrow + fullscreen) is a game-engine-only
+    // overlay — it duplicates the whiteboard's own fullscreen button and
+    // its "ملء الشاشة"/history navigation, so only show it for game-engine
+    // routes, not for the whiteboard even though both hide the shell header.
+    if (!isEngineRoute) {
+      document.body.classList.remove('ge-active');
+    } else {
+      document.body.classList.add('ge-active');
     }
 
     updateActiveNavLink();

@@ -11,25 +11,39 @@ const { generateQuizFromPDF, extractQuizQuestions } = require('./ai-service');
 const log = require('./logger').create('server');
 
 // ── Firebase Admin (shared Firestore for license requests) ─────────────────
-const SERVICE_ACCOUNT = {
-  type: 'service_account',
-  project_id: 'active-class-windows',
-  private_key_id: '009582df6e931b96d2d9cc913d2e663d1f7917ac',
-  private_key: '-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQD1uIigBNM1QQSL\ny6o6618gQ85rQd87RWBpyeOpVTgnEQjQmBBPgEiZzyFdd44PGMHHi/EsbDzEoIic\n40Jl+s8tosXxfYXt3kKtWRsnTGE0ci1Ji/Uj5xgehWTQ5etVmQIFwEDHA9aWbw6d\noXhJxIUCTCXUwKkE/izYPFVbtgkJLvzmBTMBNC83vH+AjZFowEPrXj+Cfzcs/kSU\nLVSuxDPFc53PDWDJlWUmqURXv6pFJHW865fun2gb95JY4xsBp47LK+i3tjegn2rf\nD/TkcYZW6agNW4UAPSBdbwfCXPIa4U7OXr3kwivfKQgAhtjb3FqoLqjeX4Sq9mjl\nDq7Y2ORZAgMBAAECggEADpy06TkoOzI83DhWDO9qxn8pwwiVhw+K2neiRXNXJcGW\nUds9GxEwoA7od8ewh7bL7Tsl8iOUoIfAX/4GuIxH7jmQBlqV0I2nTuot2nIpFKaW\niVlckFBBh60cj+ygSESTUXa7k2onxGXhy19rCQ357+dJ16NGWdDop0o9NDk4w9Ys\n6BH1GceKCqCsdfEo7bxTEM36GLt3fidH7Y0ZlzK0aRXw9zWBLTHcs9oXQSHAB+rT\nlwgboPOUa1dw1YxjfKFR2Xfy27my4GMw2WGjmF975x3TQs4qFv1e8tR1WAPOMOen\naSj88UgppW+zvMT8tcqEd14cpx+2gt0Cd8w6jZ1KoQKBgQD+o9tIP8CEi7qP78Ve\niLB+XX2qqv3AcbpXsagRGa98Mgl3xdNEFhCzOeig7aoGiW0b+4Lq19X7II1vCoaz\n5qI2Lr90BNmv7I/TELufpjJH6aDl9l64jlS3UG8swj+fiIiYgctM8HiEz6MN04qU\n9TBKKWdhKOZS2pW/bjK/jfRLSQKBgQD3CHuWh2hpvtRLMRm5p/bjpZ7VuifeLmF+\n5wSwKQ4bvxLYwu1UxMqkceGn2Z8QMEFCvcyssORdstKmv0d+1Xh/VMnXf1engb1v\neB2ViKplByy3vEc2fK7jgvrieWFHbIEfNspymFnyoJ7He78HkLz2RvBmJ+jarLlz\nEkdkgWhAkQKBgQCldCRsOnhF52COW9YbiadcRDT+KuJ8I6lXh6jTi6P5h62dNF4E\nlG2/drYPsr1SSAMsNm0nWJzB8rHTX7yMsiPeHtvpb6leZNBC7VFr95oeHdCc+0sq\nkdi7z7idFY4vg5B1v4gwcuNsMFobBsO56+K3nVV9zQxy83JvkxPIYV1FeQKBgExV\nX7Mc9mOupvTxICzhPQYNGG6cjlM2a8QF6MnydbyXJ2C5oxKNmLyFwB/YvDEJaDES\naxt1satOZY9HDfWgSxK1hYVEgTZufbXjHOknCNgdBnFkCXFJx9TflVzD+w5R9fhK\nOvZ8I1c40Ld9goL485r6QrCeZnKj6s4m+M6Suj8xAoGBAKrk8+dN87zUBUBeeq/D\n3lvllBJi6DP70m8MBPY5gMHCaCWEIeSRTZCcOKAzsgpfQ6/UZB5dAVZP5ukjksRS\n0pjlx8aCbGCyAT5oNTqfIFLY27z0vsSPngSUB38BfNGP8kbldEdkPt8LHvX76aWC\nsi+m96AERVpRlHbgihqvLnkf\n-----END PRIVATE KEY-----\n',
-  client_email: 'firebase-adminsdk-fbsvc@active-class-windows.iam.gserviceaccount.com',
-  client_id: '117664907079305617314',
-  auth_uri: 'https://accounts.google.com/o/oauth2/auth',
-  token_uri: 'https://oauth2.googleapis.com/token',
-};
+// SECURITY: this used to be a hardcoded service-account private key baked
+// directly into this file — which electron-builder then shipped inside
+// every installer, extractable by anyone via `asar extract` on the
+// distributed app. That key grants full admin read/write access to the
+// Firestore project and must never ship to end-user machines. It is now
+// loaded ONLY from an environment variable that you set on your own
+// machine/build server — it is never committed to the repo or bundled into
+// the app. If it's absent (as it will be for every end-user install),
+// Firestore-backed license sync is simply disabled and the code falls back
+// to the local licenses.json file (see readLicenses/writeLicenses below).
+//
+// IMPORTANT: the previously-hardcoded key was exposed in git history and in
+// every build shipped so far — rotate/revoke it in the Firebase console
+// (Project Settings → Service Accounts) and generate a new one, then set it
+// via FIREBASE_SERVICE_ACCOUNT_JSON (the full JSON key file contents, as a
+// single-line string) only in your own local/admin environment.
+function loadServiceAccount() {
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  if (!raw) return null;
+  try { return JSON.parse(raw); }
+  catch (e) { log.error('FIREBASE_SERVICE_ACCOUNT_JSON is not valid JSON:', e.message); return null; }
+}
 
 let _firestore = null;
 function getFirestore() {
   if (_firestore) return _firestore;
+  const serviceAccount = loadServiceAccount();
+  if (!serviceAccount) return null; // not configured on this machine — callers fall back to local storage
   try {
     // firebase-admin v14+ uses modular API
     const { initializeApp, getApps, cert } = require('firebase-admin/app');
     const { getFirestore: _getFs } = require('firebase-admin/firestore');
-    if (!getApps().length) initializeApp({ credential: cert(SERVICE_ACCOUNT) });
+    if (!getApps().length) initializeApp({ credential: cert(serviceAccount) });
     _firestore = _getFs();
   } catch (e) {
     log.error('Firebase init failed:', e.message);
@@ -2133,14 +2147,27 @@ app.get('/api/trial-status', async (req, res) => {
 const LICENSES_FILE  = path.join(dataDir, 'licenses.json');
 const ADMIN_CFG_FILE = path.join(dataDir, 'admin-config.json');
 
+// SECURITY: this used to fall back to a hardcoded default password
+// ('admin2025') whenever no admin-config.json existed — which is the case
+// on every fresh end-user install, since that file is never shipped or
+// created automatically. A guessable hardcoded default defeats the purpose
+// of the password check. Now: no config file and no ADMIN_PASS env var
+// means there is no valid password at all, so licenseAdminAuth denies
+// every request (fail-closed) instead of silently accepting a known
+// default.
 function getAdminPass() {
-  try { return JSON.parse(fssync.readFileSync(ADMIN_CFG_FILE, 'utf8')).pass || 'admin2025'; }
-  catch { return 'admin2025'; }
+  try {
+    const configured = JSON.parse(fssync.readFileSync(ADMIN_CFG_FILE, 'utf8')).pass;
+    if (configured) return configured;
+  } catch {}
+  return process.env.ADMIN_PASS || null;
 }
 
 function licenseAdminAuth(req, res, next) {
+  const expected = getAdminPass();
+  if (!expected) return res.status(503).json({ ok: false, message: 'لوحة الإدارة غير مُفعّلة على هذا الجهاز.' });
   const pass = req.headers['x-admin-pass'] || '';
-  if (pass !== getAdminPass()) return res.status(401).json({ ok: false, message: 'غير مصرح' });
+  if (pass !== expected) return res.status(401).json({ ok: false, message: 'غير مصرح' });
   next();
 }
 

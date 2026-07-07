@@ -219,7 +219,7 @@ class SettingsManager {
             database:   ['النسخ الاحتياطي', 'حفظ واسترجاع بيانات التطبيق'],
             interface:  ['الذكاء الاصطناعي', 'إعداد مفتاح Groq API'],
             license:    ['الترخيص', 'معلومات المستخدم والترخيص'],
-            about:      ['حول البرنامج', 'معلومات عن Active Class'],
+            about:      ['تحديث البرنامج', 'معلومات عن Active Class'],
         };
         if (tabName === 'license') this._fillLicenseTab();
         const t = titles[tabName];
@@ -655,6 +655,10 @@ class SettingsManager {
             this.switchTab('database');
             this._loadStats();
             this._initResetAll();
+            // Once the teacher has opened settings, the update notice has
+            // done its job — clear the header badge either way.
+            const badge = document.getElementById('settingsUpdateBadge');
+            if (badge) badge.style.display = 'none';
         }
     }
 
@@ -834,6 +838,11 @@ SettingsManager.prototype._initAboutTab = function () {
                         dlBtn.textContent = 'جارٍ التحميل…';
                         api.downloadUpdate();
                     };
+                    // This listener is registered once globally (settings.js
+                    // loads on every page), so this fires and is visible
+                    // no matter which page the teacher is on — not just
+                    // when the settings modal happens to be open.
+                    this._showUpdateAvailableNotice(msg.version);
                     break;
 
                 case 'progress':
@@ -871,6 +880,42 @@ SettingsManager.prototype._initAboutTab = function () {
             statusText.textContent = 'ميزة التحديث تعمل فقط في النسخة المثبّتة.';
         }
     });
+};
+
+// Visible app-wide (red dot on the header settings icon + a dismissible
+// toast), not just inside the settings modal's About tab — so a teacher
+// finds out about a new version no matter what page they're on, instead of
+// only learning about it if they happen to open Settings ← About.
+SettingsManager.prototype._showUpdateAvailableNotice = function (version) {
+    const badge = document.getElementById('settingsUpdateBadge');
+    if (badge) badge.style.display = 'block';
+
+    if (document.getElementById('_updateToast')) return; // already showing one
+
+    const toast = document.createElement('div');
+    toast.id = '_updateToast';
+    toast.style.cssText = `
+        position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+        background:#0f172a;color:#f1f5f9;border-radius:12px;
+        padding:14px 18px;min-width:300px;max-width:90vw;
+        box-shadow:0 8px 32px rgba(0,0,0,.45);z-index:99999;
+        font-family:inherit;direction:rtl;display:flex;align-items:center;gap:12px;
+        border:1px solid rgba(99,102,241,.4);
+    `;
+    toast.innerHTML = `
+        <span style="font-size:20px;flex-shrink:0">🎉</span>
+        <span style="flex:1;font-size:13.5px;font-weight:600">يتوفر إصدار جديد (${version}) — جاهز للتحميل والتثبيت.</span>
+        <button id="_updateToastOpen" style="background:#0d9488;border:none;color:#fff;border-radius:8px;padding:7px 14px;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit">تحديث الآن</button>
+        <button id="_updateToastClose" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:16px;line-height:1;flex-shrink:0">✕</button>
+    `;
+    document.body.appendChild(toast);
+
+    document.getElementById('_updateToastClose').onclick = () => toast.remove();
+    document.getElementById('_updateToastOpen').onclick = () => {
+        toast.remove();
+        this.showModal();
+        setTimeout(() => this.switchTab('about'), 50);
+    };
 };
 // ── End About / Update helper ────────────────────────────────────────────
 

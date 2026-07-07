@@ -1439,8 +1439,8 @@
     });
   });
 
-  /* Text font size — separate from brush size, see wbTextSizeBtn */
-  const textSizeBtn = document.getElementById('wbTextSizeBtn');
+  /* Text font size — separate from brush size, see wbTextToolBtn */
+  const textSizeBtn = document.getElementById('wbTextToolBtn');
   document.querySelectorAll('#wbTextSizePop .wb-size-opt').forEach(opt => {
     opt.addEventListener('click', () => {
       document.querySelectorAll('#wbTextSizePop .wb-size-opt').forEach(o => o.classList.remove('active'));
@@ -1489,7 +1489,7 @@
     pop.addEventListener('click', e => e.stopPropagation());
   }
   wirePropPopover('wbSizeBtn', 'wbSizePop');
-  wirePropPopover('wbTextSizeBtn', 'wbTextSizePop');
+  wirePropPopover('wbTextToolBtn', 'wbTextSizePop');
   wirePropPopover('wbShapeBtn', 'wbShapePop');
   wirePropPopover('wbColorBtn', 'wbColorPop');
   wirePropPopover('wbSbBgBtn', 'wbSbBgPop');

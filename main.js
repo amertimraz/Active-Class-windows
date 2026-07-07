@@ -1,5 +1,5 @@
 // Simple Electron main process
-const { app, BrowserWindow, ipcMain, dialog, session, shell, desktopCapturer, Notification } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, session, shell, desktopCapturer, Notification, Menu } = require('electron');
 
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 // Interactive touchscreens (the app targets classroom smartboards): make sure
@@ -544,6 +544,16 @@ function startServer() {
 }
 
 app.whenReady().then(async () => {
+  // Every window is frameless with its own custom title-bar controls (no
+  // native menu bar is ever shown), but Electron still installs its
+  // *default* application menu unless explicitly cleared — and that
+  // default menu's Edit role binds CmdOrCtrl+Z/Y/X/C/V as global
+  // accelerators. Those accelerators intercept the keystroke before it
+  // ever reaches renderer JS, which silently broke pages with their own
+  // custom Ctrl+Z/Ctrl+Y handlers (e.g. the whiteboard's undo/redo) even
+  // though clicking the on-screen buttons worked fine.
+  Menu.setApplicationMenu(null);
+
   // Block ad networks in embedded games
   const adBlockList = [
     '*://*.googlesyndication.com/*',
@@ -1603,6 +1613,15 @@ app.whenReady().then(async () => {
     ipcMain.handle('check-for-updates', () => { autoUpdater.checkForUpdates(); return {}; });
     ipcMain.handle('download-update',   () => autoUpdater.downloadUpdate());
     ipcMain.handle('install-update',    () => autoUpdater.quitAndInstall(false, true));
+
+    // Auto-check shortly after startup instead of only when the teacher
+    // manually opens Settings ← About and clicks "check for updates" — the
+    // 'update-available' event this triggers is what shows the header
+    // badge + toast (see settings.js _showUpdateAvailableNotice), so this
+    // is what actually makes the notification "just happen" on its own.
+    setTimeout(() => {
+      try { autoUpdater.checkForUpdates(); } catch (e) { log.warn('Startup update check failed:', e.message); }
+    }, 8000);
   } else {
     // Development stubs — prevent "no handler" errors in renderer
     ipcMain.handle('check-for-updates', () => ({ devMode: true }));

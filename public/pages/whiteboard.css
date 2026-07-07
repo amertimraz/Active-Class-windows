@@ -26,7 +26,10 @@
 
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  /* #app is already sized to fit below the (now visible again) app header
+     via body.whiteboard-page #app in styles.css — filling 100% of that
+     instead of assuming a full 100vh avoids overlapping the header. */
+  height: 100%;
   background: var(--bg);
   overflow: hidden;
   user-select: none;
@@ -875,12 +878,16 @@
    out of view (hidden) instead of shrinking further. This lets the teacher
    shrink the whole toolbar/sidebar past that floor when needed. */
 .wb-ui-scale-ctrl {
+  /* Was bottom-right, which collided with the page-name/board-switcher
+     controls that also live in that corner. Middle-right instead, clear of
+     both the top bar and the bottom status/page-nav cluster. */
   position: fixed;
   right: 10px;
-  bottom: 34px;
+  top: 50%;
+  transform: translateY(-50%);
   z-index: 200;
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   gap: 4px;
   background: var(--card);
   border: 1.5px solid var(--border);

@@ -258,8 +258,13 @@
           </svg>
         </button>
         <button class="wb-btn wb-tool" data-tool="select" title="تحديد — تحريك/تكبير/حذف أي عنصر (S)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-dasharray="4 3">
-            <rect x="4" y="4" width="16" height="16" rx="1"/>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="5 9 2 12 5 15"/>
+            <polyline points="9 5 12 2 15 5"/>
+            <polyline points="15 19 12 22 9 19"/>
+            <polyline points="19 9 22 12 19 15"/>
+            <line x1="2" y1="12" x2="22" y2="12"/>
+            <line x1="12" y1="2" x2="12" y2="22"/>
           </svg>
         </button>
       </div>
@@ -396,16 +401,13 @@
       <!-- نص -->
       <div class="wb-sb-section">
         <div class="wb-sb-label">نص</div>
-        <button class="wb-btn wb-tool" data-tool="text" title="إدراج نص (T)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="4 7 4 4 20 4 20 7"/>
-            <line x1="9" y1="20" x2="15" y2="20"/>
-            <line x1="12" y1="4" x2="12" y2="20"/>
-          </svg>
-        </button>
         <div class="wb-prop-wrap">
-          <button class="wb-prop-btn" id="wbTextSizeBtn" type="button" title="حجم النص">
-            <svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6v-.5A1.5 1.5 0 0 1 5.5 4h11A1.5 1.5 0 0 1 18 5.5V6M11 4v14M8.5 18h5"/></svg>
+          <button class="wb-btn wb-tool" id="wbTextToolBtn" data-tool="text" title="إدراج نص (T) — اضغط لاختيار الحجم">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="4 7 4 4 20 4 20 7"/>
+              <line x1="9" y1="20" x2="15" y2="20"/>
+              <line x1="12" y1="4" x2="12" y2="20"/>
+            </svg>
           </button>
           <div class="wb-prop-pop wb-size-pop" id="wbTextSizePop">
             <button class="wb-size-opt" data-text-size="18" title="صغير">
