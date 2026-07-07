@@ -34,6 +34,139 @@ function loadServiceAccount() {
   catch (e) { log.error('FIREBASE_SERVICE_ACCOUNT_JSON is not valid JSON:', e.message); return null; }
 }
 
+// Project id is not a secret (it's part of every Firebase web config) — safe
+// to hardcode. Used only for the public REST fallback below, never for
+// admin-privileged access.
+const FIREBASE_PROJECT_ID = 'active-class-windows';
+
+// Public, credential-free fallback for submitting a license request from a
+// normal end-user machine (which never has FIREBASE_SERVICE_ACCOUNT_JSON
+// set — see loadServiceAccount above). Writes straight to Firestore's REST
+// API with no auth at all; safety comes entirely from Firestore Security
+// Rules restricting the `license-requests` collection to create-only
+// (no read/update/delete) for unauthenticated requests — see the rules
+// snippet shared with the admin. This intentionally skips the
+// query-then-upsert-by-machineId dance the admin-SDK path does below,
+// since anonymous requests aren't granted read access to de-dupe against;
+// a stray duplicate "pending" doc is harmless and the admin can still mark
+// either one done.
+async function createLicenseRequestPublic(payload) {
+  const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/license-requests`;
+  const body = {
+    fields: {
+      id:          { stringValue: payload.id },
+      name:        { stringValue: payload.name },
+      phone:       { stringValue: payload.phone },
+      machineId:   { stringValue: payload.machineId },
+      requestedAt: { stringValue: payload.requestedAt },
+      status:      { stringValue: payload.status },
+    },
+  };
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return resp.ok;
+}
+
+// Same idea as createLicenseRequestPublic, for logging that a trial started
+// on a machine with no admin credentials (i.e. every normal end-user
+// install) — writes straight to Firestore's REST API, restricted to
+// create-only for this collection by the same Security Rules.
+async function createTrialLogPublic(payload) {
+  const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/trial-log`;
+  const body = {
+    fields: {
+      machineId:   { stringValue: payload.machineId },
+      name:        { stringValue: payload.name || '' },
+      phone:       { stringValue: payload.phone || '' },
+      activatedAt: { stringValue: payload.activatedAt },
+    },
+  };
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return resp.ok;
+}
+
+// ── Public (credential-free) license lookup/activation ─────────────────────
+// License verification is the one Firestore-backed flow that runs on every
+// paying customer's machine, not just the admin's — so it MUST work without
+// FIREBASE_SERVICE_ACCOUNT_JSON. Licenses are stored with their license
+// `key` as the Firestore document ID (see writeLicenseDoc below), so a
+// customer's machine can fetch exactly its own license by a direct `get`
+// on a known document path — Firestore Security Rules allow `get` on
+// /licenses/{key} for anyone, but deny `list`, so no one can enumerate or
+// browse other customers' licenses (they'd need to already know the exact
+// key, which is the same thing verify itself requires).
+function firestoreValueToJs(v) {
+  if (!v) return null;
+  if ('stringValue'  in v) return v.stringValue;
+  if ('integerValue' in v) return parseInt(v.integerValue, 10);
+  if ('doubleValue'  in v) return v.doubleValue;
+  if ('booleanValue' in v) return v.booleanValue;
+  if ('nullValue'    in v) return null;
+  return null;
+}
+function firestoreDocToObject(doc) {
+  const out = {};
+  for (const [k, v] of Object.entries(doc.fields || {})) out[k] = firestoreValueToJs(v);
+  return out;
+}
+function jsToFirestoreValue(v) {
+  if (v === null || v === undefined) return { nullValue: null };
+  if (typeof v === 'boolean') return { booleanValue: v };
+  if (typeof v === 'number')  return Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
+  return { stringValue: String(v) };
+}
+
+async function getLicensePublic(key) {
+  const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/licenses/${encodeURIComponent(key)}`;
+  const resp = await fetch(url);
+  if (!resp.ok) return null; // 404 = no such license, or rules denied it
+  const doc = await resp.json();
+  return firestoreDocToObject(doc);
+}
+
+// Generic single-doc get/delete against Firestore's public REST API, used
+// for the trial-revoked/trial-resets checks below — same "get by exact
+// known doc ID, no list" safety property as getLicensePublic.
+async function getDocPublic(collection, docId) {
+  const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/${collection}/${encodeURIComponent(docId)}`;
+  const resp = await fetch(url);
+  if (!resp.ok) return null;
+  const doc = await resp.json();
+  return firestoreDocToObject(doc);
+}
+async function deleteDocPublic(collection, docId) {
+  const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/${collection}/${encodeURIComponent(docId)}`;
+  const resp = await fetch(url, { method: 'DELETE' });
+  return resp.ok;
+}
+
+// Conditional field-only update — only ever called to bind a license to a
+// machine on first activation. Restricted by Security Rules to succeed
+// only when the license's machineId is currently unset, so this can't be
+// abused to hijack an already-activated license from another machine.
+async function bindLicenseMachinePublic(key, machineId, activatedAt) {
+  const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/licenses/${encodeURIComponent(key)}`
+    + `?updateMask.fieldPaths=machineId&updateMask.fieldPaths=activatedAt`;
+  const resp = await fetch(url, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      fields: {
+        machineId:   jsToFirestoreValue(machineId),
+        activatedAt: jsToFirestoreValue(activatedAt),
+      },
+    }),
+  });
+  return resp.ok;
+}
+
 let _firestore = null;
 function getFirestore() {
   if (_firestore) return _firestore;
@@ -1904,8 +2037,28 @@ const DEFAULT_TRIAL_CONFIG = {
   maxLessons:     3,
 };
 
+// Trial limits are a single global policy the admin sets once and every
+// customer's app must read the SAME values — previously this only ever
+// wrote/read a local file, so admin changes never reached any real
+// customer machine (each one just saw its own untouched defaults). Now
+// mirrored to a single Firestore doc (config/trial) that any machine can
+// read publicly (no admin credentials needed), while only the admin's own
+// machine (via the Admin SDK, which bypasses Security Rules) can write it.
 async function readTrialConfig() {
-  try { return JSON.parse(await fs.readFile(TRIAL_CONFIG_FILE, 'utf8')); }
+  const db2 = getFirestore();
+  if (db2) {
+    try {
+      const doc = await db2.collection('config').doc('trial').get();
+      if (doc.exists) return { ...DEFAULT_TRIAL_CONFIG, ...doc.data() };
+    } catch {}
+  } else {
+    try {
+      const remote = await getDocPublic('config', 'trial');
+      if (remote) return { ...DEFAULT_TRIAL_CONFIG, ...remote };
+    } catch {}
+  }
+  // offline / never-configured fallback
+  try { return { ...DEFAULT_TRIAL_CONFIG, ...JSON.parse(await fs.readFile(TRIAL_CONFIG_FILE, 'utf8')) }; }
   catch { return { ...DEFAULT_TRIAL_CONFIG }; }
 }
 
@@ -1948,11 +2101,19 @@ async function readTrialLog() {
 
 async function isMachineRevoked(machineId) {
   const db2 = getFirestore();
-  if (!db2) return false;
-  try {
-    const snap = await db2.collection('trial-revoked').where('machineId', '==', machineId).limit(1).get();
-    return !snap.empty;
-  } catch { return false; }
+  if (db2) {
+    try {
+      const doc = await db2.collection('trial-revoked').doc(machineId).get();
+      return doc.exists;
+    } catch { return false; }
+  }
+  // Normal customer machine — no admin credentials. `trial-revoked` docs are
+  // keyed by machineId itself, so this is a direct single-doc `get` (not a
+  // `list`), which Security Rules allow publicly for exactly this reason: a
+  // machine can check whether IT was revoked without being able to browse
+  // anyone else's revocation status.
+  try { return !!(await getDocPublic('trial-revoked', machineId)); }
+  catch { return false; }
 }
 
 app.get('/api/app-info', (req, res) => {
@@ -1962,12 +2123,36 @@ app.get('/api/app-info', (req, res) => {
   } catch { res.json({ version: '?', year: new Date().getFullYear() }); }
 });
 
+// Same global-policy-vs-local-file bug as trial config: the admin panel's
+// per-game enable/disable toggle is meant to apply to every installed
+// copy of the app immediately ("التغييرات تُطبَّق فوراً" in the admin UI),
+// but a plain local file never reaches any customer machine but the
+// admin's own. Mirrored to a public-readable Firestore doc, same pattern
+// as config/trial above.
 app.get('/api/games-visibility', async (req, res) => {
+  const db2 = getFirestore();
+  if (db2) {
+    try {
+      const doc = await db2.collection('config').doc('games-visibility').get();
+      if (doc.exists) return res.json(doc.data());
+    } catch {}
+  } else {
+    try {
+      const remote = await getDocPublic('config', 'games-visibility');
+      if (remote) return res.json(remote);
+    } catch {}
+  }
   try { res.json(JSON.parse(await fs.readFile(GAMES_VIS_FILE, 'utf8'))); }
   catch { res.json({}); }
 });
 app.post('/api/games-visibility', async (req, res) => {
   try {
+    const db2 = getFirestore();
+    if (db2) {
+      try { await db2.collection('config').doc('games-visibility').set(req.body || {}, { merge: false }); }
+      catch (e) { log.error('writeGamesVisibility Firestore error:', e.message); }
+    }
+    await fs.mkdir(dataDir, { recursive: true }).catch(() => {});
     await fs.writeFile(GAMES_VIS_FILE, JSON.stringify(req.body, null, 2), 'utf8');
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
@@ -1991,6 +2176,12 @@ app.post('/api/trial-config', async (req, res) => {
     cfg.maxGrades    = Math.max(0,  parseInt(cfg.maxGrades)    || 0);
     cfg.maxUnits     = Math.max(0,  parseInt(cfg.maxUnits)     || 0);
     cfg.maxLessons   = Math.max(0,  parseInt(cfg.maxLessons)   || 0);
+    const db2 = getFirestore();
+    if (db2) {
+      try { await db2.collection('config').doc('trial').set(cfg, { merge: true }); }
+      catch (e) { log.error('writeTrialConfig Firestore error:', e.message); }
+    }
+    await fs.mkdir(dataDir, { recursive: true }).catch(() => {});
     await fs.writeFile(TRIAL_CONFIG_FILE, JSON.stringify(cfg, null, 2), 'utf8');
     res.json({ ok: true, config: cfg });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
@@ -2018,7 +2209,13 @@ app.post('/api/trial-log', async (req, res) => {
         if (!doc.data().name) await doc.ref.update({ name, phone });
       }
     } else {
-      // fallback local
+      // No admin credentials on this machine (the normal case for every
+      // end-user install) — write via the public, credential-free REST
+      // fallback so the admin's Firestore-backed trial list actually sees
+      // it, instead of only ever writing to a local file only this machine
+      // can read (see createTrialLogPublic above).
+      await createTrialLogPublic({ machineId, name, phone, activatedAt: new Date().toISOString() });
+      // also mirror locally as an offline-friendly backup
       const log = await readTrialLog();
       if (!log.find(e => e.machineId === machineId)) {
         log.push({ activatedAt: new Date().toISOString(), machineId, name, phone });
@@ -2038,14 +2235,13 @@ app.delete('/api/trial-log/:machineId', async (req, res) => {
       const snap = await db2.collection('trial-log').where('machineId', '==', id).get();
       const meta = snap.docs[0] ? snap.docs[0].data() : {};
       await Promise.all(snap.docs.map(d => d.ref.delete()));
-      // add to revoked list so the machine knows it's been cut off
-      const alreadyRevoked = await db2.collection('trial-revoked').where('machineId', '==', id).limit(1).get();
-      if (alreadyRevoked.empty) {
-        await db2.collection('trial-revoked').add({
-          machineId: id, revokedAt: new Date().toISOString(),
-          name: meta.name || '', phone: meta.phone || '',
-        });
-      }
+      // add to revoked list, keyed by machineId itself (not an auto-id) so
+      // the revoked machine can check its own status via a public single-doc
+      // `get` with no admin credentials — see isMachineRevoked above.
+      await db2.collection('trial-revoked').doc(id).set({
+        machineId: id, revokedAt: new Date().toISOString(),
+        name: meta.name || '', phone: meta.phone || '',
+      });
     } else {
       let log = await readTrialLog();
       log = log.filter(e => e.machineId !== id);
@@ -2077,8 +2273,7 @@ app.post('/api/trial-log/:machineId/restore', async (req, res) => {
     const id = decodeURIComponent(req.params.machineId);
     const db2 = getFirestore();
     if (db2) {
-      const snap = await db2.collection('trial-revoked').where('machineId', '==', id).get();
-      await Promise.all(snap.docs.map(d => d.ref.delete()));
+      await db2.collection('trial-revoked').doc(id).delete().catch(() => {});
     }
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
@@ -2097,31 +2292,36 @@ app.post('/api/trial-log/:machineId/reset', async (req, res) => {
     const id = decodeURIComponent(req.params.machineId);
     const db2 = getFirestore();
     if (!db2) return res.json({ ok: false, error: 'firebase_unavailable' });
-    const [logSnap, revokedSnap] = await Promise.all([
+    const [logSnap, revokedDoc] = await Promise.all([
       db2.collection('trial-log').where('machineId', '==', id).get(),
-      db2.collection('trial-revoked').where('machineId', '==', id).get(),
+      db2.collection('trial-revoked').doc(id).get(),
     ]);
     await Promise.all([
       ...logSnap.docs.map(d => d.ref.delete()),
-      ...revokedSnap.docs.map(d => d.ref.delete()),
+      revokedDoc.exists ? db2.collection('trial-revoked').doc(id).delete() : Promise.resolve(),
     ]);
-    const existingReset = await db2.collection('trial-resets').where('machineId', '==', id).limit(1).get();
-    if (existingReset.empty) {
-      await db2.collection('trial-resets').add({ machineId: id, requestedAt: new Date().toISOString() });
-    }
+    // keyed by machineId itself so the customer's own machine can later
+    // check + consume this one-shot flag with no admin credentials — see
+    // reset-consume and /api/trial-status below.
+    await db2.collection('trial-resets').doc(id).set({ machineId: id, requestedAt: new Date().toISOString() });
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 // Called by main.js when it's about to actually issue a fresh trial off the
-// back of a reset — makes the reset one-shot so it can't be replayed.
+// back of a reset — makes the reset one-shot so it can't be replayed. This
+// runs on the CUSTOMER's own machine (no admin credentials), so it needs
+// the public REST fallback too — safe because it only ever deletes the
+// doc at its own exact machineId path (see deleteDocPublic above).
 app.post('/api/trial-log/:machineId/reset-consume', async (req, res) => {
   try {
     const id = decodeURIComponent(req.params.machineId);
     const db2 = getFirestore();
-    if (!db2) return res.json({ ok: false });
-    const snap = await db2.collection('trial-resets').where('machineId', '==', id).get();
-    await Promise.all(snap.docs.map(d => d.ref.delete()));
+    if (db2) {
+      await db2.collection('trial-resets').doc(id).delete().catch(() => {});
+    } else {
+      await deleteDocPublic('trial-resets', id).catch(() => {});
+    }
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
@@ -2135,9 +2335,14 @@ app.get('/api/trial-status', async (req, res) => {
   let resetAvailable = false;
   if (db2) {
     try {
-      const snap = await db2.collection('trial-resets').where('machineId', '==', machineId).limit(1).get();
-      resetAvailable = !snap.empty;
+      const doc = await db2.collection('trial-resets').doc(machineId).get();
+      resetAvailable = doc.exists;
     } catch {}
+  } else {
+    // Normal customer machine — public single-doc check, same reasoning
+    // as isMachineRevoked above.
+    try { resetAvailable = !!(await getDocPublic('trial-resets', machineId)); }
+    catch {}
   }
   res.json({ revoked, resetAvailable });
 });
@@ -2194,10 +2399,15 @@ async function writeLicenses(licenses) {
       const batch = db.batch();
       // write each license as its own doc keyed by id
       for (const lic of licenses) {
-        const docId = lic._docId || lic.id;
+        // Keyed by the license `key` itself (not a random id) so that a
+        // customer's machine can fetch its own license from Firestore via
+        // a public, credential-free single-doc `get` on a known path — see
+        // getLicensePublic above. Migrate off any legacy random-id doc.
+        const docId = (lic.key || lic._docId || lic.id).toUpperCase();
         const ref = db.collection(FS_COLL).doc(docId);
         const { _docId, ...data } = lic;
         batch.set(ref, data, { merge: true });
+        if (_docId && _docId !== docId) batch.delete(db.collection(FS_COLL).doc(_docId));
       }
       await batch.commit();
     } catch (e) { log.error('writeLicenses Firestore error:', e.message); }
@@ -2212,9 +2422,11 @@ async function writeLicenseDoc(lic) {
   const db = getFirestore();
   if (db) {
     try {
-      const docId = lic._docId || lic.id;
+      const docId = (lic.key || lic._docId || lic.id).toUpperCase();
       const { _docId, ...data } = lic;
       await db.collection(FS_COLL).doc(docId).set(data, { merge: true });
+      // migrate off a legacy random-id doc from before licenses were keyed by `key`
+      if (_docId && _docId !== docId) await db.collection(FS_COLL).doc(_docId).delete().catch(() => {});
     } catch (e) { log.error('writeLicenseDoc Firestore error:', e.message); }
   }
   // mirror to local file
@@ -2244,16 +2456,46 @@ async function readLicensesLocal() {
 app.post('/api/license/verify', async (req, res) => {
   const { key, machineId } = req.body || {};
   if (!key || !machineId) return res.json({ ok: false, message: 'بيانات ناقصة' });
-  const licenses = await readLicenses();
-  const lic = licenses.find(l => l.key === key.toUpperCase().trim());
+  const normKey = key.toUpperCase().trim();
+  const db = getFirestore();
+
+  let lic;
+  if (db) {
+    // Admin's own machine (has FIREBASE_SERVICE_ACCOUNT_JSON) — unchanged path.
+    const licenses = await readLicenses();
+    lic = licenses.find(l => l.key === normKey);
+  } else {
+    // Normal customer machine — no admin credentials. Fetch this one
+    // license directly from Firestore's public REST API by its doc ID
+    // (the key itself); see getLicensePublic above for why this is safe.
+    lic = await getLicensePublic(normKey).catch(() => null);
+    if (!lic) {
+      // last-resort offline fallback (e.g. no internet at activation time)
+      const local = await readLicensesLocal();
+      lic = local.find(l => l.key === normKey) || null;
+    }
+  }
+
   if (!lic)         return res.json({ ok: false, message: 'المفتاح غير صحيح' });
   if (lic.revoked)  return res.json({ ok: false, message: 'الترخيص ملغي' });
   if (new Date(lic.expiresAt) < new Date()) return res.json({ ok: false, message: 'الترخيص منتهي', expired: true });
+
   // First activation: bind to machine
   if (!lic.machineId) {
     lic.machineId   = machineId;
     lic.activatedAt = new Date().toISOString();
-    await writeLicenseDoc(lic); // single-doc write — fast and atomic
+    if (db) {
+      await writeLicenseDoc(lic); // single-doc write — fast and atomic
+    } else {
+      const bound = await bindLicenseMachinePublic(normKey, machineId, lic.activatedAt).catch(() => false);
+      if (!bound) return res.json({ ok: false, message: 'تعذّر تفعيل المفتاح، تأكد من الاتصال بالإنترنت وحاول مرة أخرى' });
+      // mirror locally too, for the offline-fallback path above
+      const local = await readLicensesLocal();
+      const idx = local.findIndex(l => l.key === normKey);
+      if (idx >= 0) local[idx] = lic; else local.push(lic);
+      await fs.mkdir(dataDir, { recursive: true }).catch(() => {});
+      await fs.writeFile(LICENSES_FILE, JSON.stringify(local, null, 2), 'utf8').catch(() => {});
+    }
   } else if (lic.machineId !== machineId) {
     return res.json({ ok: false, message: 'هذا المفتاح مفعّل على جهاز آخر — تواصل مع الدعم' });
   }
@@ -2345,7 +2587,18 @@ app.post('/api/license/request', async (req, res) => {
   const { name, phone, machineId } = req.body || {};
   if (!name || !phone) return res.json({ ok: false });
   const db2 = getFirestore();
-  if (!db2) return res.json({ ok: false, error: 'firebase_unavailable' });
+  if (!db2) {
+    // Normal case on every end-user machine — no admin credentials here.
+    // Fall back to the public, credential-free REST write instead of
+    // silently dropping the request.
+    try {
+      const ok = await createLicenseRequestPublic({
+        id: crypto.randomUUID(), name, phone, machineId: machineId || '',
+        requestedAt: new Date().toISOString(), status: 'pending',
+      });
+      return res.json({ ok });
+    } catch (e) { return res.json({ ok: false, error: e.message }); }
+  }
   try {
     const col = db2.collection('license-requests');
     // upsert by machineId (pending only)
