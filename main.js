@@ -252,6 +252,18 @@ async function createWindow() {
         writeTrialFile({ ...trial, expiresAt: new Date(0).toISOString(), revokedByAdmin: true });
       } else {
         startUrl = APP_URL;
+        // Self-heal trials started before this fix: the very first trial-log
+        // write (in start-trial below) only ever reached Firestore on builds
+        // with the public-REST fallback (v1.3.8+). A trial started on an
+        // older build never got recorded there and update alone doesn't
+        // retroactively resend it — so re-announce it here on every startup.
+        // The endpoint is an idempotent upsert-by-machineId, so this is a
+        // no-op once the admin's dashboard already has it.
+        fetch(`${APP_URL}/api/trial-log`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ machineId: mid }),
+        }).catch(() => {});
       }
     } catch {
       startUrl = APP_URL; // offline — give benefit of the doubt
