@@ -500,8 +500,10 @@
       <!-- كاميرا المعلم: معاينة عائمة قابلة للسحب والتكبير -->
       <div id="wbCamBox" style="display:none">
         <video id="wbCamPreview" autoplay muted playsinline></video>
-        <button id="wbCamZoomOut" type="button" title="تصغير الكاميرا">−</button>
-        <button id="wbCamZoomIn"  type="button" title="تكبير الكاميرا">+</button>
+        <div class="wb-img-h wb-cam-h" data-dir="nw" title="تكبير/تصغير الكاميرا"></div>
+        <div class="wb-img-h wb-cam-h" data-dir="ne" title="تكبير/تصغير الكاميرا"></div>
+        <div class="wb-img-h wb-cam-h" data-dir="sw" title="تكبير/تصغير الكاميرا"></div>
+        <div class="wb-img-h wb-cam-h" data-dir="se" title="تكبير/تصغير الكاميرا"></div>
       </div>
 
       <!-- سبوتلايت: دايرة شفافة فوق تعتيم كامل، بتتبع الماوس -->
@@ -558,7 +560,7 @@
           <button data-k="=" class="wb-calc-eq">=</button>
         </div>
       </div>
-    </div>
+    </div><!-- /wb-canvas-wrap -->
 
   </div><!-- /wb-main -->
 

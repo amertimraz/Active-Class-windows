@@ -23,6 +23,17 @@
   const ctx     = canvas.getContext('2d');
   const octx    = overlay.getContext('2d');
 
+  /* Offscreen scratch canvas the highlighter draws its live stroke onto at
+     full opacity — each individual move-segment is opaque there, so
+     overlapping round-capped segments (very common at slow pointer speed)
+     just look like solid colour, not stacked transparency. The whole
+     stroke is then composited onto the real canvas (and, live, onto the
+     overlay for on-screen feedback) exactly once at the intended
+     translucency, instead of blending translucency per-segment straight
+     onto the board — which is what produced the dark overlapping dots. */
+  const hlCvs = document.createElement('canvas');
+  const hlCtx = hlCvs.getContext('2d');
+
   /* ── State ── */
   let tool    = 'pen';
   let color   = '#1e293b';
@@ -92,6 +103,15 @@
   let floatImg  = null;
   let floatRect = { x: 0, y: 0, w: 0, h: 0 }; // CSS px relative to wrap
   let _imgDrag  = null; // { type:'move'|'resize', dir, startX, startY, startRect }
+
+  /* Bounding boxes (board px) of images, templates, and shapes placed on
+     the current page — lets the "تحديد" (select) tool grab any of them
+     with one click instead of needing a full drag-select rectangle around
+     it every time. Purely an index into where things are; the actual
+     pixels still live baked into the canvas like everything else (see
+     commitFloatImg for images/templates, the shape branch of onUp below
+     for shapes). */
+  let placedObjects = [];
 
   /* Cached wrap rect — getBoundingClientRect() forces a synchronous layout
      flush, and getScreen() (below) used to call it on every single
@@ -286,7 +306,7 @@
      the one real canvas — no extra backing stores, so drawing performance
      is unaffected by how many pages exist. Each page keeps its own
      undo/redo history. */
-  let pagesData     = [{ name: 'سبورة 1', snap: null, history: [], redoStack: [] }];
+  let pagesData     = [{ name: 'سبورة 1', snap: null, history: [], redoStack: [], placedObjects: [] }];
   let currentPageIdx = 0;
   const pageLabelEl = document.getElementById('wbPageLabel');
 
@@ -312,11 +332,12 @@
   function loadPage(idx) {
     if (idx < 0 || idx >= pagesData.length || idx === currentPageIdx) return;
     // persist whatever the current page's live canvas/history look like now
-    pagesData[currentPageIdx] = { ...pagesData[currentPageIdx], snap: snapshotCanvas(), history, redoStack };
+    pagesData[currentPageIdx] = { ...pagesData[currentPageIdx], snap: snapshotCanvas(), history, redoStack, placedObjects };
     currentPageIdx = idx;
     const pd = pagesData[idx];
     history = pd.history;
     redoStack = pd.redoStack;
+    placedObjects = pd.placedObjects || [];
     ctx.save(); ctx.setTransform(1,0,0,1,0,0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (pd.snap) ctx.drawImage(pd.snap, 0, 0);
@@ -330,7 +351,7 @@
   }
 
   function addPage() {
-    pagesData.push({ name: `سبورة ${pagesData.length + 1}`, snap: null, history: [], redoStack: [] });
+    pagesData.push({ name: `سبورة ${pagesData.length + 1}`, snap: null, history: [], redoStack: [], placedObjects: [] });
     loadPage(pagesData.length - 1);
   }
 
@@ -345,6 +366,7 @@
     const pd = pagesData[target];
     history = pd.history;
     redoStack = pd.redoStack;
+    placedObjects = pd.placedObjects || [];
     ctx.save(); ctx.setTransform(1,0,0,1,0,0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (pd.snap) ctx.drawImage(pd.snap, 0, 0);
@@ -471,6 +493,14 @@
     if (tool === 'text') { placeText(bd.x, bd.y); return; }
     if (tool === 'select' && floatImg) return; // finish the current floating selection first
 
+    // Select tool: a plain click landing directly on a previously-placed
+    // image grabs it immediately (move/resize/delete handles), instead of
+    // needing a full drag-select rectangle around it every time.
+    if (tool === 'select') {
+      const hit = placedObjects.find(p => bd.x >= p.bx && bd.x <= p.bx + p.bw && bd.y >= p.by && bd.y <= p.by + p.bh);
+      if (hit) { liftSelection(hit.bx, hit.by, hit.bx + hit.bw, hit.by + hit.bh); return; }
+    }
+
     drawing = true;
     const p = clampToBoard(bd.x, bd.y);
     startX = lastX = p.x;
@@ -478,20 +508,31 @@
     saveHistory();
 
     if (['pen','highlight','eraser'].includes(tool)) {
-      ctx.save();
-      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-      applyStroke(ctx);
-      if (tool === 'eraser') {
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.lineWidth = (size * 4) / scale;
-        ctx.globalAlpha = 1;
-      } else if (tool === 'highlight') {
-        ctx.globalAlpha = 0.35;
-        ctx.lineWidth   = (size * 6) / scale;
+      if (tool === 'highlight') {
+        // fresh full-opacity scratch layer for this stroke — see hlCvs above
+        hlCvs.width = canvas.width;
+        hlCvs.height = canvas.height;
+        hlCtx.save();
+        hlCtx.setTransform(DPR, 0, 0, DPR, 0, 0);
+        applyStroke(hlCtx);
+        hlCtx.globalAlpha = 1;
+        hlCtx.lineWidth   = (size * 6) / scale;
+        hlCtx.beginPath();
+        hlCtx.moveTo(p.x, p.y);
+        hlCtx.restore();
+      } else {
+        ctx.save();
+        ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+        applyStroke(ctx);
+        if (tool === 'eraser') {
+          ctx.globalCompositeOperation = 'destination-out';
+          ctx.lineWidth = (size * 4) / scale;
+          ctx.globalAlpha = 1;
+        }
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.restore();
       }
-      ctx.beginPath();
-      ctx.moveTo(p.x, p.y);
-      ctx.restore();
       smoothRawX = smoothMidX = p.x;
       smoothRawY = smoothMidY = p.y;
     }
@@ -518,31 +559,47 @@
     if (!drawing) return;
 
     if (['pen','highlight','eraser'].includes(tool)) {
-      ctx.save();
-      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-      applyStroke(ctx);
+      const target = tool === 'highlight' ? hlCtx : ctx;
+      target.save();
+      target.setTransform(DPR, 0, 0, DPR, 0, 0);
+      applyStroke(target);
       if (tool === 'eraser') {
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.lineWidth = (size * 4) / scale;
-        ctx.globalAlpha = 1;
+        target.globalCompositeOperation = 'destination-out';
+        target.lineWidth = (size * 4) / scale;
+        target.globalAlpha = 1;
       } else if (tool === 'highlight') {
-        ctx.globalAlpha = 0.35;
-        ctx.lineWidth   = (size * 6) / scale;
+        // full opacity here — the whole scratch layer gets composited onto
+        // the board at the real 0.35 highlighter alpha exactly once, in
+        // onUp, instead of stacking translucency per segment (see hlCvs).
+        target.globalAlpha = 1;
+        target.lineWidth   = (size * 6) / scale;
       }
       /* quadratic curve through midpoints, using the previous raw sample as
          the control point — smooths out the faceted look of raw lineTo
          segments on fast or curved strokes */
       const newMidX = (smoothRawX + cl.x) / 2;
       const newMidY = (smoothRawY + cl.y) / 2;
-      ctx.beginPath();
-      ctx.moveTo(smoothMidX, smoothMidY);
-      ctx.quadraticCurveTo(smoothRawX, smoothRawY, newMidX, newMidY);
-      ctx.stroke();
+      target.beginPath();
+      target.moveTo(smoothMidX, smoothMidY);
+      target.quadraticCurveTo(smoothRawX, smoothRawY, newMidX, newMidY);
+      target.stroke();
       smoothMidX = newMidX;
       smoothMidY = newMidY;
       smoothRawX = cl.x;
       smoothRawY = cl.y;
-      ctx.restore();
+      target.restore();
+      if (tool === 'highlight') {
+        // live on-screen feedback: one full-canvas composite of the
+        // opaque scratch layer at the real alpha, replacing the previous
+        // preview each frame rather than blending onto it.
+        octx.save();
+        octx.setTransform(1, 0, 0, 1, 0, 0);
+        octx.clearRect(0, 0, overlay.width, overlay.height);
+        octx.globalAlpha = 0.35;
+        octx.drawImage(hlCvs, 0, 0);
+        octx.globalAlpha = 1;
+        octx.restore();
+      }
     } else if (tool === 'select') {
       octx.save();
       octx.setTransform(1, 0, 0, 1, 0, 0);
@@ -586,7 +643,19 @@
     ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = 1;
 
-    if (['line','arrow','rect','circle','triangle','diamond','star'].includes(tool)) {
+    if (tool === 'highlight') {
+      // composite the whole opaque scratch stroke onto the real board
+      // exactly once, at the real translucency — see hlCvs above.
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.globalAlpha = 0.35;
+      ctx.drawImage(hlCvs, 0, 0);
+      ctx.restore();
+      octx.save();
+      octx.setTransform(1, 0, 0, 1, 0, 0);
+      octx.clearRect(0, 0, overlay.width, overlay.height);
+      octx.restore();
+    } else if (['line','arrow','rect','circle','triangle','diamond','star'].includes(tool)) {
       const bd = getBoard(e);
       const cl = clampToBoard(bd.x || lastX, bd.y || lastY);
       drawShape(ctx, startX, startY, cl.x, cl.y);
@@ -594,6 +663,13 @@
       octx.setTransform(1, 0, 0, 1, 0, 0);
       octx.clearRect(0, 0, overlay.width, overlay.height);
       octx.restore();
+      // track this shape's bounds so the select tool can grab it with one
+      // click later — a little stroke-width padding so thin lines/shapes
+      // (e.g. a straight horizontal line, near-zero height) stay clickable.
+      const pad = Math.max(6, size);
+      const bx = Math.min(startX, cl.x) - pad, by = Math.min(startY, cl.y) - pad;
+      const bw = Math.abs(cl.x - startX) + pad * 2, bh = Math.abs(cl.y - startY) + pad * 2;
+      if (bw > 6 && bh > 6) placedObjects.push({ bx, by, bw, bh });
     } else if (tool === 'select') {
       const bd = getBoard(e);
       const cl = clampToBoard(bd.x || lastX, bd.y || lastY);
@@ -625,6 +701,12 @@
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     ctx.clearRect(bx, by, bw, bh);
     ctx.restore();
+
+    // any tracked image whose pixels just got cleared out from under it is
+    // no longer "there" to one-click-grab later — commitFloatImg re-adds it
+    // (at its possibly-new bounds) if the user re-commits instead of deleting.
+    placedObjects = placedObjects.filter(p =>
+      p.bx + p.bw <= bx || p.bx >= bx + bw || p.by + p.bh <= by || p.by >= by + bh);
 
     liftedFrom = { bx, by, bw, bh };
     const img = new Image();
@@ -1640,6 +1722,9 @@
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     ctx.drawImage(floatImg, bx, by, bw, bh);
     ctx.restore();
+    // remember where this landed so the select tool can grab it again with
+    // one click next time — see the placedObjects hit-test in onDown.
+    placedObjects.push({ bx, by, bw, bh });
     cancelFloatImg(false); // already placed at the new spot — nothing to restore
   }
 
@@ -1817,8 +1902,7 @@
   const camShapeIcon  = document.getElementById('wbCamShapeIcon');
   const camBox        = document.getElementById('wbCamBox');
   const camPreview    = document.getElementById('wbCamPreview');
-  const camZoomIn     = document.getElementById('wbCamZoomIn');
-  const camZoomOut    = document.getElementById('wbCamZoomOut');
+  const camHandles    = document.querySelectorAll('.wb-cam-h');
   const recBtn        = document.getElementById('wbRecToggle');
   const recToggleIcon = document.getElementById('wbRecToggleIcon');
   const recStatus     = document.getElementById('wbRecStatus');
@@ -1933,22 +2017,39 @@
       : '<rect x="3" y="3" width="18" height="18" rx="4"/>';
   });
 
-  /* enlarge/shrink the camera box, anchored to its current center */
-  function resizeCamBox(factor) {
-    const cur = camBox.getBoundingClientRect();
-    const wr  = wrap.getBoundingClientRect();
-    const cx  = cur.left - wr.left + cur.width  / 2;
-    const cy  = cur.top  - wr.top  + cur.height / 2;
-    const size = Math.max(80, Math.min(360, cur.width * factor));
-    camBox.style.width  = size + 'px';
-    camBox.style.height = size + 'px';
-    camBox.style.left   = (cx - size / 2) + 'px';
-    camBox.style.top    = (cy - size / 2) + 'px';
-    camBox.style.right  = 'auto';
-    camBox.style.bottom = 'auto';
-  }
-  camZoomIn.addEventListener('click', e  => { e.stopPropagation(); resizeCamBox(1.15); });
-  camZoomOut.addEventListener('click', e => { e.stopPropagation(); resizeCamBox(0.87); });
+  /* resize the camera box by dragging one of its four corner handles —
+     same interaction as the image/template floating overlay's corner
+     handles, replacing the old +/- zoom buttons. The corner opposite the
+     one being dragged stays fixed in place while the dragged corner
+     follows the pointer. */
+  camHandles.forEach(handle => {
+    handle.addEventListener('mousedown', e => {
+      e.stopPropagation();
+      e.preventDefault();
+      const dir = handle.dataset.dir;
+      const wr  = wrap.getBoundingClientRect();
+      const r   = camBox.getBoundingClientRect();
+      const fixedX = (dir.includes('w') ? r.right  : r.left) - wr.left;
+      const fixedY = (dir.includes('n') ? r.bottom : r.top)  - wr.top;
+      function onMove(e2) {
+        const px = e2.clientX - wr.left;
+        const py = e2.clientY - wr.top;
+        const size = Math.max(80, Math.min(360, Math.max(Math.abs(px - fixedX), Math.abs(py - fixedY))));
+        camBox.style.width  = size + 'px';
+        camBox.style.height = size + 'px';
+        camBox.style.left   = (dir.includes('w') ? fixedX - size : fixedX) + 'px';
+        camBox.style.top    = (dir.includes('n') ? fixedY - size : fixedY) + 'px';
+        camBox.style.right  = 'auto';
+        camBox.style.bottom = 'auto';
+      }
+      function onUp() {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  });
 
   camBtn.addEventListener('click', async () => {
     if (camOn) {
@@ -1982,11 +2083,11 @@
   });
 
   /* drag the floating camera box around the board; a plain click (no drag)
-     toggles the zoom +/- controls instead of moving it */
+     toggles the resize-handle controls instead of moving it */
   (function makeCamBoxDraggable() {
     let dragging = false, moved = false, offX = 0, offY = 0, startX = 0, startY = 0;
     camBox.addEventListener('mousedown', e => {
-      if (e.target === camZoomIn || e.target === camZoomOut) return;
+      if (e.target.classList.contains('wb-cam-h')) return;
       dragging = true;
       moved = false;
       startX = e.clientX; startY = e.clientY;
@@ -2004,7 +2105,7 @@
       camBox.style.bottom = 'auto';
     });
     document.addEventListener('mouseup', e => {
-      if (dragging && !moved && e.target !== camZoomIn && e.target !== camZoomOut) {
+      if (dragging && !moved && !e.target.classList.contains('wb-cam-h')) {
         camBox.classList.toggle('wb-cam-controls-visible');
       }
       dragging = false;

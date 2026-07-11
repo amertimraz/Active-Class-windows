@@ -74,7 +74,7 @@
     .tb-spacer{width:64px;}
 
     /* ── Page ── */
-    .page{height:100vh;display:flex;align-items:center;justify-content:center;padding:40px 16px 10px;}
+    .page{height:100vh;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto;}
 
     /* ── Card ── */
     .card{
@@ -84,31 +84,32 @@
       border-radius:var(--radius);
       box-shadow:var(--shadow);
       width:100%;max-width:420px;
-      padding:20px;
+      max-height:94vh;overflow-y:auto;
+      padding:16px 18px;
       animation:card-in .5s cubic-bezier(.4,0,.2,1) both;
     }
     @keyframes card-in{from{opacity:0;transform:translateY(20px) scale(.97);}to{opacity:1;transform:none;}}
 
     /* ── Step indicator ── */
-    .steps{display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:16px;}
+    .steps{display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:10px;}
     .step-item{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;}
     .step-circle{
-      width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-      font-size:.75rem;font-weight:800;transition:all .3s;border:2px solid var(--sl-200);
+      width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+      font-size:.72rem;font-weight:800;transition:all .3s;border:2px solid var(--sl-200);
       background:var(--sl-100);color:var(--sl-400);
     }
     .step-circle.active{background:linear-gradient(135deg,#14b8a6,#0f766e);color:#fff;border-color:transparent;box-shadow:0 4px 14px rgba(15,118,110,.3);}
     .step-circle.done{background:var(--green);color:#fff;border-color:transparent;}
-    .step-label{font-size:.68rem;font-weight:700;color:var(--sl-400);white-space:nowrap;}
+    .step-label{font-size:.66rem;font-weight:700;color:var(--sl-400);white-space:nowrap;}
     .step-label.active{color:var(--teal);}
     .step-label.done{color:var(--green);}
-    .step-line{height:2px;flex:1;background:var(--sl-200);margin-bottom:14px;transition:background .3s;}
+    .step-line{height:2px;flex:1;background:var(--sl-200);margin-bottom:12px;transition:background .3s;}
     .step-line.done{background:var(--green);}
 
     /* ── Section head ── */
-    .section-head{margin-bottom:14px;text-align:center;}
+    .section-head{margin-bottom:10px;text-align:center;}
     .section-icon{
-      width:40px;height:40px;border-radius:50%;margin:0 auto 8px;
+      width:34px;height:34px;border-radius:50%;margin:0 auto 6px;
       display:flex;align-items:center;justify-content:center;
     }
     .icon-teal{background:linear-gradient(135deg,#14b8a6,#0f766e);box-shadow:0 6px 18px rgba(15,118,110,.28);}
@@ -275,6 +276,21 @@
         <p class="section-sub">سجّل بياناتك وسنرسل لك كود التفعيل</p>
       </div>
 
+      <button id="btnStartTrial" class="btn btn-primary" style="font-weight:800">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        جرّب مجاناً لمدة 7 أيام
+      </button>
+      <p id="trialMsg" class="msg hidden"></p>
+      <p style="text-align:center;font-size:.72rem;color:var(--sl-400);margin-top:-6px">بدون كود — ابدأ فورًا بميزات محدودة</p>
+
+      <!-- Registration / paid activation separator -->
+      <div style="display:flex;align-items:center;gap:10px;margin:14px 0 4px">
+        <div style="flex:1;height:1px;background:var(--sl-200)"></div>
+        <span style="font-size:.8rem;color:var(--teal);font-weight:800">أو للنسخة الكاملة</span>
+        <div style="flex:1;height:1px;background:var(--sl-200)"></div>
+      </div>
+      <p style="text-align:center;font-size:.74rem;color:var(--sl-400);margin:-2px 0 12px">سجّل بياناتك بالأسفل وسنرسل لك كود التفعيل</p>
+
       <div class="field">
         <label class="field-label" for="regName">الاسم الكامل</label>
         <input id="regName" class="field-input" type="text" placeholder="مثال: أحمد محمد علي" autocomplete="name" />
@@ -292,26 +308,12 @@
         <div class="info-box-value" id="machineIdDisplay">جاري التحميل...</div>
       </div>
 
-      <button id="btnSendRequest" class="btn btn-primary">
+      <button id="btnSendRequest" class="btn btn-ghost">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
         إرسال طلب التفعيل
         <div id="btnSendSpinner" class="spinner hidden"></div>
       </button>
       <button id="btnAlreadyHaveKey" class="btn btn-ghost">لدي كود تفعيل بالفعل</button>
-
-      <!-- Trial separator -->
-      <div style="display:flex;align-items:center;gap:10px;margin:4px 0">
-        <div style="flex:1;height:1px;background:var(--sl-200)"></div>
-        <span style="font-size:.78rem;color:var(--sl-400)">أو</span>
-        <div style="flex:1;height:1px;background:var(--sl-200)"></div>
-      </div>
-
-      <button id="btnStartTrial" class="btn btn-ghost" style="border:1.5px dashed var(--teal-border);color:var(--teal);background:var(--teal-pale);font-weight:700">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-        جرّب مجاناً لمدة 7 أيام
-      </button>
-      <p id="trialMsg" class="msg hidden"></p>
-      <p style="text-align:center;font-size:.72rem;color:var(--sl-400);margin-top:-6px">بدون كود — ميزات محدودة</p>
     </div>
 
     <!-- ════════════════════════════════════

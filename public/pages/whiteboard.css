@@ -771,36 +771,19 @@
   display: block;
 }
 
-/* zoom in/out controls on the camera box */
-#wbCamZoomIn, #wbCamZoomOut {
-  position: absolute;
-  bottom: -4px;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  border: 1.5px solid var(--border);
-  background: #fff;
-  color: #2563eb;
-  font-size: 16px;
-  font-weight: 900;
-  line-height: 1;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 6px rgba(0,0,0,.2);
-  z-index: 16;
+/* resize handles on the camera box — same square-corner style as the
+   image/template floating overlay (.wb-img-h), reused via that class on
+   the elements themselves; only visibility/opacity differs here since the
+   camera box's handles are hidden until clicked (see wb-cam-controls-visible),
+   unlike the always-visible image overlay ones. */
+.wb-cam-h {
   opacity: 0;
   pointer-events: none;
   transition: opacity .12s;
 }
-#wbCamZoomOut { left: -4px; }
-#wbCamZoomIn  { right: -4px; }
-#wbCamZoomIn:hover, #wbCamZoomOut:hover { background: #eff6ff; }
 
-/* zoom controls only appear once the camera box is clicked */
-#wbCamBox.wb-cam-controls-visible #wbCamZoomIn,
-#wbCamBox.wb-cam-controls-visible #wbCamZoomOut {
+/* handles only appear once the camera box is clicked */
+#wbCamBox.wb-cam-controls-visible .wb-cam-h {
   opacity: 1;
   pointer-events: auto;
 }

@@ -313,13 +313,12 @@
 
   async function updateGamesCount() {
     try {
-      const vis = await fetch('http://localhost:5000/api/games-visibility').then(r => r.ok ? r.json() : {}).catch(() => ({}));
       // 5 local cards actually rendered in #localGamesGrid on games.html
       // (dino-arabic, dino-english, duck-race, million, game-engine) — the
       // "ألعاب الإنترنت" hub tile is a navigation entry, not a game, so it's
       // excluded here too, matching the counting fix already applied there.
       const builtIn = 5;
-      const onlineTotal = 22;
+      const onlineTotal = 24;
 
       const s = window.TRIAL_STATUS;
       const isTrial = s && s.trial && !s.licensed && !s.expired;
@@ -328,13 +327,18 @@
         // A trial user can't actually reach the admin's full catalog — show
         // what's really unlocked for them (same numbers games.html enforces),
         // not the full total, which is what was showing "10" here regardless
-        // of the trial's own games limit.
+        // of the trial's own games limit. The games-visibility toggles in
+        // the admin panel are a TRIAL-ONLY restriction (see applyGamesVisibility
+        // in games.html: "Licensed users see everything — no locking needed"),
+        // so they only ever apply in this branch.
+        const vis = await fetch('http://localhost:5000/api/games-visibility').then(r => r.ok ? r.json() : {}).catch(() => ({}));
         const allowedLocal = Math.min(s.limits?.allowedGames ?? 3, builtIn);
         const enabledOnline = Object.values(vis).filter(v => v === true).length;
         total = allowedLocal + enabledOnline;
       } else {
-        const disabledCount = Object.values(vis).filter(v => v === false).length;
-        total = builtIn + (onlineTotal - disabledCount);
+        // Full license (or no trial info yet) — always the complete catalog,
+        // regardless of the trial-only visibility toggles.
+        total = builtIn + onlineTotal;
       }
 
       const el1 = document.getElementById('_gamesCountLabel');

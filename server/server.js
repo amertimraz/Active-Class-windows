@@ -74,8 +74,15 @@ async function createLicenseRequestPublic(payload) {
 // on a machine with no admin credentials (i.e. every normal end-user
 // install) — writes straight to Firestore's REST API, restricted to
 // create-only for this collection by the same Security Rules.
+// Keyed by machineId itself (not an auto-id via POST) so repeated calls —
+// e.g. the startup self-heal re-announce in main.js, which fires every time
+// the app opens during an active trial — upsert the SAME document instead
+// of creating a new duplicate each time. Anonymous callers can't query to
+// dedupe themselves (no read/list permission on this collection), so the
+// doc ID itself has to be the natural dedupe key.
 async function createTrialLogPublic(payload) {
-  const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/trial-log`;
+  const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/trial-log/${encodeURIComponent(payload.machineId)}`
+    + `?updateMask.fieldPaths=machineId&updateMask.fieldPaths=name&updateMask.fieldPaths=phone&updateMask.fieldPaths=activatedAt`;
   const body = {
     fields: {
       machineId:   { stringValue: payload.machineId },
@@ -85,7 +92,7 @@ async function createTrialLogPublic(payload) {
     },
   };
   const resp = await fetch(url, {
-    method: 'POST',
+    method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
