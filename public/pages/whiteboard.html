@@ -205,13 +205,58 @@
 
       <div class="wb-tb-sep"></div>
 
-      <!-- الآلة الحاسبة العلمية -->
+      <!-- أدوات الرياضيات: حاسبة + رسم بياني + أدوات هندسية، كلها تحت أيقونة واحدة -->
       <div class="wb-tb-grp">
-        <div class="wb-tb-label">حاسبة</div>
+        <div class="wb-tb-label">أدوات الرياضيات</div>
         <div class="wb-tb-row">
-          <button class="wb-btn" id="wbCalcToggle" title="آلة حاسبة علمية" type="button">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10.5" x2="8" y2="10.5"/><line x1="12" y1="10.5" x2="12" y2="10.5"/><line x1="16" y1="10.5" x2="16" y2="10.5"/><line x1="8" y1="14.5" x2="8" y2="14.5"/><line x1="12" y1="14.5" x2="12" y2="14.5"/><line x1="16" y1="14.5" x2="16" y2="14.5"/><line x1="8" y1="18.5" x2="8" y2="18.5"/><line x1="12" y1="18.5" x2="12" y2="18.5"/><line x1="16" y1="18.5" x2="16" y2="18.5"/></svg>
-          </button>
+          <div class="header-quick-tools" id="wbMathToolsWrap">
+            <button class="wb-btn" id="wbMathToolsBtn" title="أدوات الرياضيات" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 5"/><polyline points="14 5 21 5 21 12"/></svg>
+            </button>
+            <div class="hqt-menu" id="wbMathToolsMenu" hidden>
+              <button class="hqt-item" id="wbCalcToggle" type="button">🧮 <span>آلة حاسبة</span></button>
+              <button class="hqt-item" id="wbGraphToggle" type="button">📈 <span>رسم بياني</span></button>
+              <button class="hqt-item" data-mathtool="protractor" type="button">📐 <span>منقلة (قياس زوايا)</span></button>
+              <button class="hqt-item" data-mathtool="ruler" type="button">📏 <span>مسطرة</span></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="wb-tb-sep"></div>
+
+      <!-- أدوات العلوم: جدول دوري + دائرة كهربائية + دورة الماء، كلها تحت أيقونة واحدة -->
+      <div class="wb-tb-grp">
+        <div class="wb-tb-label">أدوات العلوم</div>
+        <div class="wb-tb-row">
+          <div class="header-quick-tools" id="wbScienceToolsWrap">
+            <button class="wb-btn" id="wbScienceToolsBtn" title="أدوات العلوم" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v6.5L4 18a2 2 0 0 0 1.8 3h12.4a2 2 0 0 0 1.8-3l-5-9.5V2"/><line x1="8" y1="2" x2="16" y2="2"/><line x1="8.5" y1="12" x2="15.5" y2="12"/></svg>
+            </button>
+            <div class="hqt-menu" id="wbScienceToolsMenu" hidden>
+              <button class="hqt-item" data-sciencetool="periodic" type="button">🧪 <span>الجدول الدوري المصغر</span></button>
+              <button class="hqt-item" data-sciencetool="circuit" type="button">🔋 <span>دائرة كهربائية بسيطة</span></button>
+              <button class="hqt-item" data-sciencetool="watercycle" type="button">💧 <span>دورة الماء</span></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="wb-tb-sep"></div>
+
+      <!-- أدوات اللغة الإنجليزية: نطق + جدول الحروف، كلها تحت أيقونة واحدة -->
+      <div class="wb-tb-grp">
+        <div class="wb-tb-label">أدوات الإنجليزية</div>
+        <div class="wb-tb-row">
+          <div class="header-quick-tools" id="wbEnglishToolsWrap">
+            <button class="wb-btn" id="wbEnglishToolsBtn" title="أدوات اللغة الإنجليزية" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><line x1="9" y1="7" x2="15" y2="7"/><line x1="9" y1="11" x2="14" y2="11"/></svg>
+            </button>
+            <div class="hqt-menu" id="wbEnglishToolsMenu" hidden>
+              <button class="hqt-item" id="wbPronounceToggle" type="button">🔊 <span>نطق الكلمات</span></button>
+              <button class="hqt-item" id="wbAlphabetToggle" type="button">🔤 <span>جدول الحروف الأبجدية</span></button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -559,6 +604,71 @@
           <button data-k="+" class="wb-calc-op">+</button>
           <button data-k="=" class="wb-calc-eq">=</button>
         </div>
+      </div>
+
+      <!-- رسم بياني للدوال عائم قابل للسحب -->
+      <div id="wbGraph" style="display:none">
+        <div class="wb-calc-head" id="wbGraphHead">
+          <span>رسم بياني</span>
+          <button id="wbGraphClose" type="button" title="إغلاق">✕</button>
+        </div>
+        <div class="wb-graph-body">
+          <div class="wb-graph-type-tabs" id="wbGraphTypeTabs">
+            <button type="button" class="wb-graph-type-tab active" data-graphtype="line">📈 خط (دالة)</button>
+            <button type="button" class="wb-graph-type-tab" data-graphtype="bar">📊 أعمدة (بيانات)</button>
+          </div>
+
+          <div id="wbGraphFnFields">
+            <label class="wb-graph-label">y = f(x)</label>
+            <input id="wbGraphEq1" class="wb-graph-input" type="text" placeholder="مثال: x^2" value="x^2" dir="ltr">
+            <input id="wbGraphEq2" class="wb-graph-input" type="text" placeholder="معادلة ثانية (اختياري)" dir="ltr">
+            <div class="wb-graph-range">
+              <label>x من</label>
+              <input id="wbGraphXMin" type="number" value="-10" step="1">
+              <label>إلى</label>
+              <input id="wbGraphXMax" type="number" value="10" step="1">
+            </div>
+          </div>
+
+          <div id="wbGraphBarFields" style="display:none">
+            <label class="wb-graph-label">القيم (افصل بينها بفاصلة)</label>
+            <input id="wbGraphBarValues" class="wb-graph-input" type="text" placeholder="مثال: 5, 8, 3, 9" dir="rtl">
+            <label class="wb-graph-label">التسميات (اختياري)</label>
+            <input id="wbGraphBarLabels" class="wb-graph-input" type="text" placeholder="مثال: أحد, اثنين, ثلاثاء, أربعاء" dir="rtl">
+          </div>
+
+          <div id="wbGraphMsg" class="wb-graph-msg" style="display:none"></div>
+          <button id="wbGraphPlot" class="wb-graph-plot-btn" type="button">ارسم على السبورة</button>
+        </div>
+      </div>
+
+      <!-- نطق الكلمات (مادة اللغة الإنجليزية) -->
+      <div id="wbPronounce" style="display:none">
+        <div class="wb-calc-head" id="wbPronounceHead">
+          <span>نطق الكلمات</span>
+          <button id="wbPronounceClose" type="button" title="إغلاق">✕</button>
+        </div>
+        <div class="wb-graph-body">
+          <label class="wb-graph-label">الكلمة أو الجملة</label>
+          <input id="wbPronounceText" class="wb-graph-input" type="text" placeholder="Type a word or sentence…" dir="ltr">
+          <div class="wb-graph-range">
+            <label>السرعة</label>
+            <input id="wbPronounceRate" type="range" min="0.5" max="1.3" step="0.1" value="0.9" style="flex:1">
+          </div>
+          <button id="wbPronounceSpeak" class="wb-graph-plot-btn" type="button">🔊 انطق</button>
+        </div>
+      </div>
+
+      <!-- جدول الحروف الأبجدية التفاعلي — اضغط على أي حرف ليُقرأ بصوت عالٍ -->
+      <div id="wbAlphabet" style="display:none">
+        <div class="wb-calc-head" id="wbAlphabetHead">
+          <span>جدول الحروف الأبجدية</span>
+          <button id="wbAlphabetClose" type="button" title="إغلاق">✕</button>
+        </div>
+        <div class="wb-alphabet-toolbar">
+          <button id="wbAlphabetPlayAll" class="wb-graph-plot-btn" type="button">▶️ اقرأ كل الحروف بالتسلسل</button>
+        </div>
+        <div class="wb-alphabet-grid" id="wbAlphabetGrid"></div>
       </div>
     </div><!-- /wb-canvas-wrap -->
 

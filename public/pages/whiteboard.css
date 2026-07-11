@@ -1182,3 +1182,198 @@
   100% { transform: translate(var(--drift, 0px), 90vh) rotate(600deg); opacity: 0; }
 }
 #wbRecToggle.active svg { animation: wb-rec-blink 1s infinite; }
+
+/* ══════════════════════════════════════
+   GRAPH PANEL — plot y=f(x) onto the board (math subject tool)
+   ══════════════════════════════════════ */
+#wbGraph {
+  position: absolute;
+  top: 80px;
+  left: 400px;
+  width: 260px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 12px 36px rgba(0,0,0,.22);
+  z-index: 450;
+  overflow: hidden;
+  font-family: Cairo, sans-serif;
+}
+.wb-graph-body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.wb-graph-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  direction: ltr;
+  text-align: left;
+}
+.wb-graph-input {
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  direction: ltr;
+  outline: none;
+}
+.wb-graph-input:focus { border-color: #4f46e5; }
+.wb-graph-range {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+.wb-graph-range input {
+  width: 56px;
+  padding: 5px 6px;
+  border-radius: 7px;
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 12px;
+  text-align: center;
+  direction: ltr;
+}
+.wb-graph-msg {
+  font-size: 11px;
+  font-weight: 700;
+  color: #ef4444;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 7px;
+  padding: 5px 8px;
+}
+.wb-graph-plot-btn {
+  padding: 9px;
+  border: none;
+  border-radius: 9px;
+  background: #4f46e5;
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background .12s;
+}
+.wb-graph-plot-btn:hover { background: #4338ca; }
+
+.wb-graph-type-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--bg);
+  border-radius: 9px;
+  padding: 3px;
+}
+.wb-graph-type-tab {
+  flex: 1;
+  padding: 6px 4px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  font-family: Cairo, sans-serif;
+  cursor: pointer;
+  transition: background .12s, color .12s;
+}
+.wb-graph-type-tab:hover { color: var(--text); }
+.wb-graph-type-tab.active { background: var(--card); color: #4f46e5; box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+
+/* ══════════════════════════════════════
+   PRONOUNCE PANEL — speak a word/sentence aloud (English subject tool)
+   ══════════════════════════════════════ */
+#wbPronounce {
+  position: absolute;
+  top: 80px;
+  left: 400px;
+  width: 260px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 12px 36px rgba(0,0,0,.22);
+  z-index: 450;
+  overflow: hidden;
+  font-family: Cairo, sans-serif;
+}
+
+/* ══════════════════════════════════════
+   ALPHABET PANEL — interactive A-Z, click a letter to hear it (English subject tool)
+   ══════════════════════════════════════ */
+#wbAlphabet {
+  position: absolute;
+  top: 50px;
+  left: 260px;
+  width: 606px;
+  max-height: 85vh;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 12px 36px rgba(0,0,0,.22);
+  z-index: 450;
+  display: flex;
+  flex-direction: column;
+  font-family: Cairo, sans-serif;
+}
+.wb-alphabet-toolbar { padding: 10px 12px 0; }
+.wb-alphabet-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 78px);
+  justify-content: center;
+  gap: 6px;
+  padding: 12px;
+  overflow-y: auto;
+}
+.wb-alphabet-btn {
+  width: 78px;
+  height: 78px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: 1.5px solid #c7d2fe;
+  border-radius: 10px;
+  background: #eef2ff;
+  cursor: pointer;
+  transition: background .1s, transform .1s, box-shadow .15s;
+  padding: 2px;
+}
+.wb-alphabet-btn:hover  { background: #e0e7ff; }
+.wb-alphabet-btn:active { transform: scale(.92); background: #c7d2fe; }
+.wb-alphabet-btn.playing {
+  background: #fef3c7;
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245,158,11,.25);
+  transform: scale(1.06);
+}
+.wb-alphabet-letter { font-size: 17px; font-weight: 800; color: #4338ca; line-height: 1; }
+.wb-alphabet-emoji  { font-size: 16px; line-height: 1; }
+.wb-alphabet-word   { font-size: 8px; font-weight: 700; color: #374151; line-height: 1; }
+
+.wb-shape-anim-btn {
+  position: absolute;
+  transform: translate(-50%, -120%);
+  z-index: 500;
+  background: #1e293b;
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: Cairo, sans-serif;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0,0,0,.28);
+  white-space: nowrap;
+}
+.wb-shape-anim-btn:hover { background: #334155; }

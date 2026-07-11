@@ -403,6 +403,173 @@
     return { x, y };
   }
 
+  /* Vertex/outline geometry for the shape tools, in board coordinates —
+     mirrors drawShape's own math exactly so the "construction animation"
+     (see animateShapeDraw) traces the same outline the shape was actually
+     drawn with. Returns null for tools that aren't a clean outline shape
+     (pen/highlight/eraser/arrow). */
+  function getShapeGeometry(shapeTool, x1, y1, x2, y2) {
+    const rx = Math.min(x1, x2), ry = Math.min(y1, y2);
+    const rw = Math.abs(x2 - x1), rh = Math.abs(y2 - y1);
+    const cx = (x1 + x2) / 2, cy = (y1 + y2) / 2;
+    if (shapeTool === 'rect') {
+      return { kind: 'polygon', points: [{x:rx,y:ry},{x:rx+rw,y:ry},{x:rx+rw,y:ry+rh},{x:rx,y:ry+rh}] };
+    }
+    if (shapeTool === 'triangle') {
+      return { kind: 'polygon', points: [{x:rx+rw/2,y:ry},{x:rx+rw,y:ry+rh},{x:rx,y:ry+rh}] };
+    }
+    if (shapeTool === 'diamond') {
+      return { kind: 'polygon', points: [{x:rx+rw/2,y:ry},{x:rx+rw,y:ry+rh/2},{x:rx+rw/2,y:ry+rh},{x:rx,y:ry+rh/2}] };
+    }
+    if (shapeTool === 'star') {
+      const rOut = Math.max(rw, rh) / 2, rIn = rOut * 0.42;
+      const points = [];
+      for (let i = 0; i < 10; i++) {
+        const ang = (Math.PI / 5) * i - Math.PI / 2;
+        const r = i % 2 === 0 ? rOut : rIn;
+        points.push({ x: cx + r * Math.cos(ang), y: cy + r * Math.sin(ang) });
+      }
+      return { kind: 'polygon', points };
+    }
+    if (shapeTool === 'line') {
+      return { kind: 'polygon', points: [{x:x1,y:y1},{x:x2,y:y2}], open: true };
+    }
+    if (shapeTool === 'circle') {
+      return { kind: 'circle', cx, cy, rx: rw / 2, ry: rh / 2 };
+    }
+    return null;
+  }
+
+  /* Shared short musical tone, reused by the shape-construction animation
+     and the alphabet "play all" tool — a little audible feedback per
+     vertex/step instead of pure silence. */
+  let _toneCtx;
+  function playTone(freq, duration = 0.28) {
+    if (!_toneCtx) { try { _toneCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (_) { return; } }
+    const t = _toneCtx.currentTime;
+    const osc = _toneCtx.createOscillator();
+    const gain = _toneCtx.createGain();
+    osc.connect(gain); gain.connect(_toneCtx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, t);
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.linearRampToValueAtTime(0.22, t + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+    osc.start(t); osc.stop(t + duration);
+  }
+  const TONE_SCALE = [261.63, 293.66, 329.63, 392.00, 440.00, 493.88];
+
+  /* Small floating "🎬 حرّك الشكل" button that pops up right where the
+     teacher clicked a shape (with the select tool) — clicking it plays
+     the construction animation in place; clicking anywhere else dismisses
+     it without doing anything (so a normal drag-select of the same area
+     still works as before). */
+  let _shapeAnimBtn = null;
+  function showShapeAnimateButton(hit, screenPos) {
+    dismissShapeAnimateButton();
+    const btn = document.createElement('button');
+    btn.textContent = '🎬 حرّك الشكل';
+    btn.className = 'wb-shape-anim-btn';
+    btn.style.left = screenPos.x + 'px';
+    btn.style.top  = screenPos.y + 'px';
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      dismissShapeAnimateButton();
+      animateShapeDraw(hit);
+    });
+    wrap.appendChild(btn);
+    _shapeAnimBtn = btn;
+    setTimeout(() => {
+      document.addEventListener('click', dismissShapeAnimateButton, { once: true });
+    }, 0);
+  }
+  function dismissShapeAnimateButton() {
+    if (_shapeAnimBtn) { _shapeAnimBtn.remove(); _shapeAnimBtn = null; }
+  }
+
+  /* Redraws a placed shape's outline progressively, vertex by vertex, with
+     a short tone at each corner — a quick "how this shape is built"
+     construction animation, triggered by the 🎬 button that appears when
+     you click a shape with the select tool (see onDown below). */
+  function animateShapeDraw(obj) {
+    const { bx, by, bw, bh, shape } = obj;
+    if (!shape) return;
+    ctx.save();
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.clearRect(bx - 2, by - 2, bw + 4, bh + 4);
+    ctx.restore();
+
+    const draw = (c) => {
+      c.save();
+      c.setTransform(DPR, 0, 0, DPR, 0, 0);
+      c.strokeStyle = shape.color;
+      c.fillStyle   = shape.color;
+      c.lineWidth   = shape.size / scale;
+      c.lineCap     = 'round';
+      c.lineJoin    = 'round';
+      c.globalAlpha = shape.opacity;
+      return c;
+    };
+
+    if (shape.kind === 'circle') {
+      const totalMs = 900;
+      const start = performance.now();
+      const step = (now) => {
+        const t = Math.min(1, (now - start) / totalMs);
+        ctx.save();
+        ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+        ctx.clearRect(bx - 2, by - 2, bw + 4, bh + 4);
+        ctx.restore();
+        const c = draw(ctx);
+        c.beginPath();
+        c.ellipse(shape.cx, shape.cy, shape.rx, shape.ry, 0, -Math.PI / 2, -Math.PI / 2 + t * Math.PI * 2);
+        c.stroke();
+        c.restore();
+        if (Math.floor(t * 4) !== Math.floor(((now - 16 - start) / totalMs) * 4)) playTone(TONE_SCALE[Math.floor(t * 4) % TONE_SCALE.length]);
+        if (t < 1) requestAnimationFrame(step);
+        else if (shape.fill) { const c2 = draw(ctx); c2.beginPath(); c2.ellipse(shape.cx, shape.cy, shape.rx, shape.ry, 0, 0, Math.PI * 2); c2.fill(); c2.restore(); }
+      };
+      requestAnimationFrame(step);
+      return;
+    }
+
+    // polygon (rect/triangle/diamond/star/line) — one edge at a time
+    const pts = shape.points;
+    const segCount = shape.open ? pts.length - 1 : pts.length;
+    let seg = 0;
+    playTone(TONE_SCALE[0]);
+    const drawSoFar = () => {
+      const c = draw(ctx);
+      c.beginPath();
+      c.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i <= seg; i++) c.lineTo(pts[i % pts.length].x, pts[i % pts.length].y);
+      c.stroke();
+      c.restore();
+    };
+    const stepEdge = () => {
+      ctx.save();
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      ctx.clearRect(bx - 2, by - 2, bw + 4, bh + 4);
+      ctx.restore();
+      drawSoFar();
+      if (seg < segCount) {
+        seg++;
+        playTone(TONE_SCALE[seg % TONE_SCALE.length]);
+        setTimeout(stepEdge, 260);
+      } else if (shape.fill && !shape.open) {
+        const c = draw(ctx);
+        c.beginPath();
+        c.moveTo(pts[0].x, pts[0].y);
+        pts.slice(1).forEach(p => c.lineTo(p.x, p.y));
+        c.closePath();
+        c.fill();
+        c.stroke();
+        c.restore();
+      }
+    };
+    stepEdge();
+  }
+
   function drawShape(c, x1, y1, x2, y2) {
     c.save();
     c.setTransform(DPR, 0, 0, DPR, 0, 0);
@@ -498,6 +665,7 @@
     // needing a full drag-select rectangle around it every time.
     if (tool === 'select') {
       const hit = placedObjects.find(p => bd.x >= p.bx && bd.x <= p.bx + p.bw && bd.y >= p.by && bd.y <= p.by + p.bh);
+      if (hit && hit.shape) { showShapeAnimateButton(hit, sc); return; }
       if (hit) { liftSelection(hit.bx, hit.by, hit.bx + hit.bw, hit.by + hit.bh); return; }
     }
 
@@ -669,7 +837,14 @@
       const pad = Math.max(6, size);
       const bx = Math.min(startX, cl.x) - pad, by = Math.min(startY, cl.y) - pad;
       const bw = Math.abs(cl.x - startX) + pad * 2, bh = Math.abs(cl.y - startY) + pad * 2;
-      if (bw > 6 && bh > 6) placedObjects.push({ bx, by, bw, bh });
+      if (bw > 6 && bh > 6) {
+        // geometry + the exact style it was drawn with, so the 🎬
+        // construction-animation button can replay this specific shape
+        // later even if the teacher has since changed color/size/fill.
+        const geom = getShapeGeometry(tool, startX, startY, cl.x, cl.y);
+        const shape = geom ? { ...geom, color, size, opacity, fill } : null;
+        placedObjects.push({ bx, by, bw, bh, shape });
+      }
     } else if (tool === 'select') {
       const bd = getBoard(e);
       const cl = clampToBoard(bd.x || lastX, bd.y || lastY);
@@ -864,6 +1039,291 @@
     closeBtn?.addEventListener('click', () => { panel.style.display = 'none'; toggleBtn.classList.remove('active'); });
 
     /* drag by the header, position kept in px relative to wrap */
+    let dragOffset = null;
+    function dragMove(e) {
+      if (!dragOffset) return;
+      const cl = e.touches ? e.touches[0] : e;
+      panel.style.left = Math.max(0, cl.clientX - wrapRect.left - dragOffset.x) + 'px';
+      panel.style.top  = Math.max(0, cl.clientY - wrapRect.top  - dragOffset.y) + 'px';
+    }
+    head?.addEventListener('mousedown', e => {
+      const r = panel.getBoundingClientRect();
+      dragOffset = { x: e.clientX - r.left, y: e.clientY - r.top };
+    });
+    document.addEventListener('mousemove', dragMove);
+    document.addEventListener('mouseup', () => { dragOffset = null; });
+  })();
+
+  /* ── Graph tool: plot y=f(x) as an image placed on the board (math
+     subject tool) — reuses the same math.js instance the calculator loads,
+     and the same floating-image placement flow templates/inserted images
+     use, so the plotted graph is movable/resizable/deletable like anything
+     else once placed. ── */
+  (function setupGraphTool() {
+    const panel    = document.getElementById('wbGraph');
+    const toggleBtn = document.getElementById('wbGraphToggle');
+    const closeBtn  = document.getElementById('wbGraphClose');
+    const head      = document.getElementById('wbGraphHead');
+    const eq1El     = document.getElementById('wbGraphEq1');
+    const eq2El     = document.getElementById('wbGraphEq2');
+    const xMinEl    = document.getElementById('wbGraphXMin');
+    const xMaxEl    = document.getElementById('wbGraphXMax');
+    const msgEl     = document.getElementById('wbGraphMsg');
+    const plotBtn   = document.getElementById('wbGraphPlot');
+    const typeTabs  = document.getElementById('wbGraphTypeTabs');
+    const fnFields  = document.getElementById('wbGraphFnFields');
+    const barFields = document.getElementById('wbGraphBarFields');
+    const barValuesEl = document.getElementById('wbGraphBarValues');
+    const barLabelsEl = document.getElementById('wbGraphBarLabels');
+    if (!panel || !toggleBtn) return;
+
+    let graphType = 'line';
+    typeTabs?.querySelectorAll('.wb-graph-type-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        graphType = tab.dataset.graphtype;
+        typeTabs.querySelectorAll('.wb-graph-type-tab').forEach(t => t.classList.toggle('active', t === tab));
+        fnFields.style.display  = graphType === 'line' ? 'block' : 'none';
+        barFields.style.display = graphType === 'bar'  ? 'block' : 'none';
+      });
+    });
+
+    let mathLib = null;
+    function loadMathLib() {
+      if (mathLib) return Promise.resolve(mathLib);
+      if (window.math) { mathLib = window.math; return Promise.resolve(mathLib); }
+      return new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'http://localhost:5000/vendor/mathjs/math.js';
+        s.onload = () => { mathLib = window.math; resolve(mathLib); };
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    }
+
+    function showMsg(text) {
+      if (!msgEl) return;
+      msgEl.textContent = text;
+      msgEl.style.display = text ? 'block' : 'none';
+    }
+
+    const COLORS = ['#4f46e5', '#ef4444'];
+
+    function renderGraphImage(equations, xMin, xMax) {
+      const W = 640, H = 460;
+      const padL = 42, padR = 16, padT = 16, padB = 32;
+      const plotW = W - padL - padR, plotH = H - padT - padB;
+
+      const SAMPLES = 400;
+      const series = equations.map(eq => {
+        const pts = [];
+        for (let i = 0; i <= SAMPLES; i++) {
+          const x = xMin + (xMax - xMin) * (i / SAMPLES);
+          let y;
+          try { y = mathLib.evaluate(eq, { x }); } catch { y = NaN; }
+          pts.push({ x, y: (typeof y === 'number' && isFinite(y)) ? y : NaN });
+        }
+        return pts;
+      });
+
+      // auto-scale y using the 2nd–98th percentile of finite samples, so a
+      // single asymptote spike doesn't blow out the whole vertical range
+      const finiteYs = series.flat().map(p => p.y).filter(y => !isNaN(y)).sort((a, b) => a - b);
+      let yMin = -10, yMax = 10;
+      if (finiteYs.length > 4) {
+        yMin = finiteYs[Math.floor(finiteYs.length * 0.02)];
+        yMax = finiteYs[Math.ceil(finiteYs.length * 0.98) - 1];
+        if (yMax - yMin < 1e-6) { yMin -= 5; yMax += 5; }
+        const pad = (yMax - yMin) * 0.1;
+        yMin -= pad; yMax += pad;
+      }
+
+      const oc = document.createElement('canvas');
+      oc.width = W; oc.height = H;
+      const c = oc.getContext('2d');
+      c.fillStyle = '#ffffff';
+      c.fillRect(0, 0, W, H);
+
+      const toPx = (x, y) => ({
+        px: padL + ((x - xMin) / (xMax - xMin)) * plotW,
+        py: padT + (1 - (y - yMin) / (yMax - yMin)) * plotH,
+      });
+
+      // grid
+      c.strokeStyle = '#e5e7eb';
+      c.lineWidth = 1;
+      const gridStepsX = 10, gridStepsY = 8;
+      for (let i = 0; i <= gridStepsX; i++) {
+        const x = xMin + (xMax - xMin) * (i / gridStepsX);
+        const { px } = toPx(x, 0);
+        c.beginPath(); c.moveTo(px, padT); c.lineTo(px, H - padB); c.stroke();
+        c.fillStyle = '#6b7280'; c.font = '10px sans-serif'; c.textAlign = 'center';
+        c.fillText(Math.round(x * 100) / 100, px, H - padB + 14);
+      }
+      for (let i = 0; i <= gridStepsY; i++) {
+        const y = yMin + (yMax - yMin) * (i / gridStepsY);
+        const { py } = toPx(0, y);
+        c.beginPath(); c.moveTo(padL, py); c.lineTo(W - padR, py); c.stroke();
+        c.fillStyle = '#6b7280'; c.font = '10px sans-serif'; c.textAlign = 'right';
+        c.fillText(Math.round(y * 100) / 100, padL - 6, py + 3);
+      }
+
+      // axes (x=0 / y=0), only drawn if within range
+      c.strokeStyle = '#111827';
+      c.lineWidth = 1.5;
+      if (xMin <= 0 && xMax >= 0) {
+        const { px } = toPx(0, 0);
+        c.beginPath(); c.moveTo(px, padT); c.lineTo(px, H - padB); c.stroke();
+      }
+      if (yMin <= 0 && yMax >= 0) {
+        const { py } = toPx(0, 0);
+        c.beginPath(); c.moveTo(padL, py); c.lineTo(W - padR, py); c.stroke();
+      }
+      c.strokeStyle = '#9ca3af';
+      c.strokeRect(padL, padT, plotW, plotH);
+
+      // curves
+      series.forEach((pts, i) => {
+        c.strokeStyle = COLORS[i % COLORS.length];
+        c.lineWidth = 2.5;
+        c.beginPath();
+        let started = false;
+        pts.forEach(p => {
+          if (isNaN(p.y) || p.y < yMin - (yMax - yMin) || p.y > yMax + (yMax - yMin)) { started = false; return; }
+          const { px, py } = toPx(p.x, p.y);
+          if (!started) { c.moveTo(px, py); started = true; }
+          else c.lineTo(px, py);
+        });
+        c.stroke();
+      });
+
+      // legend
+      equations.forEach((eq, i) => {
+        c.fillStyle = COLORS[i % COLORS.length];
+        c.font = 'bold 12px monospace';
+        c.textAlign = 'left';
+        c.fillText(`y = ${eq}`, padL + 6, padT + 14 + i * 16);
+      });
+
+      return oc.toDataURL('image/png');
+    }
+
+    const BAR_COLORS = ['#4f46e5', '#f97316', '#10b981', '#ef4444', '#0ea5e9', '#eab308', '#8b5cf6', '#ec4899'];
+
+    function renderBarChartImage(values, labels) {
+      const W = 560, H = 420;
+      const padL = 50, padR = 16, padT = 20, padB = 50;
+      const plotW = W - padL - padR, plotH = H - padT - padB;
+
+      const maxVal = Math.max(...values, 0);
+      const niceMax = maxVal <= 0 ? 1 : maxVal * 1.15;
+
+      const oc = document.createElement('canvas');
+      oc.width = W; oc.height = H;
+      const c = oc.getContext('2d');
+      c.fillStyle = '#ffffff';
+      c.fillRect(0, 0, W, H);
+
+      // horizontal grid lines + y-axis labels
+      c.strokeStyle = '#e5e7eb';
+      c.lineWidth = 1;
+      const gridSteps = 5;
+      for (let i = 0; i <= gridSteps; i++) {
+        const v = (niceMax / gridSteps) * i;
+        const y = padT + plotH - (v / niceMax) * plotH;
+        c.beginPath(); c.moveTo(padL, y); c.lineTo(W - padR, y); c.stroke();
+        c.fillStyle = '#6b7280'; c.font = '10px sans-serif'; c.textAlign = 'right';
+        c.fillText(Math.round(v * 100) / 100, padL - 6, y + 3);
+      }
+
+      const n = values.length;
+      const slot = plotW / n;
+      const barW = Math.min(slot * 0.6, 70);
+
+      values.forEach((v, i) => {
+        const barH = (Math.max(v, 0) / niceMax) * plotH;
+        const x = padL + slot * i + (slot - barW) / 2;
+        const y = padT + plotH - barH;
+        c.fillStyle = BAR_COLORS[i % BAR_COLORS.length];
+        c.beginPath();
+        const r = 5;
+        c.moveTo(x, y + r);
+        c.arcTo(x, y, x + r, y, r);
+        c.lineTo(x + barW - r, y);
+        c.arcTo(x + barW, y, x + barW, y + r, r);
+        c.lineTo(x + barW, padT + plotH);
+        c.lineTo(x, padT + plotH);
+        c.closePath();
+        c.fill();
+
+        // value on top of the bar
+        c.fillStyle = '#1e293b';
+        c.font = 'bold 11px sans-serif';
+        c.textAlign = 'center';
+        c.fillText(v, x + barW / 2, y - 6);
+
+        // label under the bar
+        const label = labels[i] || String(i + 1);
+        c.fillStyle = '#374151';
+        c.font = '11px Cairo, sans-serif';
+        c.fillText(label, x + barW / 2, padT + plotH + 18);
+      });
+
+      c.strokeStyle = '#9ca3af';
+      c.strokeRect(padL, padT, plotW, plotH);
+
+      return oc.toDataURL('image/png');
+    }
+
+    function placeImage(dataUrl) {
+      const img = new Image();
+      img.onload = () => {
+        const maxW = wrap.clientWidth  * 0.55;
+        const maxH = wrap.clientHeight * 0.55;
+        const sc2 = Math.min(maxW / img.width, maxH / img.height, 1);
+        const w = img.width * sc2, h = img.height * sc2;
+        const cx = wrap.clientWidth / 2, cy = wrap.clientHeight / 2;
+        showFloatImg(img, cx - w / 2, cy - h / 2, w, h);
+      };
+      img.src = dataUrl;
+    }
+
+    plotBtn?.addEventListener('click', async () => {
+      showMsg('');
+
+      if (graphType === 'bar') {
+        const values = barValuesEl.value.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
+        if (!values.length) { showMsg('اكتب قيمة واحدة على الأقل، مفصولة بفاصلة'); return; }
+        const labels = barLabelsEl.value.split(',').map(s => s.trim());
+        placeImage(renderBarChartImage(values, labels));
+        return;
+      }
+
+      const eqs = [eq1El.value.trim(), eq2El.value.trim()].filter(Boolean);
+      if (!eqs.length) { showMsg('اكتب معادلة واحدة على الأقل'); return; }
+      const xMin = parseFloat(xMinEl.value), xMax = parseFloat(xMaxEl.value);
+      if (!isFinite(xMin) || !isFinite(xMax) || xMin >= xMax) { showMsg('نطاق x غير صحيح'); return; }
+
+      await loadMathLib();
+      // validate each equation with a single test sample before committing
+      // to a full render, so a typo shows a friendly Arabic message instead
+      // of silently plotting a blank/garbage graph
+      for (const eq of eqs) {
+        try { mathLib.evaluate(eq, { x: (xMin + xMax) / 2 }); }
+        catch { showMsg(`معادلة غير صحيحة: ${eq}`); return; }
+      }
+
+      placeImage(renderGraphImage(eqs, xMin, xMax));
+    });
+
+    toggleBtn.addEventListener('click', async () => {
+      const opening = panel.style.display === 'none';
+      panel.style.display = opening ? 'block' : 'none';
+      toggleBtn.classList.toggle('active', opening);
+      if (opening) await loadMathLib();
+    });
+    closeBtn?.addEventListener('click', () => { panel.style.display = 'none'; toggleBtn.classList.remove('active'); });
+
+    /* drag by the header, same pattern as the calculator panel */
     let dragOffset = null;
     function dragMove(e) {
       if (!dragOffset) return;
@@ -1102,6 +1562,436 @@
     centerBoard();
     updateWrapRect();
   });
+
+  /* ── Math tools dropdown: calculator + graph + geometry stamps, all under
+     one icon (see wbMathToolsBtn/wbMathToolsMenu) instead of a separate
+     topbar icon each. The calculator/graph menu items keep their original
+     ids (wbCalcToggle/wbGraphToggle) so setupCalculator/setupGraphTool's
+     own click listeners (which open their respective panels) still work
+     unchanged — this wiring only adds "close the dropdown" on top. ── */
+  const mathToolsBtn  = document.getElementById('wbMathToolsBtn');
+  const mathToolsMenu = document.getElementById('wbMathToolsMenu');
+  if (mathToolsBtn && mathToolsMenu) {
+    const setMathToolsOpen = open => {
+      if (open) {
+        const r = mathToolsBtn.getBoundingClientRect();
+        mathToolsMenu.hidden = false;
+        const mw = mathToolsMenu.getBoundingClientRect().width;
+        mathToolsMenu.style.top  = (r.bottom + 6) + 'px';
+        let left = r.left;
+        if (left + mw > window.innerWidth - 8) left = window.innerWidth - mw - 8;
+        mathToolsMenu.style.left = Math.max(8, left) + 'px';
+      } else {
+        mathToolsMenu.hidden = true;
+      }
+    };
+    mathToolsBtn.addEventListener('click', e => { e.stopPropagation(); setMathToolsOpen(mathToolsMenu.hidden); });
+    document.addEventListener('click', e => {
+      if (!mathToolsBtn.contains(e.target) && !mathToolsMenu.contains(e.target)) setMathToolsOpen(false);
+    });
+    mathToolsMenu.querySelectorAll('.hqt-item').forEach(btn => {
+      btn.addEventListener('click', () => setMathToolsOpen(false));
+    });
+
+    // Geometry stamps (منقلة/مسطرة) — rendered as an SVG image and dropped
+    // onto the board via the same floating-image placement flow the graph
+    // tool and templates already use (movable/resizable/deletable once
+    // placed, grabbable again with one click via the select tool).
+    mathToolsMenu.querySelectorAll('[data-mathtool]').forEach(btn => {
+      btn.addEventListener('click', () => insertGeometryTool(btn.dataset.mathtool));
+    });
+  }
+
+  function insertGeometryTool(kind) {
+    let svg;
+    if (kind === 'protractor') {
+      const cx0 = 160, cy0 = 175, R = 150;
+      // ticks every 10°, a longer/bolder tick every 30° (major, numbered)
+      const ticks = Array.from({ length: 19 }).map((_, i) => {
+        const deg = i * 10;
+        const angle = deg * Math.PI / 180;
+        const major = deg % 30 === 0;
+        const outerR = R, innerR = major ? R - 18 : R - 10;
+        const x1 = cx0 - outerR * Math.cos(angle), y1 = cy0 - outerR * Math.sin(angle);
+        const x2 = cx0 - innerR * Math.cos(angle), y2 = cy0 - innerR * Math.sin(angle);
+        return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#1e293b" stroke-width="${major ? 2 : 1}"/>`;
+      }).join('');
+      // degree numbers just outside the arc at every major (30°) tick —
+      // kept upright (not rotated along the arc) so they stay readable on
+      // a projected screen from any angle in the room
+      const labels = Array.from({ length: 7 }).map((_, i) => {
+        const deg = i * 30;
+        const angle = deg * Math.PI / 180;
+        const labelR = R + 16;
+        const x = cx0 - labelR * Math.cos(angle), y = cy0 - labelR * Math.sin(angle);
+        return `<text x="${x}" y="${y}" font-size="13" font-weight="700" text-anchor="middle" dominant-baseline="middle" fill="#1e293b">${deg}°</text>`;
+      }).join('');
+      svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 195" width="320" height="195">
+        <path d="M${cx0 - R} ${cy0} A${R} ${R} 0 0 1 ${cx0 + R} ${cy0} Z" fill="rgba(255,255,255,0.9)" stroke="#1e293b" stroke-width="2"/>
+        ${ticks}
+        ${labels}
+        <line x1="${cx0 - R}" y1="${cy0}" x2="${cx0 + R}" y2="${cy0}" stroke="#1e293b" stroke-width="2"/>
+        <circle cx="${cx0}" cy="${cy0}" r="3" fill="#ef4444"/>
+      </svg>`;
+    } else { // ruler
+      const marks = Array.from({ length: 41 }).map((_, i) => {
+        const x = 10 + i * 9.5;
+        const tall = i % 5 === 0;
+        const label = tall ? `<text x="${x}" y="38" font-size="9" text-anchor="middle" fill="#1e293b">${i / 5}</text>` : '';
+        return `<line x1="${x}" y1="8" x2="${x}" y2="${tall ? 24 : 16}" stroke="#1e293b" stroke-width="1"/>${label}`;
+      }).join('');
+      svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 60" width="400" height="60">
+        <rect x="2" y="2" width="396" height="56" rx="4" fill="rgba(255,255,255,0.9)" stroke="#1e293b" stroke-width="2"/>
+        ${marks}
+      </svg>`;
+    }
+    placeSvgImage(svg, 0.4);
+  }
+
+  /* Shared by insertGeometryTool and insertScienceTool: turns an inline
+     SVG string into an <img>, then drops it on the board via the same
+     floating-image placement flow images/templates/graphs already use. */
+  function placeSvgImage(svg, maxWidthFrac) {
+    const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+    const img = new Image();
+    img.onload = () => {
+      const maxW = wrap.clientWidth * maxWidthFrac;
+      const sc2 = Math.min(maxW / img.width, 1);
+      const w = img.width * sc2, h = img.height * sc2;
+      const cx = wrap.clientWidth / 2, cy = wrap.clientHeight / 2;
+      showFloatImg(img, cx - w / 2, cy - h / 2, w, h);
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
+  }
+
+  /* ── Science tools: periodic table / circuit diagram / water cycle ── */
+  const scienceToolsBtn  = document.getElementById('wbScienceToolsBtn');
+  const scienceToolsMenu = document.getElementById('wbScienceToolsMenu');
+  if (scienceToolsBtn && scienceToolsMenu) {
+    const setScienceToolsOpen = open => {
+      if (open) {
+        const r = scienceToolsBtn.getBoundingClientRect();
+        scienceToolsMenu.hidden = false;
+        const mw = scienceToolsMenu.getBoundingClientRect().width;
+        scienceToolsMenu.style.top  = (r.bottom + 6) + 'px';
+        let left = r.left;
+        if (left + mw > window.innerWidth - 8) left = window.innerWidth - mw - 8;
+        scienceToolsMenu.style.left = Math.max(8, left) + 'px';
+      } else {
+        scienceToolsMenu.hidden = true;
+      }
+    };
+    scienceToolsBtn.addEventListener('click', e => { e.stopPropagation(); setScienceToolsOpen(scienceToolsMenu.hidden); });
+    document.addEventListener('click', e => {
+      if (!scienceToolsBtn.contains(e.target) && !scienceToolsMenu.contains(e.target)) setScienceToolsOpen(false);
+    });
+    scienceToolsMenu.querySelectorAll('[data-sciencetool]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        setScienceToolsOpen(false);
+        insertScienceTool(btn.dataset.sciencetool);
+      });
+    });
+  }
+
+  function insertScienceTool(kind) {
+    if (kind === 'periodic') {
+      // First 20 elements, colour-coded by simple category, laid out in
+      // their real periodic-table grid positions (with the usual gaps).
+      const ELEMENTS = [
+        { s:'H',  n:1,  g:1,  p:1, cat:'nonmetal'   }, { s:'He', n:2,  g:18, p:1, cat:'noble'      },
+        { s:'Li', n:3,  g:1,  p:2, cat:'alkali'     }, { s:'Be', n:4,  g:2,  p:2, cat:'alkaline'   },
+        { s:'B',  n:5,  g:13, p:2, cat:'metalloid'  }, { s:'C',  n:6,  g:14, p:2, cat:'nonmetal'   },
+        { s:'N',  n:7,  g:15, p:2, cat:'nonmetal'   }, { s:'O',  n:8,  g:16, p:2, cat:'nonmetal'   },
+        { s:'F',  n:9,  g:17, p:2, cat:'halogen'    }, { s:'Ne', n:10, g:18, p:2, cat:'noble'      },
+        { s:'Na', n:11, g:1,  p:3, cat:'alkali'     }, { s:'Mg', n:12, g:2,  p:3, cat:'alkaline'   },
+        { s:'Al', n:13, g:13, p:3, cat:'metal'      }, { s:'Si', n:14, g:14, p:3, cat:'metalloid'  },
+        { s:'P',  n:15, g:15, p:3, cat:'nonmetal'   }, { s:'S',  n:16, g:16, p:3, cat:'nonmetal'   },
+        { s:'Cl', n:17, g:17, p:3, cat:'halogen'    }, { s:'Ar', n:18, g:18, p:3, cat:'noble'      },
+        { s:'K',  n:19, g:1,  p:4, cat:'alkali'     }, { s:'Ca', n:20, g:2,  p:4, cat:'alkaline'   },
+      ];
+      const CAT_COLORS = {
+        nonmetal: '#22c55e', noble: '#8b5cf6', alkali: '#ef4444', alkaline: '#f97316',
+        metalloid: '#eab308', halogen: '#0ea5e9', metal: '#94a3b8',
+      };
+      const cell = 46, gap = 3;
+      const tiles = ELEMENTS.map(el => {
+        const x = (el.g - 1) * (cell + gap), y = (el.p - 1) * (cell + gap);
+        return `<g>
+          <rect x="${x}" y="${y}" width="${cell}" height="${cell}" rx="6" fill="${CAT_COLORS[el.cat]}" opacity="0.85"/>
+          <text x="${x + 6}" y="${y + 15}" font-size="10" fill="#fff" font-weight="700">${el.n}</text>
+          <text x="${x + cell / 2}" y="${y + 33}" font-size="18" fill="#fff" font-weight="800" text-anchor="middle">${el.s}</text>
+        </g>`;
+      }).join('');
+      const W = 18 * (cell + gap), H = 4 * (cell + gap) + 10;
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
+        <rect x="0" y="0" width="${W}" height="${H}" fill="rgba(255,255,255,0.95)"/>
+        ${tiles}
+      </svg>`;
+      placeSvgImage(svg, 0.7);
+
+    } else if (kind === 'circuit') {
+      // Simple series circuit: battery, wire loop, switch, light bulb
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 220" width="420" height="220">
+        <rect x="0" y="0" width="420" height="220" fill="rgba(255,255,255,0.92)"/>
+        <!-- wire loop -->
+        <path d="M60 40 H360 V180 H60 Z" fill="none" stroke="#1e293b" stroke-width="3"/>
+        <!-- battery (on the left side) -->
+        <line x1="60" y1="90" x2="60" y2="110" stroke="#1e293b" stroke-width="3"/>
+        <line x1="45" y1="90"  x2="75" y2="90"  stroke="#1e293b" stroke-width="6"/>
+        <line x1="50" y1="110" x2="70" y2="110" stroke="#1e293b" stroke-width="3"/>
+        <text x="20" y="104" font-size="14" font-weight="700" fill="#1e293b">+/-</text>
+        <!-- switch (top wire) -->
+        <circle cx="160" cy="40" r="4" fill="#1e293b"/>
+        <circle cx="220" cy="40" r="4" fill="#1e293b"/>
+        <line x1="160" y1="40" x2="210" y2="20" stroke="#ef4444" stroke-width="3"/>
+        <text x="165" y="14" font-size="12" fill="#374151">مفتاح</text>
+        <!-- bulb (right side) -->
+        <circle cx="360" cy="110" r="26" fill="#fef9c3" stroke="#eab308" stroke-width="3"/>
+        <line x1="345" y1="96" x2="375" y2="124" stroke="#eab308" stroke-width="2"/>
+        <line x1="375" y1="96" x2="345" y2="124" stroke="#eab308" stroke-width="2"/>
+        <text x="332" y="160" font-size="12" fill="#374151">لمبة</text>
+      </svg>`;
+      placeSvgImage(svg, 0.5);
+
+    } else if (kind === 'watercycle') {
+      // Labeled-arrow water cycle diagram: evaporation → condensation →
+      // precipitation → collection, back to the sea
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 300" width="520" height="300">
+        <rect x="0" y="0" width="520" height="300" fill="rgba(240,249,255,0.9)"/>
+        <text x="440" y="50" font-size="34">☀️</text>
+        <text x="220" y="60" font-size="34">☁️</text>
+        <rect x="0" y="230" width="520" height="70" fill="#38bdf8" opacity="0.55"/>
+        <text x="20" y="270" font-size="14" font-weight="700" fill="#0c4a6e">البحر</text>
+
+        <!-- evaporation: sea -> cloud -->
+        <path d="M120 230 Q 160 140 210 80" fill="none" stroke="#0284c7" stroke-width="2.5" marker-end="url(#arrow)"/>
+        <text x="60" y="150" font-size="13" font-weight="700" fill="#0c4a6e">تبخّر</text>
+
+        <!-- condensation label near cloud -->
+        <text x="150" y="55" font-size="13" font-weight="700" fill="#0c4a6e">تكاثف</text>
+
+        <!-- precipitation: cloud -> ground -->
+        <path d="M250 90 Q 270 160 280 225" fill="none" stroke="#0284c7" stroke-width="2.5" marker-end="url(#arrow)"/>
+        <text x="290" y="150" font-size="13" font-weight="700" fill="#0c4a6e">هطول (مطر)</text>
+
+        <!-- collection: ground -> sea -->
+        <path d="M300 240 Q 360 245 400 235" fill="none" stroke="#0284c7" stroke-width="2.5" marker-end="url(#arrow)"/>
+        <text x="330" y="220" font-size="13" font-weight="700" fill="#0c4a6e">جريان/تجمّع</text>
+
+        <defs>
+          <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+            <path d="M0 0 L8 4 L0 8 Z" fill="#0284c7"/>
+          </marker>
+        </defs>
+      </svg>`;
+      placeSvgImage(svg, 0.6);
+    }
+  }
+
+  /* ── English tools: word pronunciation (Web Speech API, no backend) +
+     alphabet chart stamp ── */
+  const englishToolsBtn  = document.getElementById('wbEnglishToolsBtn');
+  const englishToolsMenu = document.getElementById('wbEnglishToolsMenu');
+  if (englishToolsBtn && englishToolsMenu) {
+    const setEnglishToolsOpen = open => {
+      if (open) {
+        const r = englishToolsBtn.getBoundingClientRect();
+        englishToolsMenu.hidden = false;
+        const mw = englishToolsMenu.getBoundingClientRect().width;
+        englishToolsMenu.style.top  = (r.bottom + 6) + 'px';
+        let left = r.left;
+        if (left + mw > window.innerWidth - 8) left = window.innerWidth - mw - 8;
+        englishToolsMenu.style.left = Math.max(8, left) + 'px';
+      } else {
+        englishToolsMenu.hidden = true;
+      }
+    };
+    englishToolsBtn.addEventListener('click', e => { e.stopPropagation(); setEnglishToolsOpen(englishToolsMenu.hidden); });
+    document.addEventListener('click', e => {
+      if (!englishToolsBtn.contains(e.target) && !englishToolsMenu.contains(e.target)) setEnglishToolsOpen(false);
+    });
+    // Both items open their own panel (wired below by setupPronounceTool /
+    // setupAlphabetTool), so this just closes the dropdown.
+    englishToolsMenu.querySelectorAll('.hqt-item').forEach(btn => {
+      btn.addEventListener('click', () => setEnglishToolsOpen(false));
+    });
+  }
+
+  /* Interactive A-Z panel — no static example words/images; every letter is
+     a real button that speaks itself aloud on click (Web Speech API, same
+     engine as the pronunciation tool), so the "reading" is live audio
+     rather than a fixed baked-in example. */
+  (function setupAlphabetTool() {
+    const panel     = document.getElementById('wbAlphabet');
+    const toggleBtn = document.getElementById('wbAlphabetToggle');
+    const closeBtn  = document.getElementById('wbAlphabetClose');
+    const head      = document.getElementById('wbAlphabetHead');
+    const grid      = document.getElementById('wbAlphabetGrid');
+    if (!panel || !toggleBtn || !grid) return;
+
+    // letter + example word + emoji, each tile individually readable aloud
+    const LETTERS = [
+      ['A','Apple','🍎'], ['B','Ball','⚽'], ['C','Cat','🐱'], ['D','Dog','🐶'],
+      ['E','Elephant','🐘'], ['F','Fish','🐟'], ['G','Grapes','🍇'], ['H','Hat','🎩'],
+      ['I','Ice cream','🍦'], ['J','Juice','🧃'], ['K','Kite','🪁'], ['L','Lion','🦁'],
+      ['M','Moon','🌙'], ['N','Nest','🪺'], ['O','Orange','🍊'], ['P','Pencil','✏️'],
+      ['Q','Queen','👸'], ['R','Rabbit','🐰'], ['S','Sun','☀️'], ['T','Tree','🌳'],
+      ['U','Umbrella','☂️'], ['V','Van','🚐'], ['W','Watch','⌚'], ['X','Xylophone','🎹'],
+      ['Y','Yoyo','🪀'], ['Z','Zebra','🦓'],
+    ];
+    grid.innerHTML = LETTERS.map(([letter, word, emoji]) => `
+      <button class="wb-alphabet-btn" data-letter="${letter}" data-word="${word}" type="button">
+        <span class="wb-alphabet-letter">${letter}</span>
+        <span class="wb-alphabet-emoji">${emoji}</span>
+        <span class="wb-alphabet-word">${word}</span>
+      </button>`).join('');
+    grid.querySelectorAll('.wb-alphabet-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (!('speechSynthesis' in window)) return;
+        stopPlayAll();
+        window.speechSynthesis.cancel();
+        // reads the letter, then its example word — one at a time per tile
+        const utter = new SpeechSynthesisUtterance(`${btn.dataset.letter}. ${btn.dataset.word}`);
+        utter.lang = 'en-US';
+        utter.rate = 0.8;
+        window.speechSynthesis.speak(utter);
+      });
+    });
+
+    /* "▶️ اقرأ كل الحروف بالتسلسل" — steps through every tile, speaking its
+       letter+word and playing a short musical note (a little rising/cycling
+       tune) at the same time, highlighting the current tile as it goes. */
+    const playAllBtn = document.getElementById('wbAlphabetPlayAll');
+    let audioCtx;
+    function ensureAudio() {
+      if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (_) {} }
+    }
+    function playNote(freq) {
+      ensureAudio();
+      if (!audioCtx) return;
+      const t = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.linearRampToValueAtTime(0.2, t + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+      osc.start(t); osc.stop(t + 0.4);
+    }
+    // simple pleasant pentatonic scale (C D E G A), cycling — gives the
+    // read-through a light "little tune" feel without needing an actual
+    // audio/song file
+    const SCALE = [261.63, 293.66, 329.63, 392.00, 440.00];
+
+    let playToken = 0;
+    function stopPlayAll() {
+      playToken++;
+      grid.querySelectorAll('.wb-alphabet-btn.playing').forEach(b => b.classList.remove('playing'));
+      if (playAllBtn) playAllBtn.textContent = '▶️ اقرأ كل الحروف بالتسلسل';
+    }
+    function playAllLetters() {
+      if (!('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      const myToken = ++playToken;
+      if (playAllBtn) playAllBtn.textContent = '⏹️ إيقاف';
+      const btns = Array.from(grid.querySelectorAll('.wb-alphabet-btn'));
+      let i = 0;
+      const step = () => {
+        if (myToken !== playToken || i >= btns.length) { stopPlayAll(); return; }
+        grid.querySelectorAll('.wb-alphabet-btn.playing').forEach(b => b.classList.remove('playing'));
+        const btn = btns[i];
+        btn.classList.add('playing');
+        btn.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        playNote(SCALE[i % SCALE.length]);
+        const utter = new SpeechSynthesisUtterance(`${btn.dataset.letter}. ${btn.dataset.word}`);
+        utter.lang = 'en-US';
+        utter.rate = 0.85;
+        utter.onend = () => { i++; setTimeout(step, 150); };
+        window.speechSynthesis.speak(utter);
+      };
+      step();
+    }
+    playAllBtn?.addEventListener('click', () => {
+      if (window.speechSynthesis.speaking || window.speechSynthesis.pending) stopPlayAll();
+      else playAllLetters();
+    });
+
+    toggleBtn.addEventListener('click', () => {
+      const opening = panel.style.display === 'none';
+      panel.style.display = opening ? 'block' : 'none';
+      toggleBtn.classList.toggle('active', opening);
+      if (!opening) { stopPlayAll(); window.speechSynthesis?.cancel(); }
+    });
+    closeBtn?.addEventListener('click', () => {
+      panel.style.display = 'none';
+      toggleBtn.classList.remove('active');
+      stopPlayAll();
+      window.speechSynthesis?.cancel();
+    });
+
+    /* drag by the header, same pattern as the other floating panels */
+    let dragOffset = null;
+    function dragMove(e) {
+      if (!dragOffset) return;
+      const cl = e.touches ? e.touches[0] : e;
+      panel.style.left = Math.max(0, cl.clientX - wrapRect.left - dragOffset.x) + 'px';
+      panel.style.top  = Math.max(0, cl.clientY - wrapRect.top  - dragOffset.y) + 'px';
+    }
+    head?.addEventListener('mousedown', e => {
+      const r = panel.getBoundingClientRect();
+      dragOffset = { x: e.clientX - r.left, y: e.clientY - r.top };
+    });
+    document.addEventListener('mousemove', dragMove);
+    document.addEventListener('mouseup', () => { dragOffset = null; });
+  })();
+
+  (function setupPronounceTool() {
+    const panel    = document.getElementById('wbPronounce');
+    const toggleBtn = document.getElementById('wbPronounceToggle');
+    const closeBtn  = document.getElementById('wbPronounceClose');
+    const head      = document.getElementById('wbPronounceHead');
+    const textEl    = document.getElementById('wbPronounceText');
+    const rateEl    = document.getElementById('wbPronounceRate');
+    const speakBtn  = document.getElementById('wbPronounceSpeak');
+    if (!panel || !toggleBtn) return;
+
+    function speak() {
+      const text = textEl.value.trim();
+      if (!text || !('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel(); // don't queue/overlap repeated clicks
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = 'en-US';
+      utter.rate = parseFloat(rateEl.value) || 0.9;
+      window.speechSynthesis.speak(utter);
+    }
+    speakBtn?.addEventListener('click', speak);
+    textEl?.addEventListener('keydown', e => { if (e.key === 'Enter') speak(); });
+
+    toggleBtn.addEventListener('click', () => {
+      const opening = panel.style.display === 'none';
+      panel.style.display = opening ? 'block' : 'none';
+      toggleBtn.classList.toggle('active', opening);
+    });
+    closeBtn?.addEventListener('click', () => { panel.style.display = 'none'; toggleBtn.classList.remove('active'); });
+
+    /* drag by the header, same pattern as calculator/graph panels */
+    let dragOffset = null;
+    function dragMove(e) {
+      if (!dragOffset) return;
+      const cl = e.touches ? e.touches[0] : e;
+      panel.style.left = Math.max(0, cl.clientX - wrapRect.left - dragOffset.x) + 'px';
+      panel.style.top  = Math.max(0, cl.clientY - wrapRect.top  - dragOffset.y) + 'px';
+    }
+    head?.addEventListener('mousedown', e => {
+      const r = panel.getBoundingClientRect();
+      dragOffset = { x: e.clientX - r.left, y: e.clientY - r.top };
+    });
+    document.addEventListener('mousemove', dragMove);
+    document.addEventListener('mouseup', () => { dragOffset = null; });
+  })();
 
   /* ── Ready-made templates ── */
   const templateBtn  = document.getElementById('wbTemplateBtn');

@@ -318,7 +318,7 @@
       // "ألعاب الإنترنت" hub tile is a navigation entry, not a game, so it's
       // excluded here too, matching the counting fix already applied there.
       const builtIn = 5;
-      const onlineTotal = 24;
+      const onlineTotal = 26;
 
       const s = window.TRIAL_STATUS;
       const isTrial = s && s.trial && !s.licensed && !s.expired;

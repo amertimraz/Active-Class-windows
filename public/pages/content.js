@@ -1261,7 +1261,7 @@
   function hidePresent() {
     const stage = $('cntPresent');
     stage?._laserCleanup?.(); stage?._swipeCleanup?.();
-    stage.style.display = 'none';
+    if (stage) stage.style.display = 'none';
     document.body.classList.remove('cnt-presenting');
     _pdfDoc = null;
     $('cntStage')?.classList.remove('pdf-mode');

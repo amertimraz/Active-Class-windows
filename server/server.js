@@ -2080,9 +2080,33 @@ function trialGuard(check) {
   };
 }
 
+// A machine that activates a full license part-way through its 7-day trial
+// still has an unexpired ac_trial.json sitting on disk — nothing ever
+// deletes it on activation. Without this check, every write endpoint
+// gated by getActiveTrial() (groups, students, quizzes, games...) kept
+// silently enforcing trial limits (e.g. "1 group max") on fully-licensed
+// machines: a teacher would add a 2nd group, the server would 403-reject
+// it, and the UI made that easy to miss — looking exactly like the group
+// "disappeared" after restart, when it was actually never saved at all.
+async function hasValidLicense() {
+  try {
+    const trialFile = process.env.APP_TRIAL_FILE || path.join(dataDir, 'ac_trial.json');
+    const licenseFile = path.join(path.dirname(trialFile), 'ac_license.json');
+    const lic = JSON.parse(await fs.readFile(licenseFile, 'utf8'));
+    if (!lic || !lic.expiresAt || !lic.key) return false;
+    if (new Date(lic.expiresAt) <= new Date()) return false;
+    if (lic.cachedAt) {
+      const daysSinceCached = (Date.now() - new Date(lic.cachedAt).getTime()) / 86400000;
+      if (daysSinceCached > 7) return false; // matches main.js's isLicenseValid offline grace
+    }
+    return true;
+  } catch { return false; }
+}
+
 // Returns trial limits object if in an active trial, otherwise null
 async function getActiveTrial() {
   try {
+    if (await hasValidLicense()) return null;
     const trialFile = process.env.APP_TRIAL_FILE || path.join(dataDir, 'ac_trial.json');
     const t = JSON.parse(await fs.readFile(trialFile, 'utf8'));
     if (!t || !t.expiresAt) return null;

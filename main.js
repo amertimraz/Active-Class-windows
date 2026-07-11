@@ -588,6 +588,7 @@ app.whenReady().then(async () => {
     { match: 'lofgames.com',       referer: 'https://www.lofgames.com/',       origin: 'https://www.lofgames.com'       },
     { match: 'cokogames.com',      referer: 'https://www.cokogames.com/',      origin: 'https://www.cokogames.com'      },
     { match: 'wordwall.net',       referer: 'https://wordwall.net/',           origin: 'https://wordwall.net'           },
+    { match: 'mathsframe.co.uk',   referer: 'https://mathsframe.co.uk/',       origin: 'https://mathsframe.co.uk'       },
   ];
   const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
 
