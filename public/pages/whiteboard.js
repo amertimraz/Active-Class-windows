@@ -459,6 +459,52 @@
   }
   const TONE_SCALE = [261.63, 293.66, 329.63, 392.00, 440.00, 493.88];
 
+  /* Shared English TTS voice preference — the default OS voice Chromium
+     picks for 'en-US' is often a low-quality legacy SAPI voice on Windows
+     and hard to understand. The alphabet panel's dropdown (#wbVoiceSelect)
+     lets the teacher pick whichever installed voice actually sounds clear
+     on their machine; the word-pronunciation tool reuses the same pick. */
+  let selectedVoice = null;
+  function populateVoiceList(selectEl) {
+    if (!selectEl || !('speechSynthesis' in window)) return;
+    const fill = () => {
+      const voices = window.speechSynthesis.getVoices().filter(v => v.lang.toLowerCase().startsWith('en'));
+      if (!voices.length) return;
+      selectEl.innerHTML = voices.map((v, i) => `<option value="${i}">${v.name} (${v.lang})</option>`).join('');
+      // smart default: prefer an obviously higher-quality voice if one is installed
+      const preferredIdx = voices.findIndex(v => /natural|online|google|neural/i.test(v.name));
+      const idx = preferredIdx !== -1 ? preferredIdx : 0;
+      selectEl.value = idx;
+      selectedVoice = voices[idx];
+      selectEl.onchange = () => { selectedVoice = voices[+selectEl.value] || null; };
+    };
+    fill();
+    // voice list loads asynchronously the first time in Chromium
+    window.speechSynthesis.onvoiceschanged = fill;
+  }
+  function applyVoice(utter) {
+    if (selectedVoice) utter.voice = selectedVoice;
+  }
+
+  /* Shared word bank — the instant dictionary, "word of the day", and any
+     other English tool that needs a big curated word→meaning list all
+     reuse this one copy instead of each keeping their own. */
+  const DICT_CATEGORIES = {
+    'حيوانات': { cat:'قطة', dog:'كلب', elephant:'فيل', fish:'سمكة', lion:'أسد', rabbit:'أرنب', zebra:'حمار وحشي', bird:'طائر', horse:'حصان', cow:'بقرة', sheep:'خروف', monkey:'قرد', bear:'دب', duck:'بطة', frog:'ضفدع', tiger:'نمر', mouse:'فأر', snake:'ثعبان', turtle:'سلحفاة', chick:'كتكوت', camel:'جمل', goat:'ماعز', wolf:'ذئب', fox:'ثعلب', deer:'غزال', owl:'بومة', bee:'نحلة', ant:'نملة', butterfly:'فراشة', spider:'عنكبوت', crab:'سرطان بحر', whale:'حوت', shark:'قرش', dolphin:'دولفين', squirrel:'سنجاب', giraffe:'زرافة', kangaroo:'كنغر', penguin:'بطريق', peacock:'طاووس', eagle:'نسر' },
+    'طعام وفاكهة': { apple:'تفاحة', grapes:'عنب', orange:'برتقالة', water:'ماء', food:'طعام', bread:'خبز', milk:'حليب', egg:'بيضة', rice:'أرز', meat:'لحم', cheese:'جبنة', banana:'موزة', juice:'عصير', sugar:'سكر', salt:'ملح', chicken:'دجاج', cake:'كعكة', honey:'عسل', tea:'شاي', coffee:'قهوة', pizza:'بيتزا', soup:'شوربة', potato:'بطاطس', tomato:'طماطم', onion:'بصل', carrot:'جزرة', lemon:'ليمون', watermelon:'بطيخ', strawberry:'فراولة', mango:'مانجو', pear:'كمثرى', peach:'خوخ', corn:'ذرة', bean:'فاصوليا', yogurt:'زبادي', butter:'زبدة', biscuit:'بسكويت' },
+    'المدرسة': { school:'مدرسة', teacher:'معلّم', student:'طالب', book:'كتاب', pencil:'قلم رصاص', pen:'قلم حبر', bag:'حقيبة', desk:'مكتب', class:'فصل', lesson:'درس', homework:'واجب', exam:'اختبار', question:'سؤال', answer:'إجابة', notebook:'دفتر', ruler:'مسطرة', board:'سبورة', friend:'صديق', eraser:'أستيكة', scissors:'مقص', glue:'صمغ', crayon:'قلم تلوين', paint:'دهان/طلاء', story:'قصة', page:'صفحة', word:'كلمة', letter:'حرف', number:'رقم', color:'لون', shape:'شكل', reading:'قراءة', writing:'كتابة', math:'رياضيات', science:'علوم', playground:'ملعب المدرسة', principal:'مدير المدرسة' },
+    'البيت': { house:'بيت', door:'باب', window:'نافذة', chair:'كرسي', table:'طاولة', bed:'سرير', kitchen:'مطبخ', room:'غرفة', garden:'حديقة', key:'مفتاح', mirror:'مرآة', lamp:'مصباح', roof:'سقف', floor:'أرضية', family:'عائلة', mother:'أم', father:'أب', brother:'أخ', sister:'أخت', grandmother:'جدة', grandfather:'جد', baby:'طفل رضيع', sofa:'أريكة', television:'تلفاز', refrigerator:'ثلاجة', bathroom:'حمام', stairs:'سلّم', wall:'حائط', towel:'منشفة', soap:'صابون', broom:'مكنسة', blanket:'بطانية' },
+    'الطبيعة والطقس': { sun:'شمس', moon:'قمر', star:'نجمة', sky:'سماء', tree:'شجرة', flower:'زهرة', rain:'مطر', snow:'ثلج', wind:'رياح', cloud:'سحابة', sea:'بحر', mountain:'جبل', river:'نهر', hot:'حار', cold:'بارد', sunny:'مشمس', windy:'عاصف', forest:'غابة', desert:'صحراء', beach:'شاطئ', lake:'بحيرة', island:'جزيرة', grass:'عشب', leaf:'ورقة شجر', rock:'صخرة', sand:'رمل', storm:'عاصفة', thunder:'رعد', spring:'ربيع', autumn:'خريف', winter:'شتاء' },
+    'ألوان وصفات': { red:'أحمر', blue:'أزرق', green:'أخضر', yellow:'أصفر', black:'أسود', white:'أبيض', big:'كبير', small:'صغير', fast:'سريع', slow:'بطيء', beautiful:'جميل', happy:'سعيد', sad:'حزين', tall:'طويل', short:'قصير', strong:'قوي', new:'جديد', old:'قديم', clean:'نظيف', dirty:'وسخ', easy:'سهل', difficult:'صعب', full:'ممتلئ', empty:'فارغ', loud:'صاخب', quiet:'هادئ', soft:'ناعم', hard:'صلب', pink:'وردي', brown:'بني', gray:'رمادي', heavy:'ثقيل', wide:'عريض', narrow:'ضيق' },
+    'الوقت والأرقام': { morning:'صباح', night:'ليل', today:'اليوم', tomorrow:'غدًا', yesterday:'أمس', week:'أسبوع', month:'شهر', year:'سنة', one:'واحد', two:'اثنان', three:'ثلاثة', four:'أربعة', five:'خمسة', six:'ستة', seven:'سبعة', eight:'ثمانية', nine:'تسعة', ten:'عشرة', eleven:'أحد عشر', twelve:'اثنا عشر', twenty:'عشرون', hundred:'مئة', hour:'ساعة (وقت)', minute:'دقيقة', monday:'الإثنين', tuesday:'الثلاثاء', wednesday:'الأربعاء', thursday:'الخميس', friday:'الجمعة', saturday:'السبت', sunday:'الأحد' },
+    'أشياء ورموز عامة': { hat:'قبعة', ice:'ثلج', kite:'طائرة ورقية', queen:'ملكة', umbrella:'مظلة', van:'عربة نقل', watch:'ساعة يد', xylophone:'إكسيليفون (آلة موسيقية)', yoyo:'يويو', ball:'كرة', box:'صندوق', car:'سيارة', ship:'سفينة', phone:'هاتف', computer:'حاسوب', bicycle:'دراجة', train:'قطار', airplane:'طائرة', boat:'قارب', bus:'حافلة', money:'نقود', gift:'هدية', map:'خريطة', flag:'علم', bridge:'جسر', rope:'حبل', bell:'جرس', candle:'شمعة' },
+    'جسم الإنسان': { head:'رأس', hand:'يد', foot:'قدم', eye:'عين', ear:'أذن', nose:'أنف', mouth:'فم', hair:'شعر', arm:'ذراع', leg:'رجل/ساق', finger:'إصبع', tooth:'سن', heart:'قلب', shoulder:'كتف', knee:'ركبة', back:'ظهر', neck:'رقبة', face:'وجه' },
+    'الملابس': { shirt:'قميص', shoes:'حذاء', socks:'جوارب', dress:'فستان', jacket:'جاكيت', trousers:'بنطلون', skirt:'تنورة', gloves:'قفازات', scarf:'وشاح', belt:'حزام', shorts:'شورت', sweater:'سترة صوفية' },
+    'المهن': { doctor:'طبيب', nurse:'ممرضة', engineer:'مهندس', police:'شرطي', farmer:'مزارع', driver:'سائق', pilot:'طيار', chef:'طاهي', artist:'فنان', singer:'مغنّي', dentist:'طبيب أسنان', firefighter:'رجل إطفاء', builder:'بنّاء', scientist:'عالِم' },
+    'الحركة والأفعال': { run:'يجري', jump:'يقفز', walk:'يمشي', eat:'يأكل', drink:'يشرب', sleep:'ينام', read:'يقرأ', write:'يكتب', play:'يلعب', swim:'يسبح', sing:'يغنّي', dance:'يرقص', laugh:'يضحك', cry:'يبكي', listen:'يستمع', speak:'يتكلم', open:'يفتح', close:'يغلق', help:'يساعد' },
+  };
+  const DICTIONARY = Object.assign({}, ...Object.values(DICT_CATEGORIES));
+
   /* Small floating "🎬 حرّك الشكل" button that pops up right where the
      teacher clicked a shape (with the select tool) — clicking it plays
      the construction animation in place; clicking anywhere else dismisses
@@ -1830,6 +1876,8 @@
     const grid      = document.getElementById('wbAlphabetGrid');
     if (!panel || !toggleBtn || !grid) return;
 
+    populateVoiceList(document.getElementById('wbVoiceSelect'));
+
     // letter + example word + emoji, each tile individually readable aloud
     const LETTERS = [
       ['A','Apple','🍎'], ['B','Ball','⚽'], ['C','Cat','🐱'], ['D','Dog','🐶'],
@@ -1855,6 +1903,7 @@
         const utter = new SpeechSynthesisUtterance(`${btn.dataset.letter}. ${btn.dataset.word}`);
         utter.lang = 'en-US';
         utter.rate = 0.8;
+        applyVoice(utter);
         window.speechSynthesis.speak(utter);
       });
     });
@@ -1909,6 +1958,7 @@
         const utter = new SpeechSynthesisUtterance(`${btn.dataset.letter}. ${btn.dataset.word}`);
         utter.lang = 'en-US';
         utter.rate = 0.85;
+        applyVoice(utter);
         utter.onend = () => { i++; setTimeout(step, 150); };
         window.speechSynthesis.speak(utter);
       };
@@ -1965,6 +2015,7 @@
       const utter = new SpeechSynthesisUtterance(text);
       utter.lang = 'en-US';
       utter.rate = parseFloat(rateEl.value) || 0.9;
+      applyVoice(utter);
       window.speechSynthesis.speak(utter);
     }
     speakBtn?.addEventListener('click', speak);
@@ -1978,6 +2029,614 @@
     closeBtn?.addEventListener('click', () => { panel.style.display = 'none'; toggleBtn.classList.remove('active'); });
 
     /* drag by the header, same pattern as calculator/graph panels */
+    let dragOffset = null;
+    function dragMove(e) {
+      if (!dragOffset) return;
+      const cl = e.touches ? e.touches[0] : e;
+      panel.style.left = Math.max(0, cl.clientX - wrapRect.left - dragOffset.x) + 'px';
+      panel.style.top  = Math.max(0, cl.clientY - wrapRect.top  - dragOffset.y) + 'px';
+    }
+    head?.addEventListener('mousedown', e => {
+      const r = panel.getBoundingClientRect();
+      dragOffset = { x: e.clientX - r.left, y: e.clientY - r.top };
+    });
+    document.addEventListener('mousemove', dragMove);
+    document.addEventListener('mouseup', () => { dragOffset = null; });
+  })();
+
+  /* ── Spelling Bee: the app speaks a word aloud, the student writes it on
+     the board with the normal pen tool, and the teacher reveals the
+     correct spelling to compare + marks it right/wrong. No handwriting
+     recognition — this is a "speak it, compare it" flow the teacher
+     drives, not an auto-grader. ── */
+  (function setupSpellingBeeTool() {
+    const panel      = document.getElementById('wbSpellingBee');
+    const toggleBtn  = document.getElementById('wbSpellingBeeToggle');
+    const closeBtn   = document.getElementById('wbSpellingBeeClose');
+    const head       = document.getElementById('wbSpellingBeeHead');
+    const wordEl     = document.getElementById('wbSpellingWord');
+    const levelEl    = document.getElementById('wbSpellingLevel');
+    const voiceEl    = document.getElementById('wbSpellingVoiceSelect');
+    const speakBtn   = document.getElementById('wbSpellingSpeak');
+    const speakSlowBtn = document.getElementById('wbSpellingSpeakSlow');
+    const revealBtn  = document.getElementById('wbSpellingReveal');
+    const correctBtn = document.getElementById('wbSpellingCorrectBtn');
+    const wrongBtn   = document.getElementById('wbSpellingWrongBtn');
+    const nextBtn    = document.getElementById('wbSpellingNext');
+    const correctEl  = document.getElementById('wbSpellingCorrect');
+    const wrongEl    = document.getElementById('wbSpellingWrong');
+    const progressEl = document.getElementById('wbSpellingProgress');
+    if (!panel || !toggleBtn) return;
+
+    populateVoiceList(voiceEl);
+
+    const WORDS = {
+      easy: ['cat','dog','sun','red','box','pen','hat','run','big','sit','cup','map','bed','fan','ten',
+             'bag','car','egg','ice','job','key','leg','mud','net','owl','pig','rat','sea','top','van',
+             'web','yes','zoo','ant','bus','cow','cap','fox','gum','hen','ink','jam','kid','log'],
+      medium: ['apple','table','happy','school','friend','garden','yellow','pencil','window','jungle',
+                'purple','summer','little','family','orange','flower','rabbit','basket','pillow',
+                'monkey','forest','ticket','doctor','planet','castle','bottle','picnic','sunset',
+                'kitchen','holiday','morning','journey','sunshine','picture','birthday','sandwich'],
+      hard: ['beautiful','elephant','vegetable','dangerous','adventure','different','important',
+              'wonderful','chocolate','dictionary','umbrella','mountain','celebration','information',
+              'necessary','experience','opportunity','environment','communication','responsibility',
+              'imagination','temperature','independence','extraordinary'],
+    };
+
+    let correct = 0, wrong = 0;
+    let remaining = [];
+    let currentWord = '';
+
+    function refillDeck() {
+      remaining = [...WORDS[levelEl.value]].sort(() => Math.random() - 0.5);
+    }
+    function updateProgress() {
+      progressEl.textContent = `${WORDS[levelEl.value].length - remaining.length}/${WORDS[levelEl.value].length}`;
+    }
+    function nextWord() {
+      if (!remaining.length) refillDeck();
+      currentWord = remaining.pop();
+      updateProgress();
+      wordEl.textContent = '🔊';
+    }
+    function speakWord(rate) {
+      if (!currentWord || !('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(currentWord);
+      utter.lang = 'en-US';
+      // slower default than the other tools — clarity matters more than
+      // speed for a spelling exercise aimed at young children
+      utter.rate = rate || 0.7;
+      applyVoice(utter);
+      window.speechSynthesis.speak(utter);
+    }
+
+    levelEl.addEventListener('change', () => { refillDeck(); nextWord(); });
+    speakBtn.addEventListener('click', () => speakWord(0.7));
+    speakSlowBtn.addEventListener('click', () => speakWord(0.5));
+    revealBtn.addEventListener('click', () => { wordEl.textContent = currentWord; });
+    correctBtn.addEventListener('click', () => { correct++; correctEl.textContent = correct; nextWord(); });
+    wrongBtn.addEventListener('click', () => { wrong++; wrongEl.textContent = wrong; nextWord(); });
+    nextBtn.addEventListener('click', nextWord);
+
+    toggleBtn.addEventListener('click', () => {
+      const opening = panel.style.display === 'none';
+      panel.style.display = opening ? 'block' : 'none';
+      toggleBtn.classList.toggle('active', opening);
+      if (opening && !currentWord) { refillDeck(); nextWord(); }
+    });
+    closeBtn?.addEventListener('click', () => { panel.style.display = 'none'; toggleBtn.classList.remove('active'); });
+
+    /* drag by the header, same pattern as the other floating panels */
+    let dragOffset = null;
+    function dragMove(e) {
+      if (!dragOffset) return;
+      const cl = e.touches ? e.touches[0] : e;
+      panel.style.left = Math.max(0, cl.clientX - wrapRect.left - dragOffset.x) + 'px';
+      panel.style.top  = Math.max(0, cl.clientY - wrapRect.top  - dragOffset.y) + 'px';
+    }
+    head?.addEventListener('mousedown', e => {
+      const r = panel.getBoundingClientRect();
+      dragOffset = { x: e.clientX - r.left, y: e.clientY - r.top };
+    });
+    document.addEventListener('mousemove', dragMove);
+    document.addEventListener('mouseup', () => { dragOffset = null; });
+  })();
+
+  /* ── Instant dictionary: word → Arabic meaning + pronunciation. A small
+     curated list (no external API/network dependency) — any word typed
+     that isn't in it can still be pronounced, just without a translation. ── */
+  (function setupDictionaryTool() {
+    const panel    = document.getElementById('wbDictionary');
+    const toggleBtn = document.getElementById('wbDictionaryToggle');
+    const closeBtn  = document.getElementById('wbDictionaryClose');
+    const head      = document.getElementById('wbDictionaryHead');
+    const wordEl    = document.getElementById('wbDictWord');
+    const listEl    = document.getElementById('wbDictWordsList');
+    const searchBtn = document.getElementById('wbDictSearch');
+    const resultEl  = document.getElementById('wbDictResult');
+    if (!panel || !toggleBtn) return;
+
+    const catSelectEl = document.createElement('select');
+    catSelectEl.id = 'wbDictCategory';
+    catSelectEl.className = 'wb-graph-input';
+    catSelectEl.innerHTML = `<option value="">— كل الكلمات —</option>` +
+      Object.keys(DICT_CATEGORIES).map(c => `<option value="${c}">${c}</option>`).join('');
+    wordEl.insertAdjacentElement('afterend', catSelectEl);
+    const randomBtn = document.createElement('button');
+    randomBtn.type = 'button';
+    randomBtn.id = 'wbDictRandom';
+    randomBtn.className = 'wb-graph-plot-btn';
+    randomBtn.style.background = '#334155';
+    randomBtn.textContent = '🎲 كلمة عشوائية من الفئة';
+    searchBtn.insertAdjacentElement('afterend', randomBtn);
+
+    listEl.innerHTML = Object.keys(DICTIONARY).map(w => `<option value="${w}">`).join('');
+
+    function speakAndShow(w) {
+      const meaning = DICTIONARY[w];
+      resultEl.textContent = meaning ? `${w} = ${meaning}` : `"${w}" — المعنى غير متوفر بالقاموس، بس ينفع تسمع نطقها`;
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utter = new SpeechSynthesisUtterance(w);
+        utter.lang = 'en-US';
+        utter.rate = 0.8;
+        applyVoice(utter);
+        window.speechSynthesis.speak(utter);
+      }
+    }
+    function lookup() {
+      const w = wordEl.value.trim().toLowerCase();
+      if (!w) return;
+      speakAndShow(w);
+    }
+    searchBtn.addEventListener('click', lookup);
+    wordEl.addEventListener('keydown', e => { if (e.key === 'Enter') lookup(); });
+    randomBtn.addEventListener('click', () => {
+      const pool = catSelectEl.value ? Object.keys(DICT_CATEGORIES[catSelectEl.value]) : Object.keys(DICTIONARY);
+      const w = pool[Math.floor(Math.random() * pool.length)];
+      wordEl.value = w;
+      speakAndShow(w);
+    });
+
+    toggleBtn.addEventListener('click', () => {
+      const opening = panel.style.display === 'none';
+      panel.style.display = opening ? 'block' : 'none';
+      toggleBtn.classList.toggle('active', opening);
+    });
+    closeBtn?.addEventListener('click', () => { panel.style.display = 'none'; toggleBtn.classList.remove('active'); });
+
+    let dragOffset = null;
+    function dragMove(e) {
+      if (!dragOffset) return;
+      const cl = e.touches ? e.touches[0] : e;
+      panel.style.left = Math.max(0, cl.clientX - wrapRect.left - dragOffset.x) + 'px';
+      panel.style.top  = Math.max(0, cl.clientY - wrapRect.top  - dragOffset.y) + 'px';
+    }
+    head?.addEventListener('mousedown', e => {
+      const r = panel.getBoundingClientRect();
+      dragOffset = { x: e.clientX - r.left, y: e.clientY - r.top };
+    });
+    document.addEventListener('mousemove', dragMove);
+    document.addEventListener('mouseup', () => { dragOffset = null; });
+  })();
+
+  /* ── Conversation cards: common everyday phrases grouped by situation,
+     shown one at a time with an Arabic translation + pronunciation ── */
+  (function setupConversationTool() {
+    const panel      = document.getElementById('wbConversation');
+    const toggleBtn  = document.getElementById('wbConversationToggle');
+    const closeBtn   = document.getElementById('wbConversationClose');
+    const head       = document.getElementById('wbConversationHead');
+    const categoryEl = document.getElementById('wbConvCategory');
+    const enEl       = document.getElementById('wbConvEnglish');
+    const arEl       = document.getElementById('wbConvArabic');
+    const speakBtn   = document.getElementById('wbConvSpeak');
+    const nextBtn    = document.getElementById('wbConvNext');
+    if (!panel || !toggleBtn) return;
+
+    const CARDS = {
+      'التحية (Greetings)': [
+        ['Good morning!', 'صباح الخير!'], ['Good afternoon!', 'مساء الخير (بعد الظهر)!'],
+        ['Good evening!', 'مساء الخير!'], ['How are you?', 'إزيك؟'],
+        ['I am fine, thank you.', 'أنا بخير، شكرًا.'], ['Nice to meet you.', 'سعيد بلقائك.'],
+        ['See you later!', 'أراك لاحقًا!'], ['See you tomorrow!', 'أراك غدًا!'],
+        ['What is your name?', 'ما اسمك؟'], ['My name is...', 'اسمي هو...'],
+        ['Welcome!', 'أهلًا وسهلًا!'], ['Goodbye!', 'مع السلامة!'],
+      ],
+      'المدرسة (School)': [
+        ['May I ask a question?', 'هل يمكنني أن أسأل سؤالًا؟'], ['I don’t understand.', 'أنا لا أفهم.'],
+        ['Can you repeat that, please?', 'هل يمكنك إعادة ذلك من فضلك؟'], ['I finished my homework.', 'أنهيت واجبي.'],
+        ['Where is the library?', 'أين المكتبة؟'], ['May I go to the bathroom?', 'هل يمكنني الذهاب إلى الحمام؟'],
+        ['I forgot my book.', 'نسيت كتابي.'], ['Can I borrow a pencil?', 'هل يمكنني استعارة قلم رصاص؟'],
+        ['What is the homework for today?', 'ما هو واجب اليوم؟'], ['I am ready for the exam.', 'أنا جاهز للاختبار.'],
+      ],
+      'التسوق (Shopping)': [
+        ['How much is this?', 'كم سعر هذا؟'], ['I would like to buy this.', 'أريد شراء هذا.'],
+        ['Do you have a smaller size?', 'هل لديك مقاس أصغر؟'], ['Where is the cashier?', 'أين أمين الصندوق؟'],
+        ['Can I pay by card?', 'هل يمكنني الدفع بالبطاقة؟'], ['This is too expensive.', 'هذا غالي جدًا.'],
+        ['Do you have this in another color?', 'هل لديك هذا بلون آخر؟'], ['I am just looking, thank you.', 'أنا بس بتفرج، شكرًا.'],
+      ],
+      'المشاعر (Feelings)': [
+        ['I am happy.', 'أنا سعيد.'], ['I am tired.', 'أنا متعب.'],
+        ['I am excited!', 'أنا متحمس!'], ['I feel great today.', 'أشعر بحالة ممتازة اليوم.'],
+        ['I am hungry.', 'أنا جوعان.'], ['I am thirsty.', 'أنا عطشان.'],
+        ['I am scared.', 'أنا خايف.'], ['I am proud of you!', 'أنا فخور بيك!'],
+      ],
+      'الطقس (Weather)': [
+        ['It is sunny today.', 'الجو مشمس اليوم.'], ['It is raining.', 'الجو ماطر.'],
+        ['It is very cold.', 'الجو بارد جدًا.'], ['It is hot outside.', 'الجو حار بره.'],
+        ['What is the weather like today?', 'إيه حالة الطقس النهاردة؟'], ['It is windy.', 'في رياح.'],
+      ],
+      'العائلة (Family)': [
+        ['This is my mother.', 'دي أمي.'], ['This is my father.', 'ده أبويا.'],
+        ['I have two brothers.', 'عندي أخوين.'], ['How many siblings do you have?', 'عندك كام أخ وأخت؟'],
+        ['My family is big.', 'عيلتي كبيرة.'], ['I love my family.', 'بحب عيلتي.'],
+      ],
+    };
+    Object.keys(CARDS).forEach(cat => {
+      const opt = document.createElement('option');
+      opt.value = cat; opt.textContent = cat;
+      categoryEl.appendChild(opt);
+    });
+
+    let currentCard = null;
+    function newCard() {
+      const list = CARDS[categoryEl.value];
+      currentCard = list[Math.floor(Math.random() * list.length)];
+      enEl.textContent = currentCard[0];
+      arEl.textContent = currentCard[1];
+    }
+    function speakCard() {
+      if (!currentCard || !('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(currentCard[0]);
+      utter.lang = 'en-US';
+      utter.rate = 0.85;
+      applyVoice(utter);
+      window.speechSynthesis.speak(utter);
+    }
+    categoryEl.addEventListener('change', newCard);
+    speakBtn.addEventListener('click', speakCard);
+    nextBtn.addEventListener('click', newCard);
+
+    toggleBtn.addEventListener('click', () => {
+      const opening = panel.style.display === 'none';
+      panel.style.display = opening ? 'block' : 'none';
+      toggleBtn.classList.toggle('active', opening);
+      if (opening && !currentCard) newCard();
+    });
+    closeBtn?.addEventListener('click', () => { panel.style.display = 'none'; toggleBtn.classList.remove('active'); });
+
+    let dragOffset = null;
+    function dragMove(e) {
+      if (!dragOffset) return;
+      const cl = e.touches ? e.touches[0] : e;
+      panel.style.left = Math.max(0, cl.clientX - wrapRect.left - dragOffset.x) + 'px';
+      panel.style.top  = Math.max(0, cl.clientY - wrapRect.top  - dragOffset.y) + 'px';
+    }
+    head?.addEventListener('mousedown', e => {
+      const r = panel.getBoundingClientRect();
+      dragOffset = { x: e.clientX - r.left, y: e.clientY - r.top };
+    });
+    document.addEventListener('mousemove', dragMove);
+    document.addEventListener('mouseup', () => { dragOffset = null; });
+  })();
+
+  /* ── Picture description cards: a big emoji scene, the student describes
+     it aloud in an English sentence — "🔊 اسمع مثال" plays one possible
+     model sentence for reference, not a fixed "correct answer". ── */
+  (function setupPictureDescTool() {
+    const panel     = document.getElementById('wbPictureDesc');
+    const toggleBtn = document.getElementById('wbPictureDescToggle');
+    const closeBtn  = document.getElementById('wbPictureDescClose');
+    const head      = document.getElementById('wbPictureDescHead');
+    const sceneEl   = document.getElementById('wbPictureScene');
+    const exampleBtn = document.getElementById('wbPictureExample');
+    const exampleTextEl = document.getElementById('wbPictureExampleText');
+    const nextBtn   = document.getElementById('wbPictureNext');
+    if (!panel || !toggleBtn) return;
+
+    const SCENES = [
+      ['🏠', 'This is a big house. It has a red roof.'],
+      ['🌳', 'There is a tall tree in the garden.'],
+      ['🍕', 'I can see a pizza on the table. It looks delicious.'],
+      ['👨‍👩‍👧‍👦', 'This is a happy family. They are together.'],
+      ['🚗', 'This is a red car. It is very fast.'],
+      ['⚽', 'The boys are playing football in the park.'],
+      ['🐶', 'This is a small dog. It is very friendly.'],
+      ['🌧️', 'It is raining today. The sky is gray.'],
+      ['🏫', 'This is a school. The students are learning.'],
+      ['🍎', 'There is a red apple on the desk.'],
+      ['🎂', 'This is a birthday cake. It has candles on it.'],
+      ['🚲', 'The girl is riding a bicycle in the street.'],
+      ['🏖️', 'This is a beach. The sea is blue and beautiful.'],
+      ['📚', 'There are many books on the shelf.'],
+      ['🎨', 'The artist is painting a beautiful picture.'],
+      ['🧸', 'This is a soft teddy bear. It is brown.'],
+      ['🌻', 'This is a yellow flower in the garden.'],
+      ['🚀', 'This is a rocket. It is flying to space.'],
+      ['👩‍⚕️', 'This is a doctor. She is helping a patient.'],
+      ['🍦', 'This is an ice cream. It is sweet and cold.'],
+      ['⛄', 'This is a snowman. It is very cold outside.'],
+      ['🎈', 'There are colorful balloons at the party.'],
+    ];
+    let current = null;
+
+    function newScene() {
+      current = SCENES[Math.floor(Math.random() * SCENES.length)];
+      sceneEl.textContent = current[0];
+      exampleTextEl.style.display = 'none';
+      exampleTextEl.textContent = '';
+    }
+    function playExample() {
+      if (!current) return;
+      exampleTextEl.textContent = current[1];
+      exampleTextEl.style.display = 'block';
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utter = new SpeechSynthesisUtterance(current[1]);
+        utter.lang = 'en-US';
+        utter.rate = 0.85;
+        applyVoice(utter);
+        window.speechSynthesis.speak(utter);
+      }
+    }
+    exampleBtn.addEventListener('click', playExample);
+    nextBtn.addEventListener('click', newScene);
+
+    toggleBtn.addEventListener('click', () => {
+      const opening = panel.style.display === 'none';
+      panel.style.display = opening ? 'block' : 'none';
+      toggleBtn.classList.toggle('active', opening);
+      if (opening && !current) newScene();
+    });
+    closeBtn?.addEventListener('click', () => { panel.style.display = 'none'; toggleBtn.classList.remove('active'); });
+
+    let dragOffset = null;
+    function dragMove(e) {
+      if (!dragOffset) return;
+      const cl = e.touches ? e.touches[0] : e;
+      panel.style.left = Math.max(0, cl.clientX - wrapRect.left - dragOffset.x) + 'px';
+      panel.style.top  = Math.max(0, cl.clientY - wrapRect.top  - dragOffset.y) + 'px';
+    }
+    head?.addEventListener('mousedown', e => {
+      const r = panel.getBoundingClientRect();
+      dragOffset = { x: e.clientX - r.left, y: e.clientY - r.top };
+    });
+    document.addEventListener('mousemove', dragMove);
+    document.addEventListener('mouseup', () => { dragOffset = null; });
+  })();
+
+  /* ── Grammar quick-reference: pick a verb + one or more tenses, then
+     stamp the resulting table onto the board (same placeSvgImage flow as
+     the science-tool stamps). ── */
+  (function setupGrammarRefTool() {
+    const panel     = document.getElementById('wbGrammarRef');
+    const toggleBtn = document.getElementById('wbGrammarRefToggle');
+    const closeBtn  = document.getElementById('wbGrammarRefClose');
+    const head      = document.getElementById('wbGrammarRefHead');
+    const verbEl    = document.getElementById('wbGrammarVerb');
+    const tensesEl  = document.getElementById('wbGrammarTenses');
+    const insertBtn = document.getElementById('wbGrammarInsert');
+    if (!panel || !toggleBtn) return;
+
+    const VERBS = {
+      'to go': {
+        'Present Simple': 'I go to school every day.',
+        'Present Continuous': 'I am going to school now.',
+        'Present Perfect': 'I have gone to school already.',
+        'Past Simple': 'I went to school yesterday.',
+        'Future Simple': 'I will go to school tomorrow.',
+      },
+      'to have': {
+        'Present Simple': 'I have a book.',
+        'Present Continuous': 'I am having lunch now.',
+        'Present Perfect': 'I have had breakfast already.',
+        'Past Simple': 'I had a book yesterday.',
+        'Future Simple': 'I will have a new bag tomorrow.',
+      },
+      'to be': {
+        'Present Simple': 'I am happy.',
+        'Present Continuous': 'I am being very careful.',
+        'Present Perfect': 'I have been busy today.',
+        'Past Simple': 'I was happy yesterday.',
+        'Future Simple': 'I will be happy tomorrow.',
+      },
+      'to eat': {
+        'Present Simple': 'I eat breakfast every day.',
+        'Present Continuous': 'I am eating breakfast now.',
+        'Present Perfect': 'I have eaten breakfast already.',
+        'Past Simple': 'I ate breakfast yesterday.',
+        'Future Simple': 'I will eat breakfast tomorrow.',
+      },
+      'to play': {
+        'Present Simple': 'I play football every day.',
+        'Present Continuous': 'I am playing football now.',
+        'Present Perfect': 'I have played football already.',
+        'Past Simple': 'I played football yesterday.',
+        'Future Simple': 'I will play football tomorrow.',
+      },
+    };
+    const ALL_TENSES = ['Present Simple', 'Present Continuous', 'Present Perfect', 'Past Simple', 'Future Simple'];
+
+    verbEl.innerHTML = Object.keys(VERBS).map(v => `<option value="${v}">${v}</option>`).join('');
+    tensesEl.innerHTML = ALL_TENSES.map((t, i) => `
+      <label><input type="checkbox" value="${t}" ${i < 3 ? 'checked' : ''}> ${t}</label>
+    `).join('');
+
+    insertBtn.addEventListener('click', () => {
+      const verb = verbEl.value;
+      const chosenTenses = Array.from(tensesEl.querySelectorAll('input:checked')).map(i => i.value);
+      if (!chosenTenses.length) return;
+      const rows = chosenTenses.map(t => [t, VERBS[verb][t]]);
+
+      const rowH = 52, headH = 46, labelW = 180, W = 560;
+      const H = headH + rows.length * rowH;
+      const cellsHtml = rows.map(([tense, ex], i) => {
+        const y = headH + i * rowH;
+        return `
+          <rect x="0" y="${y}" width="${labelW}" height="${rowH}" fill="#eef2ff" stroke="#c7d2fe"/>
+          <text x="${labelW/2}" y="${y + rowH/2 + 5}" font-size="13" font-weight="800" fill="#4338ca" text-anchor="middle">${tense}</text>
+          <rect x="${labelW}" y="${y}" width="${W-labelW}" height="${rowH}" fill="#ffffff" stroke="#e5e7eb"/>
+          <text x="${labelW+15}" y="${y + rowH/2 + 5}" font-size="13" fill="#1e293b" font-family="monospace">${ex}</text>
+        `;
+      }).join('');
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
+        <rect x="0" y="0" width="${W}" height="${H}" fill="#ffffff"/>
+        <rect x="0" y="0" width="${W}" height="${headH}" fill="#4338ca"/>
+        <text x="${W/2}" y="${headH/2 + 6}" font-size="16" font-weight="800" fill="#fff" text-anchor="middle">Verb Tenses — "${verb}"</text>
+        ${cellsHtml}
+        <rect x="0" y="${headH}" width="${W}" height="${rows.length*rowH}" fill="none" stroke="#1e293b" stroke-width="1.5"/>
+      </svg>`;
+      placeSvgImage(svg, 0.6);
+    });
+
+    toggleBtn.addEventListener('click', () => {
+      const opening = panel.style.display === 'none';
+      panel.style.display = opening ? 'block' : 'none';
+      toggleBtn.classList.toggle('active', opening);
+    });
+    closeBtn?.addEventListener('click', () => { panel.style.display = 'none'; toggleBtn.classList.remove('active'); });
+
+    let dragOffset = null;
+    function dragMove(e) {
+      if (!dragOffset) return;
+      const cl = e.touches ? e.touches[0] : e;
+      panel.style.left = Math.max(0, cl.clientX - wrapRect.left - dragOffset.x) + 'px';
+      panel.style.top  = Math.max(0, cl.clientY - wrapRect.top  - dragOffset.y) + 'px';
+    }
+    head?.addEventListener('mousedown', e => {
+      const r = panel.getBoundingClientRect();
+      dragOffset = { x: e.clientX - r.left, y: e.clientY - r.top };
+    });
+    document.addEventListener('mousemove', dragMove);
+    document.addEventListener('mouseup', () => { dragOffset = null; });
+  })();
+
+  /* ── "امسك الكلمة الصح" — spot-the-misspelling game: shows either the
+     correct spelling or a common misspelling at random, the student calls
+     out right/wrong, then the teacher reveals the true correct spelling. ── */
+  (function setupSpotMistakeTool() {
+    const panel      = document.getElementById('wbSpotMistake');
+    const toggleBtn  = document.getElementById('wbSpotMistakeToggle');
+    const closeBtn   = document.getElementById('wbSpotMistakeClose');
+    const head       = document.getElementById('wbSpotMistakeHead');
+    const wordEl     = document.getElementById('wbSpotWord');
+    const answerEl   = document.getElementById('wbSpotAnswer');
+    const showBtn    = document.getElementById('wbSpotShowBtn');
+    const correctBtn = document.getElementById('wbSpotCorrectBtn');
+    const wrongBtn   = document.getElementById('wbSpotWrongBtn');
+    const nextBtn    = document.getElementById('wbSpotNext');
+    const correctEl  = document.getElementById('wbSpotCorrect');
+    const wrongEl    = document.getElementById('wbSpotWrong');
+    if (!panel || !toggleBtn) return;
+
+    // [correct spelling, common misspelling]
+    const PAIRS = [
+      ['apple','aple'], ['school','shcool'], ['friend','freind'], ['because','becuase'],
+      ['people','poeple'], ['beautiful','beatiful'], ['different','diffrent'], ['before','befor'],
+      ['little','litle'], ['family','familly'], ['happy','hapy'], ['orange','ornage'],
+      ['yellow','yelow'], ['garden','gardon'], ['window','windo'], ['pencil','pencle'],
+      ['elephant','elefant'], ['important','importent'], ['because','becaus'], ['tomorrow','tommorow'],
+      ['always','allways'], ['believe','beleive'], ['receive','recieve'], ['which','wich'],
+      ['through','throuh'], ['thought','thouht'], ['answer','anwser'], ['sentence','sentance'],
+      ['favorite','favrite'], ['restaurant','resturant'], ['necessary','neccessary'], ['definitely','definately'],
+    ];
+    let current = null; // { correct, shown, isCorrect }
+
+    function nextRound() {
+      const [correct, wrongSpelling] = PAIRS[Math.floor(Math.random() * PAIRS.length)];
+      const showCorrect = Math.random() < 0.5;
+      current = { correct, shown: showCorrect ? correct : wrongSpelling, isCorrect: showCorrect };
+      wordEl.textContent = current.shown;
+      answerEl.style.display = 'none';
+    }
+    showBtn.addEventListener('click', () => {
+      if (!current) return;
+      answerEl.textContent = current.isCorrect
+        ? `صح! "${current.correct}" مكتوبة صح.`
+        : `غلط! الصح هو "${current.correct}"`;
+      answerEl.style.display = 'block';
+    });
+    correctBtn.addEventListener('click', () => { correctEl.textContent = +correctEl.textContent + 1; nextRound(); });
+    wrongBtn.addEventListener('click', () => { wrongEl.textContent = +wrongEl.textContent + 1; nextRound(); });
+    nextBtn.addEventListener('click', nextRound);
+
+    toggleBtn.addEventListener('click', () => {
+      const opening = panel.style.display === 'none';
+      panel.style.display = opening ? 'block' : 'none';
+      toggleBtn.classList.toggle('active', opening);
+      if (opening && !current) nextRound();
+    });
+    closeBtn?.addEventListener('click', () => { panel.style.display = 'none'; toggleBtn.classList.remove('active'); });
+
+    let dragOffset = null;
+    function dragMove(e) {
+      if (!dragOffset) return;
+      const cl = e.touches ? e.touches[0] : e;
+      panel.style.left = Math.max(0, cl.clientX - wrapRect.left - dragOffset.x) + 'px';
+      panel.style.top  = Math.max(0, cl.clientY - wrapRect.top  - dragOffset.y) + 'px';
+    }
+    head?.addEventListener('mousedown', e => {
+      const r = panel.getBoundingClientRect();
+      dragOffset = { x: e.clientX - r.left, y: e.clientY - r.top };
+    });
+    document.addEventListener('mousemove', dragMove);
+    document.addEventListener('mouseup', () => { dragOffset = null; });
+  })();
+
+  /* ── Word of the Day: a deterministic pick from the shared dictionary
+     that only changes once per calendar day, so every teacher opening it
+     on the same day sees the same word for a quick warm-up review. ── */
+  (function setupWordOfDayTool() {
+    const panel     = document.getElementById('wbWordOfDay');
+    const toggleBtn = document.getElementById('wbWordOfDayToggle');
+    const closeBtn  = document.getElementById('wbWordOfDayClose');
+    const head      = document.getElementById('wbWordOfDayHead');
+    const wordEl    = document.getElementById('wbWordOfDayWord');
+    const meaningEl = document.getElementById('wbWordOfDayMeaning');
+    const speakBtn  = document.getElementById('wbWordOfDaySpeak');
+    const stampBtn  = document.getElementById('wbWordOfDayStamp');
+    if (!panel || !toggleBtn) return;
+
+    const words = Object.keys(DICTIONARY);
+    const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
+    const todayWord = words[dayOfYear % words.length];
+
+    function render() {
+      wordEl.textContent = todayWord;
+      meaningEl.textContent = `${todayWord} = ${DICTIONARY[todayWord]}`;
+    }
+    speakBtn.addEventListener('click', () => {
+      if (!('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(todayWord);
+      utter.lang = 'en-US';
+      utter.rate = 0.8;
+      applyVoice(utter);
+      window.speechSynthesis.speak(utter);
+    });
+    stampBtn.addEventListener('click', () => {
+      const W = 380, H = 140;
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
+        <rect x="0" y="0" width="${W}" height="${H}" rx="14" fill="#fffbeb" stroke="#f59e0b" stroke-width="2.5"/>
+        <text x="${W/2}" y="32" font-size="13" font-weight="800" fill="#b45309" text-anchor="middle">⭐ WORD OF THE DAY</text>
+        <text x="${W/2}" y="72" font-size="30" font-weight="800" fill="#1e293b" text-anchor="middle" font-family="monospace">${todayWord}</text>
+        <text x="${W/2}" y="108" font-size="17" fill="#374151" text-anchor="middle">${DICTIONARY[todayWord]}</text>
+      </svg>`;
+      placeSvgImage(svg, 0.35);
+    });
+
+    toggleBtn.addEventListener('click', () => {
+      const opening = panel.style.display === 'none';
+      panel.style.display = opening ? 'block' : 'none';
+      toggleBtn.classList.toggle('active', opening);
+      if (opening) render();
+    });
+    closeBtn?.addEventListener('click', () => { panel.style.display = 'none'; toggleBtn.classList.remove('active'); });
+
     let dragOffset = null;
     function dragMove(e) {
       if (!dragOffset) return;

@@ -1,6 +1,6 @@
 {
   "name": "active-class",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "Active Class - تطبيق إدارة الفصل التفاعلي باستخدام Electron",
   "main": "main.js",
   "scripts": {

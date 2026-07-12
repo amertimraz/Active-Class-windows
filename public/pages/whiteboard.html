@@ -255,6 +255,13 @@
             <div class="hqt-menu" id="wbEnglishToolsMenu" hidden>
               <button class="hqt-item" id="wbPronounceToggle" type="button">🔊 <span>نطق الكلمات</span></button>
               <button class="hqt-item" id="wbAlphabetToggle" type="button">🔤 <span>جدول الحروف الأبجدية</span></button>
+              <button class="hqt-item" id="wbSpellingBeeToggle" type="button">🐝 <span>لعبة التهجئة</span></button>
+              <button class="hqt-item" id="wbDictionaryToggle" type="button">📖 <span>قاموس فوري</span></button>
+              <button class="hqt-item" id="wbConversationToggle" type="button">💬 <span>بطاقات محادثة</span></button>
+              <button class="hqt-item" id="wbGrammarRefToggle" type="button">📋 <span>مرجع الأزمنة السريع</span></button>
+              <button class="hqt-item" id="wbPictureDescToggle" type="button">🖼️ <span>بطاقات وصف الصور</span></button>
+              <button class="hqt-item" id="wbSpotMistakeToggle" type="button">🔍 <span>امسك الكلمة الصح</span></button>
+              <button class="hqt-item" id="wbWordOfDayToggle" type="button">⭐ <span>كلمة اليوم</span></button>
             </div>
           </div>
         </div>
@@ -666,9 +673,152 @@
           <button id="wbAlphabetClose" type="button" title="إغلاق">✕</button>
         </div>
         <div class="wb-alphabet-toolbar">
+          <label class="wb-graph-label">صوت النطق</label>
+          <select id="wbVoiceSelect" class="wb-graph-input"></select>
           <button id="wbAlphabetPlayAll" class="wb-graph-plot-btn" type="button">▶️ اقرأ كل الحروف بالتسلسل</button>
         </div>
         <div class="wb-alphabet-grid" id="wbAlphabetGrid"></div>
+      </div>
+
+      <!-- لعبة التهجئة: البرنامج ينطق كلمة، الطالب يكتبها على السبورة،
+           والمدرس يظهر الإجابة الصحيحة للمقارنة ويسجّل صح/غلط -->
+      <div id="wbSpellingBee" style="display:none">
+        <div class="wb-calc-head" id="wbSpellingBeeHead">
+          <span>لعبة التهجئة</span>
+          <button id="wbSpellingBeeClose" type="button" title="إغلاق">✕</button>
+        </div>
+        <div class="wb-graph-body">
+          <div class="wb-spelling-score">
+            <span>✅ <b id="wbSpellingCorrect">0</b></span>
+            <span>❌ <b id="wbSpellingWrong">0</b></span>
+            <span id="wbSpellingProgress" style="margin-inline-start:auto;color:var(--text-muted);font-size:12px"></span>
+          </div>
+          <div class="wb-spelling-word" id="wbSpellingWord">🔊</div>
+          <div class="wb-graph-range">
+            <label>الصعوبة</label>
+            <select id="wbSpellingLevel" class="wb-graph-input" style="flex:1">
+              <option value="easy">سهل</option>
+              <option value="medium" selected>متوسط</option>
+              <option value="hard">صعب</option>
+            </select>
+          </div>
+          <label class="wb-graph-label">صوت النطق</label>
+          <select id="wbSpellingVoiceSelect" class="wb-graph-input"></select>
+          <div class="wb-graph-range">
+            <button id="wbSpellingSpeak" class="wb-graph-plot-btn" type="button" style="flex:2">🔊 انطق الكلمة</button>
+            <button id="wbSpellingSpeakSlow" class="wb-graph-plot-btn" type="button" style="flex:1;background:#0891b2">🐢 أبطأ</button>
+          </div>
+          <button id="wbSpellingReveal" class="wb-graph-plot-btn" type="button">👁️ إظهار الإجابة</button>
+          <div class="wb-graph-range">
+            <button id="wbSpellingCorrectBtn" class="wb-graph-plot-btn" type="button" style="background:#16a34a">✅ صح</button>
+            <button id="wbSpellingWrongBtn" class="wb-graph-plot-btn" type="button" style="background:#dc2626">❌ غلط</button>
+          </div>
+          <button id="wbSpellingNext" class="wb-graph-plot-btn" type="button" style="background:#334155">▶️ كلمة جديدة</button>
+        </div>
+      </div>
+
+      <!-- قاموس فوري: كلمة إنجليزي → معناها بالعربي + نطقها -->
+      <div id="wbDictionary" style="display:none">
+        <div class="wb-calc-head" id="wbDictionaryHead">
+          <span>قاموس فوري</span>
+          <button id="wbDictionaryClose" type="button" title="إغلاق">✕</button>
+        </div>
+        <div class="wb-graph-body">
+          <label class="wb-graph-label">اكتب كلمة إنجليزية</label>
+          <input id="wbDictWord" class="wb-graph-input" list="wbDictWordsList" type="text" placeholder="e.g. beautiful" dir="ltr">
+          <datalist id="wbDictWordsList"></datalist>
+          <button id="wbDictSearch" class="wb-graph-plot-btn" type="button">🔍 بحث</button>
+          <div id="wbDictResult" class="wb-spelling-word" style="font-size:16px;font-family:Cairo,sans-serif;direction:rtl;">اكتب كلمة وابحث</div>
+        </div>
+      </div>
+
+      <!-- بطاقات محادثة: جمل يومية شائعة مبوّبة بحسب الموقف -->
+      <div id="wbConversation" style="display:none">
+        <div class="wb-calc-head" id="wbConversationHead">
+          <span>بطاقات محادثة</span>
+          <button id="wbConversationClose" type="button" title="إغلاق">✕</button>
+        </div>
+        <div class="wb-graph-body">
+          <label class="wb-graph-label">الموقف</label>
+          <select id="wbConvCategory" class="wb-graph-input"></select>
+          <div id="wbConvEnglish" class="wb-spelling-word" style="font-size:19px;"></div>
+          <div id="wbConvArabic" class="wb-graph-msg" style="display:block;background:var(--bg);color:var(--text);border-color:var(--border);text-align:center;font-weight:700;"></div>
+          <button id="wbConvSpeak" class="wb-graph-plot-btn" type="button">🔊 انطق الجملة</button>
+          <button id="wbConvNext" class="wb-graph-plot-btn" type="button" style="background:#334155">▶️ بطاقة جديدة</button>
+        </div>
+      </div>
+
+      <!-- بطاقات وصف الصور: رمز تعبيري كبير يمثّل مشهد، والطالب يوصفه
+           بجملة إنجليزية — تدريب على المحادثة والوصف -->
+      <div id="wbPictureDesc" style="display:none">
+        <div class="wb-calc-head" id="wbPictureDescHead">
+          <span>بطاقات وصف الصور</span>
+          <button id="wbPictureDescClose" type="button" title="إغلاق">✕</button>
+        </div>
+        <div class="wb-graph-body">
+          <div class="wb-picture-scene" id="wbPictureScene">🏠</div>
+          <p class="wb-graph-label" style="text-align:center">اطلب من الطالب يوصف الصورة بجملة إنجليزية</p>
+          <button id="wbPictureExample" class="wb-graph-plot-btn" type="button">🔊 اسمع مثال</button>
+          <div id="wbPictureExampleText" class="wb-graph-msg" style="display:none;background:var(--bg);color:var(--text);border-color:var(--border);text-align:center;font-weight:700;direction:ltr;"></div>
+          <button id="wbPictureNext" class="wb-graph-plot-btn" type="button" style="background:#334155">▶️ صورة جديدة</button>
+        </div>
+      </div>
+
+      <!-- مرجع الأزمنة السريع: اختر الفعل والأزمنة المطلوبة، ثم إدراج
+           الجدول على السبورة كصورة -->
+      <div id="wbGrammarRef" style="display:none">
+        <div class="wb-calc-head" id="wbGrammarRefHead">
+          <span>مرجع الأزمنة السريع</span>
+          <button id="wbGrammarRefClose" type="button" title="إغلاق">✕</button>
+        </div>
+        <div class="wb-graph-body">
+          <label class="wb-graph-label">الفعل</label>
+          <select id="wbGrammarVerb" class="wb-graph-input"></select>
+          <label class="wb-graph-label">الأزمنة (اختر واحد أو أكثر)</label>
+          <div id="wbGrammarTenses" class="wb-grammar-tenses"></div>
+          <button id="wbGrammarInsert" class="wb-graph-plot-btn" type="button">➕ إدراج الجدول على السبورة</button>
+        </div>
+      </div>
+
+      <!-- امسك الكلمة الصح: كلمة مكتوبة بالخطأ إملائيًا، الطالب يحدد
+           الخطأ، ثم يظهر المدرس الإملاء الصحيح -->
+      <div id="wbSpotMistake" style="display:none">
+        <div class="wb-calc-head" id="wbSpotMistakeHead">
+          <span>امسك الكلمة الصح</span>
+          <button id="wbSpotMistakeClose" type="button" title="إغلاق">✕</button>
+        </div>
+        <div class="wb-graph-body">
+          <div class="wb-spelling-score">
+            <span>✅ <b id="wbSpotCorrect">0</b></span>
+            <span>❌ <b id="wbSpotWrong">0</b></span>
+          </div>
+          <p class="wb-graph-label" style="text-align:center">هل الكلمة دي مكتوبة صح ولا غلط؟</p>
+          <div class="wb-spelling-word" id="wbSpotWord">?</div>
+          <div id="wbSpotAnswer" class="wb-graph-msg" style="display:none;background:var(--bg);color:var(--text);border-color:var(--border);text-align:center;font-weight:700;direction:ltr;"></div>
+          <div class="wb-graph-range">
+            <button id="wbSpotShowBtn" class="wb-graph-plot-btn" type="button">👁️ إظهار الإجابة الصحيحة</button>
+          </div>
+          <div class="wb-graph-range">
+            <button id="wbSpotCorrectBtn" class="wb-graph-plot-btn" type="button" style="background:#16a34a">✅ الطالب صح</button>
+            <button id="wbSpotWrongBtn" class="wb-graph-plot-btn" type="button" style="background:#dc2626">❌ الطالب غلط</button>
+          </div>
+          <button id="wbSpotNext" class="wb-graph-plot-btn" type="button" style="background:#334155">▶️ كلمة جديدة</button>
+        </div>
+      </div>
+
+      <!-- كلمة اليوم: كلمة ثابتة تتغير كل يوم تلقائيًا من القاموس، للمراجعة
+           السريعة أول الحصة -->
+      <div id="wbWordOfDay" style="display:none">
+        <div class="wb-calc-head" id="wbWordOfDayHead">
+          <span>⭐ كلمة اليوم</span>
+          <button id="wbWordOfDayClose" type="button" title="إغلاق">✕</button>
+        </div>
+        <div class="wb-graph-body">
+          <div class="wb-spelling-word" id="wbWordOfDayWord" style="font-size:30px;"></div>
+          <div id="wbWordOfDayMeaning" class="wb-graph-msg" style="display:block;background:var(--bg);color:var(--text);border-color:var(--border);text-align:center;font-weight:700;"></div>
+          <button id="wbWordOfDaySpeak" class="wb-graph-plot-btn" type="button">🔊 انطق</button>
+          <button id="wbWordOfDayStamp" class="wb-graph-plot-btn" type="button" style="background:#334155">➕ إدراج على السبورة</button>
+        </div>
       </div>
     </div><!-- /wb-canvas-wrap -->
 
